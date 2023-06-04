@@ -1,0 +1,195 @@
+
+<!DOCTYPE html>
+
+<html lang="en">
+  <head>
+    <meta charset="utf-8" />
+    <meta name="viewport" content="width=device-width, initial-scale=1.0" /><meta name="generator" content="Docutils 0.19: https://docutils.sourceforge.io/" />
+
+    <title>libpgmath &#8212; Flang 1.0 documentation</title>
+    <link rel="stylesheet" type="text/css" href="_static/pygments.css" />
+    <link rel="stylesheet" type="text/css" href="_static/haiku.css" />
+    <script data-url_root="./" id="documentation_options" src="_static/documentation_options.js"></script>
+    <script src="_static/jquery.js"></script>
+    <script src="_static/underscore.js"></script>
+    <script src="_static/_sphinx_javascript_frameworks_compat.js"></script>
+    <script src="_static/doctools.js"></script>
+    <script src="_static/sphinx_highlight.js"></script>
+    <link rel="index" title="Index" href="genindex.html" />
+    <link rel="search" title="Search" href="search.html" />
+    <link rel="next" title="How to add an intrinsic to flang" href="flang1/howto_intrinsics.html" />
+    <link rel="prev" title="Cross Reference" href="flang2/xref.html" /> 
+  </head><body>
+      <div class="header" role="banner"><h1 class="heading"><a href="index.html">
+          <span>Flang 1.0 documentation</span></a></h1>
+        <h2 class="heading"><span>libpgmath</span></h2>
+      </div>
+      <div class="topnav" role="navigation" aria-label="top navigation">
+      
+        <p>
+        «&#160;&#160;<a href="flang2/xref.html">Cross Reference</a>
+        &#160;&#160;::&#160;&#160;
+        <a class="uplink" href="index.html">Contents</a>
+        &#160;&#160;::&#160;&#160;
+        <a href="flang1/howto_intrinsics.html">How to add an intrinsic to flang</a>&#160;&#160;»
+        </p>
+
+      </div>
+      <div class="content" role="main">
+        
+        
+  <section id="libpgmath">
+<h1>libpgmath<a class="headerlink" href="#libpgmath" title="Permalink to this heading">¶</a></h1>
+<p>Libpgmath implements decent subset of Fortran Mathematical Intrinsics. These are:</p>
+<ul class="simple">
+<li><p>acos</p></li>
+<li><p>asin</p></li>
+<li><p>atan</p></li>
+<li><p>atan2</p></li>
+<li><p>cos</p></li>
+<li><p>sin</p></li>
+<li><p>tan</p></li>
+<li><p>cosh</p></li>
+<li><p>sinh</p></li>
+<li><p>tanh</p></li>
+<li><p>exp</p></li>
+<li><p>log</p></li>
+<li><p>log10</p></li>
+<li><p>pow</p></li>
+<li><p>powi1 R{4, 8} * I4</p></li>
+<li><p>powi R{4, 8} * I4(:)</p></li>
+<li><p>powk1 R{4, 8} * I8</p></li>
+<li><p>powk R{4, 8} * I8(:)</p></li>
+<li><p>sincos</p></li>
+<li><p>div</p></li>
+<li><p>sqrt</p></li>
+<li><p>mod</p></li>
+<li><p>size</p></li>
+</ul>
+<section id="apis">
+<h2>APIs<a class="headerlink" href="#apis" title="Permalink to this heading">¶</a></h2>
+<p>The library exposes two APIs:</p>
+<ul>
+<li><p><strong>mth API</strong> (a.k.a old one as it was also present in pre-libpgmath runtime library), implemented by generic part of libpgmath, mostly as wrappers calling mathematical functions from underlying mathematical library (libm or libamath).</p></li>
+<li><p><strong>frp API</strong> (fast-relaxed-precise), exposing two kinds of symbols:</p>
+<blockquote>
+<div><ul class="simple">
+<li><p>jump table proxies (defined in <code class="docutils literal notranslate"><span class="pre">mth_*defs.c</span></code> files) exposing functions utilizing architecture-specific dispatch jump tables; in case of serial functions, usually the jumps are aimed at the generic functions exposed by <code class="docutils literal notranslate"><span class="pre">mth</span> <span class="pre">API</span></code>; in case of vectorized functions (or functions accepting arguments of complex number type), the jumps are aimed at specific implementation functions exposed by <code class="docutils literal notranslate"><span class="pre">frp</span> <span class="pre">API</span></code>,</p></li>
+<li><p>implementation functions (vectorized or handling complex numbers type arguments); most of them are just wrappers implemented as ‘for’ loops calling mathematical functions from underlying mathematical library (libm or libamath).</p></li>
+</ul>
+</div></blockquote>
+</li>
+</ul>
+<p>By default, for every serial function Flang frontend generates calls to <code class="docutils literal notranslate"><span class="pre">frp</span> <span class="pre">API</span></code> functions (jump table proxies) defined in <code class="docutils literal notranslate"><span class="pre">mth_128defs.c</span></code> file. All those functions are implemented as calls through the jump table. When <code class="docutils literal notranslate"><span class="pre">-My,164,0x800000</span></code> flag is used, Flang frontend generates calls to <code class="docutils literal notranslate"><span class="pre">mth</span> <span class="pre">API</span></code> functions overriding jump table (this also prevents use of vectorized functions!).</p>
+<p>The <code class="docutils literal notranslate"><span class="pre">mth_128defs_init.c</span></code> file contains <code class="docutils literal notranslate"><span class="pre">math_tables</span></code> initialization for every <code class="docutils literal notranslate"><span class="pre">frp</span> <span class="pre">API</span></code> proxy function. All those functions are <code class="docutils literal notranslate"><span class="pre">_init</span></code> suffixed. It is called at first execution of any of proxy function when libpgmath is linked as a static library (when the Fortran application is linked against shared libpgmath library, <code class="docutils literal notranslate"><span class="pre">__mth_dispatch()</span></code> function is called by
+shared object constructor (<code class="docutils literal notranslate"><span class="pre">ctor</span></code>) before <code class="docutils literal notranslate"><span class="pre">main()</span></code> function is executed).</p>
+<p>The <code class="docutils literal notranslate"><span class="pre">dispatch.c</span></code> file instantiates <code class="docutils literal notranslate"><span class="pre">mth_tables</span></code>. It contains calls to all of the files refered from mth_tables.</p>
+<p>The APIs also differ by the prefixes and suffixes they use. <code class="docutils literal notranslate"><span class="pre">frp</span> <span class="pre">API</span></code> functions look like this:</p>
+<div class="highlight-default notranslate"><div class="highlight"><pre><span></span><span class="n">__</span><span class="p">{</span><span class="n">gfrp</span><span class="p">}{</span><span class="n">sdcz</span><span class="p">}</span><span class="n">_</span><span class="o">&lt;</span><span class="n">NAME</span><span class="o">&gt;</span><span class="n">_</span><span class="o">&lt;</span><span class="n">VL</span><span class="o">&gt;</span><span class="p">[</span><span class="n">_</span><span class="p">{</span><span class="n">init</span><span class="o">|</span><span class="n">prof</span><span class="p">}]</span>
+</pre></div>
+</div>
+<p>Where:</p>
+<div class="highlight-default notranslate"><div class="highlight"><pre><span></span><span class="n">g</span> <span class="o">-</span> <span class="n">generic</span>
+<span class="n">f</span> <span class="o">-</span> <span class="n">fast</span>
+<span class="n">r</span> <span class="o">-</span> <span class="n">relaxed</span>
+<span class="n">p</span> <span class="o">-</span> <span class="n">precise</span>
+
+<span class="n">s</span> <span class="o">-</span> <span class="n">single</span>
+<span class="n">d</span> <span class="o">-</span> <span class="n">double</span>
+<span class="n">c</span> <span class="o">-</span> <span class="n">single</span> <span class="nb">complex</span>
+<span class="n">z</span> <span class="o">-</span> <span class="n">double</span> <span class="nb">complex</span>
+</pre></div>
+</div>
+<p><code class="docutils literal notranslate"><span class="pre">mth</span> <span class="pre">API</span></code> function will have the following prefixes:</p>
+<ul class="simple">
+<li><dl class="simple">
+<dt><code class="docutils literal notranslate"><span class="pre">__mth_i_</span></code> - math intrinsic</dt><dd><ul>
+<li><p>Vector ABI prefixes e.g. <code class="docutils literal notranslate"><span class="pre">__ZGVxN1v_mth_i_</span></code></p></li>
+</ul>
+</dd>
+</dl>
+</li>
+<li><p><code class="docutils literal notranslate"><span class="pre">__pmth_i_</span></code></p></li>
+<li><p><code class="docutils literal notranslate"><span class="pre">__utl_i_</span></code></p></li>
+</ul>
+<p>For vectorized functions, LLVM’s <code class="docutils literal notranslate"><span class="pre">LoopVectorize</span></code> pass utilizes <code class="docutils literal notranslate"><span class="pre">veclib</span></code> mapping from serial <code class="docutils literal notranslate"><span class="pre">frp</span> <span class="pre">API</span></code> function calls to corresponding vectorized functions. There’s a PGI’s map (PGMATH) available, which aims functions defined in <code class="docutils literal notranslate"><span class="pre">mth_128defs.c</span></code> file on AArch64 and Power architectures and in <code class="docutils literal notranslate"><span class="pre">mth_256defs.c</span></code> and <code class="docutils literal notranslate"><span class="pre">mth_512defs.c</span></code> files for Intel architectures,</p>
+</section>
+<section id="math-table-entries">
+<h2>Math table entries<a class="headerlink" href="#math-table-entries" title="Permalink to this heading">¶</a></h2>
+<section id="the-mthintrin-macros">
+<h3>The MTHINTRIN macros<a class="headerlink" href="#the-mthintrin-macros" title="Permalink to this heading">¶</a></h3>
+<p>The <code class="docutils literal notranslate"><span class="pre">MTHINTRIN</span></code> macro is defined (differently) in two places: <code class="docutils literal notranslate"><span class="pre">lib/common/mth_tbldefs.h</span></code> and <code class="docutils literal notranslate"><span class="pre">lib/common/dispatch.c</span></code> (preceded by <code class="docutils literal notranslate"><span class="pre">'#undef</span> <span class="pre">MTHINTRIN'</span></code> to get rid of definition provided by <code class="docutils literal notranslate"><span class="pre">mth_tbldefs.h</span></code>). Both definitions take the same number of arguments and are used while pre-processing <code class="docutils literal notranslate"><span class="pre">mth_*.h</span></code> files of selected <code class="docutils literal notranslate"><span class="pre">math_tables</span></code> (note that <code class="docutils literal notranslate"><span class="pre">dispatch.c</span></code> does include <code class="docutils literal notranslate"><span class="pre">those</span> <span class="pre">mth_*.h</span></code> files twice: before and after <code class="docutils literal notranslate"><span class="pre">'#undef</span> <span class="pre">MTHINTRIN'</span></code> in order to process them with both of the <code class="docutils literal notranslate"><span class="pre">MTHINTRIN</span></code> macro definitions).</p>
+<p>In currently used <code class="docutils literal notranslate"><span class="pre">math_tables</span></code> (both generic and x86_64) the last parameter (name for Sleef) is always given a pointer to <code class="docutils literal notranslate"><span class="pre">__math_dispatch_error()</span></code> function.</p>
+</section>
+</section>
+<section id="porting">
+<h2>Porting<a class="headerlink" href="#porting" title="Permalink to this heading">¶</a></h2>
+<p>There are currently two ports:</p>
+<ul class="simple">
+<li><p>AArch64 port in <code class="docutils literal notranslate"><span class="pre">lib/aarch64</span></code> directory, contributed by Cavium</p></li>
+<li><p>x86_64 port in <code class="docutils literal notranslate"><span class="pre">lib/x86_64</span></code> directory, contributed by Nvidia</p></li>
+</ul>
+<p>Every port can override <code class="docutils literal notranslate"><span class="pre">math_tables</span></code> to point to different function names, however currently only the x86_64 port makes use of this possibility.</p>
+<p>The use of overridden math_tables must be signaled in the given port CMakeLists.txt file:</p>
+<div class="highlight-default notranslate"><div class="highlight"><pre><span></span><span class="n">add_subdirectory</span><span class="p">(</span><span class="s2">&quot;math_tables&quot;</span><span class="p">)</span>
+</pre></div>
+</div>
+<p>The <code class="docutils literal notranslate"><span class="pre">math_tables</span></code> directory should contain header files, one for each of mathematical function implemented in libpgmath. List of all of the exposed headers should be provided in <code class="docutils literal notranslate"><span class="pre">CMakeLists.txt</span></code> file held in given <code class="docutils literal notranslate"><span class="pre">math_tables</span></code> directory:</p>
+<div class="highlight-default notranslate"><div class="highlight"><pre><span></span>set(SRCS
+  mth_acosdefs.h
+  mth_asindefs.h
+  mth_atandefs.h
+  mth_atan2defs.h
+  mth_cosdefs.h
+  mth_sindefs.h
+  mth_tandefs.h
+  mth_coshdefs.h
+  mth_sinhdefs.h
+  mth_tanhdefs.h
+  mth_expdefs.h
+  mth_logdefs.h
+  mth_log10defs.h
+  mth_powdefs.h
+  mth_powidefs.h
+  mth_sincosdefs.h
+  mth_divdefs.h
+  mth_sqrtdefs.h
+  mth_moddefs.h)
+
+set(NEW_SRCS)
+foreach(file ${SRCS})
+  list(APPEND NEW_SRCS ${CMAKE_CURRENT_SOURCE_DIR}/${file})
+endforeach()
+set(SRCS ${NEW_SRCS})
+set(DEPENDENCIES &quot;${SRCS}&quot;)
+
+string(REPLACE &quot;;&quot; &quot; -D&quot; DEFINITIONS &quot;${DEFINITIONS}&quot;)
+set(DEFINITIONS &quot;-D${DEFINITIONS}&quot;)
+string(REPLACE &quot;;&quot; &quot; &quot; SRCS &quot;${SRCS}&quot;)
+list(APPEND PREPROCESSOR &quot;${CMAKE_C_COMPILER} -E ${DEFINITIONS} -DPGFLANG ${FLAGS} ${SRCS}&quot;)
+separate_arguments(PREPROCESSOR UNIX_COMMAND &quot;${PREPROCESSOR}&quot;
+</pre></div>
+</div>
+</section>
+</section>
+
+
+      </div>
+      <div class="bottomnav" role="navigation" aria-label="bottom navigation">
+      
+        <p>
+        «&#160;&#160;<a href="flang2/xref.html">Cross Reference</a>
+        &#160;&#160;::&#160;&#160;
+        <a class="uplink" href="index.html">Contents</a>
+        &#160;&#160;::&#160;&#160;
+        <a href="flang1/howto_intrinsics.html">How to add an intrinsic to flang</a>&#160;&#160;»
+        </p>
+
+      </div>
+
+    <div class="footer" role="contentinfo">
+        &#169; Copyright .
+      Created using <a href="https://www.sphinx-doc.org/">Sphinx</a> 5.3.0.
+    </div>
+  </body>
+</html>

@@ -1,0 +1,726 @@
+
+<!DOCTYPE html>
+
+<html lang="en">
+  <head>
+    <meta charset="utf-8" />
+    <meta name="viewport" content="width=device-width, initial-scale=1.0" /><meta name="generator" content="Docutils 0.19: https://docutils.sourceforge.io/" />
+
+    <title>ILMs &#8212; Flang 1.0 documentation</title>
+    <link rel="stylesheet" type="text/css" href="../_static/pygments.css" />
+    <link rel="stylesheet" type="text/css" href="../_static/haiku.css" />
+    <script data-url_root="../" id="documentation_options" src="../_static/documentation_options.js"></script>
+    <script src="../_static/jquery.js"></script>
+    <script src="../_static/underscore.js"></script>
+    <script src="../_static/_sphinx_javascript_frameworks_compat.js"></script>
+    <script src="../_static/doctools.js"></script>
+    <script src="../_static/sphinx_highlight.js"></script>
+    <link rel="index" title="Index" href="../genindex.html" />
+    <link rel="search" title="Search" href="../search.html" />
+    <link rel="next" title="ILI" href="ili.html" />
+    <link rel="prev" title="Expander" href="expander.html" /> 
+  </head><body>
+      <div class="header" role="banner"><h1 class="heading"><a href="../index.html">
+          <span>Flang 1.0 documentation</span></a></h1>
+        <h2 class="heading"><span>ILMs</span></h2>
+      </div>
+      <div class="topnav" role="navigation" aria-label="top navigation">
+      
+        <p>
+        «&#160;&#160;<a href="expander.html">Expander</a>
+        &#160;&#160;::&#160;&#160;
+        <a class="uplink" href="../index.html">Contents</a>
+        &#160;&#160;::&#160;&#160;
+        <a href="ili.html">ILI</a>&#160;&#160;»
+        </p>
+
+      </div>
+      <div class="content" role="main">
+        
+        
+  <section id="ilms">
+<h1>ILMs<a class="headerlink" href="#ilms" title="Permalink to this heading">¶</a></h1>
+<section id="overview">
+<h2>Overview<a class="headerlink" href="#overview" title="Permalink to this heading">¶</a></h2>
+<p>ILMs are the internal representation of a subprogram’s
+executable statements created by the Semantic Analyzer
+and translated into the second internal representation, ILI,
+by the Expander.</p>
+<p>An ILM consists of an opcode followed by a number of operands
+which depends on the opcode, or may also vary for a given opcode.
+The opcode and operands are of type short int.
+Typical opcodes are arithmetic operations, variable loads and stores,
+conditional branches, function call, etc.
+ILM opcodes are non-zero positive integers referenced via
+macros whose names begin with
+<code class="docutils literal notranslate"><span class="pre">IM\_</span></code>.
+These macros are defined in the include file
+<em>ilmtp.n</em>.</p>
+<p>The ILMs are grouped into blocks, each of which is a
+sequential set of words.
+A block generally contains the ILMs generated for a single
+statement.  For C, compound and loop statements
+may generate more than one block, and for Fortran,
+I/O statements with implied
+<code class="docutils literal notranslate"><span class="pre">DO</span></code>
+loops generate more than one block.
+Each block begins with a
+<code class="docutils literal notranslate"><span class="pre">BOS</span></code>
+ILM specifying
+(1) the source line number of the statement,
+and (2) the number of words making up this block.</p>
+<p>A
+<code class="docutils literal notranslate"><span class="pre">BOS</span></code>
+may never appear within a block.</p>
+<p>ILM operands may be links to other ILMs, but only preceding
+ILMs in the same block.
+Links are integers relative to the beginning of the block
+which contains them.
+The links may point over a branch, label, or
+function call ILM.
+An ILM may be pointed to by more than one other ILM,
+but this is not typical (can happen for
+uses of
+<code class="docutils literal notranslate"><span class="pre">'++'</span></code>
+or
+<code class="docutils literal notranslate"><span class="pre">'--'</span></code>
+operator, or for statement function expansion).</p>
+<p>ILM operands may also be symbol table pointers or short constants.</p>
+<p>The Semantic Analyzer buffers one block of ILMs at a time in
+a dynamic storage area.
+When a block is completed it is written out to a temporary file
+in binary format (by routine
+<code class="docutils literal notranslate"><span class="pre">wrilms</span></code>).
+If the
+<code class="docutils literal notranslate"><span class="pre">-nocode</span></code>
+flag is specified
+writing of the file is inhibited.
+At this point also, a debug dump of the ILM block is performed
+if requested by the compiler maintainer.</p>
+</section>
+<section id="ilm-attributes-and-templates">
+<h2>ILM Attributes and Templates<a class="headerlink" href="#ilm-attributes-and-templates" title="Permalink to this heading">¶</a></h2>
+<p>Associated with each ILM opcode is a set of information
+used by the Expander to translate the ILMs into ILI.
+This information is defined symbolically in a file
+which is processed by the utility program ILMTP, described below,
+which creates the declaration and data definition files
+needed to access the information.
+See Appendix IV for the definition of the current ILMs
+and their attributes and templates.</p>
+<section id="ilm-attributes">
+<h3>ILM Attributes<a class="headerlink" href="#ilm-attributes" title="Permalink to this heading">¶</a></h3>
+<p>The attributes for a given ILM opcode consist of the
+following structure of information:</p>
+<div class="highlight-none notranslate"><div class="highlight"><pre><span></span>struct  {
+  char \*name;
+  char type;
+  short int oprs;
+  INT oprflag;
+  short int temps;
+  short int template;
+  short int ilict;
+};
+</pre></div>
+</div>
+<dl>
+<dt><code class="docutils literal notranslate"><span class="pre">name</span></code></dt><dd><p>pointer to null terminated character string for the ILM name.
+This is needed for the ILM debug dump only.</p>
+</dd>
+<dt><code class="docutils literal notranslate"><span class="pre">type</span></code></dt><dd><p>type of the ILM. The allowed values are:
+‘a’  arithmetic
+‘b’  branch
+‘c’  constant
+‘l’  load
+‘s’  store
+‘r’  reference
+‘p’  procedure
+‘m’  miscellaneous</p>
+</dd>
+<dt><code class="docutils literal notranslate"><span class="pre">oprs</span></code></dt><dd><p>number of operands.
+For ILMs which take a variable number of operands,
+this is the number of operands in the
+“fixed length part”.
+The number of operands for a given occurrence of such an ILM
+is equal to this value plus the value of the first operand.</p>
+</dd>
+<dt><code class="docutils literal notranslate"><span class="pre">oprflag</span></code></dt><dd><p>Bit map defining the type of each operand, and the attributes of
+the ILM:</p>
+<table class="docutils align-default">
+<tbody>
+<tr class="row-odd"><td><p>31</p></td>
+<td><p>30</p></td>
+<td><p>29</p></td>
+<td></td>
+<td><p>3:2</p></td>
+<td><p>1:0</p></td>
+</tr>
+<tr class="row-even"><td colspan="6"><p>_</p></td>
+</tr>
+<tr class="row-odd"><td><p>spec</p></td>
+<td><p>trm</p></td>
+<td><p>var</p></td>
+<td><p>&amp;…</p></td>
+<td><p>op2</p></td>
+<td><p>op1</p></td>
+</tr>
+<tr class="row-even"><td colspan="6"><p>_</p></td>
+</tr>
+</tbody>
+</table>
+<dl>
+<dt><code class="docutils literal notranslate"><span class="pre">opi</span></code></dt><dd><p>2 bit fields corresponding to the ILM operands
+in reverse order. The values (macros defined in
+include file
+<em>ilm.h</em>)
+are:</p>
+<table class="docutils align-default">
+<tbody>
+<tr class="row-odd"><td><p>OPR_LNK</p></td>
+<td><p>this operand is a link to another ILM.</p></td>
+</tr>
+<tr class="row-even"><td><p>OPR_SYM</p></td>
+<td><p>this operand is a symbol table pointer.</p></td>
+</tr>
+<tr class="row-odd"><td><p>OPR_STC</p></td>
+<td><p>this operand is a short constant.</p></td>
+</tr>
+<tr class="row-even"><td><p>OPR_N</p></td>
+<td><p>.fi
+this operand specifies the number
+of operands in the
+.q “variable length part” .
+Only the first operand of
+an ILM is allowed this value.</p></td>
+</tr>
+</tbody>
+</table>
+</dd>
+<dt><code class="docutils literal notranslate"><span class="pre">spec</span></code></dt><dd><p>1 bit field which is set if this is a
+“special case”
+ILM, i.e. one whose expansion into ILI is
+not purely table driven.</p>
+</dd>
+<dt><code class="docutils literal notranslate"><span class="pre">trm</span></code></dt><dd><p>1 bit field which is set if the ILM is a terminal
+ILM (i.e., a store, branch, etc.).</p>
+</dd>
+<dt><code class="docutils literal notranslate"><span class="pre">var</span></code></dt><dd><p>1 bit field which is set if the ILM has a variable
+number of operands.  For these ILMs, operand one
+contains the number of variable operands.</p>
+</dd>
+</dl>
+</dd>
+<dt><code class="docutils literal notranslate"><span class="pre">temps</span></code></dt><dd><p>number of temporaries used in the template for this ILM.</p>
+</dd>
+<dt><code class="docutils literal notranslate"><span class="pre">template</span></code></dt><dd><p>index into the ILM template array for this ILM (see below).</p>
+</dd>
+<dt><code class="docutils literal notranslate"><span class="pre">ilict</span></code></dt><dd><p>number of ILI in the template.</p>
+</dd>
+</dl>
+</section>
+<section id="ilm-templates">
+<h3>ILM Templates<a class="headerlink" href="#ilm-templates" title="Permalink to this heading">¶</a></h3>
+<p>An ILM template defines the sequence of one or more ILI into which
+ILMs of a given opcode are translated by the Expander.
+An ILM template consists of one or more
+“ILI specifications”
+which are stored sequentially in the ILM template array (c
+<code class="docutils literal notranslate"><span class="pre">ilmtp</span></code>).
+Each ILI specification has the form:</p>
+<table class="docutils align-default">
+<tbody>
+<tr class="row-odd"><td colspan="6"><p>_</p></td>
+</tr>
+<tr class="row-even"><td><p>iliopc</p></td>
+<td><p>result</p></td>
+<td><p>opr1</p></td>
+<td><p>opr2</p></td>
+<td><p>&amp;…</p></td>
+<td><p>oprn</p></td>
+</tr>
+<tr class="row-odd"><td colspan="6"><p>_</p></td>
+</tr>
+</tbody>
+</table>
+<dl class="simple">
+<dt><code class="docutils literal notranslate"><span class="pre">iliopc</span></code></dt><dd><p>ILI operation code (refer to appendix V).</p>
+</dd>
+<dt><code class="docutils literal notranslate"><span class="pre">result</span></code></dt><dd><p>index into the ILM operand array which defines for the
+Expander how the ILI created for the ILI specification
+is to be handled, i.e., if the ILI is the
+“result”
+of the
+ILM, if the ILI is assigned to a template temporary, etc.
+A value of 0 indicates that there is no result.</p>
+</dd>
+<dt><code class="docutils literal notranslate"><span class="pre">opri</span></code></dt><dd><p>index into the ILM operand array which defines for the
+Expander how the corresponding ILI operand is to be constructed.
+The number of these entries depends on
+<code class="docutils literal notranslate"><span class="pre">iliopc</span></code>
+(the
+ILI attribute structure must be referenced - see section 13).
+A value of 0 indicates that there is no operand.</p>
+</dd>
+</dl>
+<p>The operand array (c
+<code class="docutils literal notranslate"><span class="pre">ilmopnd</span></code>)
+consists of a common pool of operand definitions, each of which defines how
+an ILI operand is constructed or how the result of an ILI is to be
+processed by the Expander.  Each definition has the form:</p>
+<table class="docutils align-default">
+<tbody>
+<tr class="row-odd"><td colspan="2"><p>_</p></td>
+</tr>
+<tr class="row-even"><td><p>type</p></td>
+<td><p>aux</p></td>
+</tr>
+<tr class="row-odd"><td colspan="2"><p>_</p></td>
+</tr>
+</tbody>
+</table>
+<p>where each field is type INT.</p>
+<p><code class="docutils literal notranslate"><span class="pre">result</span></code>
+and each
+<code class="docutils literal notranslate"><span class="pre">opri</span></code>
+are indices (subscripts) into this array.
+The first entry of
+<code class="docutils literal notranslate"><span class="pre">ilmopnd</span></code>
+(i.e., a subscript value of 0) consists of a single value (0).
+Each result/operand type has a macro definition whose name begins
+with
+<code class="docutils literal notranslate"><span class="pre">ILMO\_</span></code>.
+These macros are defined in the include file
+“ilm.h”.</p>
+<p>Result Definition:</p>
+<table class="docutils align-default">
+<tbody>
+<tr class="row-odd"><td><p>type</p></td>
+<td><p>aux</p></td>
+<td><p>meaning</p></td>
+</tr>
+<tr class="row-even"><td colspan="3"><p>_</p></td>
+</tr>
+<tr class="row-odd"><td><p>ILMO_R</p></td>
+<td><p>N/A</p></td>
+<td><p>ILI is the single template result</p></td>
+</tr>
+<tr class="row-even"><td><p>ILMO_RR</p></td>
+<td><p>N/A</p></td>
+<td><p>ILI is the real template result (for complex)</p></td>
+</tr>
+<tr class="row-odd"><td><p>ILMO_IR</p></td>
+<td><p>N/A</p></td>
+<td><p>ILI is the imaginary template result</p></td>
+</tr>
+<tr class="row-even"><td><p>ILMO_T</p></td>
+<td><p><em>n</em></p></td>
+<td><p>.fi
+ILI is the template temporary result
+.i n
+(<em>n</em> &gt;= 1)</p></td>
+</tr>
+</tbody>
+</table>
+<p>Operand Definition:</p>
+<table class="docutils align-default">
+<tbody>
+<tr class="row-odd"><td><p>type</p></td>
+<td><p>aux</p></td>
+<td><p>meaning</p></td>
+</tr>
+<tr class="row-even"><td colspan="3"><p>_</p></td>
+</tr>
+<tr class="row-odd"><td><p>ILMO_P</p></td>
+<td><p>n</p></td>
+<td><p>ILI pointed to by the nth ILM operand</p></td>
+</tr>
+<tr class="row-even"><td><p>ILMO_RP</p></td>
+<td><p>n</p></td>
+<td><p>.fi
+ILI pointed to by the
+.i n th
+ILM operand
+is the real part of a complex operand</p></td>
+</tr>
+<tr class="row-odd"><td><p>ILMO_IP</p></td>
+<td><p>n</p></td>
+<td><p>.fi
+ILI pointed to by the
+.i n th ILM operand
+is the imaginary part of a complex</p></td>
+</tr>
+<tr class="row-even"><td><p>ILMO_T</p></td>
+<td><p>n</p></td>
+<td><p>Template temporary <em>n</em></p></td>
+</tr>
+<tr class="row-odd"><td><p>ILMO_V</p></td>
+<td><p>n</p></td>
+<td><p>.fi
+Value of the
+.i n th
+ILM operand (a ST pointer)</p></td>
+</tr>
+<tr class="row-even"><td><p>ILMO_SZ</p></td>
+<td><p>n</p></td>
+<td><p>.fi
+Value of the
+.i n th
+ILM operand which locates
+a data type entry.  The data type entry will be used to determine the size of
+an item.</p></td>
+</tr>
+<tr class="row-odd"><td><p>ILMO_IV</p></td>
+<td><p>n</p></td>
+<td><p>Immediate value <em>n</em></p></td>
+</tr>
+<tr class="row-even"><td><p>ILMO_ISYM</p></td>
+<td><p>n</p></td>
+<td><p>.fi
+Integer literal
+.i n
+is an index into the ILM
+auxiliary array which is the text of the
+literal (in this case, an integer) used to
+form a symbol table entry (in this case, an
+integer constant)</p></td>
+</tr>
+<tr class="row-odd"><td><p>ILMO_RSYM</p></td>
+<td><p>n</p></td>
+<td><p>Real literal (real constant)</p></td>
+</tr>
+<tr class="row-even"><td><p>ILMO_XRSYM</p></td>
+<td><p>n</p></td>
+<td><p>.fi
+Hexadecimal literal which represents the
+value of a real constant.</p></td>
+</tr>
+<tr class="row-odd"><td><p>ILMO_DSYM</p></td>
+<td><p>n</p></td>
+<td><p>Double literal (double constant)</p></td>
+</tr>
+<tr class="row-even"><td><p>ILMO_XDSYM</p></td>
+<td><p>n</p></td>
+<td><p>.fi
+Two hexadecimal literals separated by a a comma
+which represents the value of a double constant.
+The first literal is the most significant part;
+the second literal is the least signifcant part.</p></td>
+</tr>
+<tr class="row-odd"><td><p>ILMO_ESYM</p></td>
+<td><p>n</p></td>
+<td><p>External literal (proc symbol)</p></td>
+</tr>
+<tr class="row-even"><td><p>ILMO_DR</p></td>
+<td><p>n</p></td>
+<td><p>.fi
+Integer register for intrinsic argument
+.i n .
+A value of -1 indicates that there is not a register associated with
+the ILI.
+Note that for this operand and the remaining register argument operands,
+the value
+.i n
+represents argument
+.i n+1
+and is mapped to the appropriate target register.</p></td>
+</tr>
+<tr class="row-odd"><td><p>ILMO_AR</p></td>
+<td><p>n</p></td>
+<td><p>Address register <em>n</em>.</p></td>
+</tr>
+<tr class="row-even"><td><p>ILMO_SP</p></td>
+<td><p>n</p></td>
+<td><p>Single precision register <em>n</em>.</p></td>
+</tr>
+<tr class="row-odd"><td><p>ILMO_DP</p></td>
+<td><p>n</p></td>
+<td><p>Double precision register <em>n</em>.</p></td>
+</tr>
+<tr class="row-even"><td><p>ILMO_ISP</p></td>
+<td><p>n</p></td>
+<td><p>Imaginary single precision register <em>n</em>.</p></td>
+</tr>
+<tr class="row-odd"><td><p>ILMO_IDP</p></td>
+<td><p>n</p></td>
+<td><p>Imaginary double precision register <em>n</em>.</p></td>
+</tr>
+</tbody>
+</table>
+<p>The ILM auxiliary array (c
+<code class="docutils literal notranslate"><span class="pre">ilmaux</span></code>)
+consists of a sequence of character
+strings representing the text of the literals.  Each string
+is null terminated (i.e., it is a normal C character string) and
+will be used to form the
+“value”
+of a symbol table entry.</p>
+</section>
+</section>
+<section id="auxiliary-data-structures-switch-lists-c-only">
+<h2>Auxiliary Data Structures - Switch Lists (C only)<a class="headerlink" href="#auxiliary-data-structures-switch-lists-c-only" title="Permalink to this heading">¶</a></h2>
+<p>Switch Lists are created by the Semantic Analyzer as
+it processes switch (case) statements and their embedded case and
+default (otherwise) labels.
+A switch list is used by the Expander to generate ILI for a
+switch statement when the SWITCH ILM which
+points to the switch list is processed.</p>
+<p>Switch lists are stored in a single dynamic storage block.
+All pointers to switch list elements are relative (c
+<code class="docutils literal notranslate"><span class="pre">short</span> <span class="pre">int</span></code>)
+values.
+Each list consists of a header record followed by a linked
+list of case records which define case value, label pairs.
+The elements of this list are ordered by the case value,
+not by the order in which they appeared in the source program.
+There is no list element for a default label.
+Instead, the list header contains the default label
+(if none was specified by the user, the break label is used).</p>
+<p>The same structure is used for list headers and list elements:</p>
+<div class="highlight-none notranslate"><div class="highlight"><pre><span></span>struct {
+    INT   val;
+    short clabel;
+    short next;
+};
+</pre></div>
+</div>
+<p>For list headers:</p>
+<table class="docutils align-default">
+<tbody>
+<tr class="row-odd"><td><p>val</p></td>
+<td><p>not used.</p></td>
+</tr>
+<tr class="row-even"><td><p>clabel</p></td>
+<td><p>symbol table pointer for the default label.</p></td>
+</tr>
+<tr class="row-odd"><td><p>next</p></td>
+<td><p>pointer to first list element (0 if no cases).</p></td>
+</tr>
+</tbody>
+</table>
+<p>For list elements:</p>
+<table class="docutils align-default">
+<tbody>
+<tr class="row-odd"><td><p>val</p></td>
+<td><p>integer case value.</p></td>
+</tr>
+<tr class="row-even"><td><p>clabel</p></td>
+<td><p>.fi
+case label (compiler created symbol allocated
+by the Semantic Analyzer).</p></td>
+</tr>
+<tr class="row-odd"><td><p>next</p></td>
+<td><p>.fi
+pointer to next list element (a value of 0 indicates the end of the list).</p></td>
+</tr>
+</tbody>
+</table>
+</section>
+<section id="ilm-template-utility-ilmtp">
+<h2>ILM Template Utility (ILMTP)<a class="headerlink" href="#ilm-template-utility-ilmtp" title="Permalink to this heading">¶</a></h2>
+<p>ILMTP reads the file which defines the ILM opcodes and
+their attributes and templates, and writes the C declaration
+and definition files needed to reference the information within the
+compiler.
+ILMTP must be re-run whenever an ILM opcode is deleted or added,
+or its attributes or template modified.
+Certain changes to the ILI definition file (section 13) also
+require that ILMTP be run (see note below).</p>
+<section id="inputs">
+<h3>Inputs<a class="headerlink" href="#inputs" title="Permalink to this heading">¶</a></h3>
+<p>ILMTP reads two input files:</p>
+<ol class="arabic">
+<li><p>ILM definition file.
+Defines the ILM opcodes, their attributes and templates.
+This file is in nroff format and is used to create appendix IV
+of this document.
+It contains three types of lines processed by ILMTP:
+ILM definition line of the form:</p>
+<div class="highlight-none notranslate"><div class="highlight"><pre><span></span>.IL name type[\*] opr1 opr2 ... oprn[\* | +]
+
+
+
+
+
+name
+   name of the ILM.
+
+
+
+type
+   type of the ILM.  Must be one of &quot;arth&quot;, &quot;branch&quot;, &quot;ref&quot;
+   &quot;const&quot;, &quot;load&quot;, &quot;store&quot;, &quot;proc&quot;, or &quot;misc&quot;.
+
+
+
+opri
+   operand type.  This must be one of &quot;lnk&quot;, &quot;sym&quot;,
+   &quot;stc&quot;, or &quot;n&quot;.  &quot;n&quot; is only allowed for the
+   first operand.  &quot;n&quot; indicates that this is a
+   variable length ILM and is allowed only if the last
+   operand if followed immediately by &quot;\*&quot; or &quot;+&quot;.
+   This means that the last operand specifier
+   defines the type of the variable length part
+   operand; &quot;\*&quot; means the variable length part
+   consists of 0 or more operands, and &quot;+&quot; means
+   that it must contain at least one operand.
+   The occurrence of n as the first operand will set the &quot;var&quot;
+   attribute.
+
+
+
+
+   ILM attribute line. Defines the attributes of the ILM opcodes.
+   The appearance of this line is optional; it, however, must precede
+   the ILI specification line(s) if it is used. The line is of the form:
+
+   .. code-block:: none
+
+      .AT followed by zero or more occurrences of &lt;attribute&gt;
+
+   where &lt;attribute&gt; is one of the following:
+
+
+
+spec
+   The ILM is to be special cased by the Expander.
+
+
+
+trm
+   The ILM is a terminal ILM.
+
+
+
+
+   ILI specification line.  Zero or more of these follow each
+   ILM definition line and together they specify the ILM template.
+   The line is of the form:
+
+   .. code-block:: none
+
+          .OP ili result opr1 opr2 ... oprn
+
+
+
+
+ili
+   ILI opcode
+
+
+
+result
+   result of the ILI; one of:
+
+   +----+------------------+
+   |null|no result         |
+   +----+------------------+
+   |r   |single result     |
+   +----+------------------+
+   |rr  |real result       |
+   +----+------------------+
+   |ir  |imaginary result  |
+   +----+------------------+
+   |tn  |temporary result n|
+   +----+------------------+
+
+
+
+
+opri
+   operand of the ILI; one of:
+
+   +------+-----------------------------------------+
+   |null  |no operand                               |
+   +------+-----------------------------------------+
+   |pn    |pointer from the nth operand of the ILM  |
+   +------+-----------------------------------------+
+   |rpn   |real pointer n                           |
+   +------+-----------------------------------------+
+   |ipn   |imaginary pointer n                      |
+   +------+-----------------------------------------+
+   |tn    |temporary n                              |
+   +------+-----------------------------------------+
+   |vn    |value in the nth operand of the ILM which|
+   |      |is a ST pointer                          |
+   +------+-----------------------------------------+
+   |szn   |value in the nth operand of the ILM which|
+   |      |is a DT pointer whose size is needed     |
+   +------+-----------------------------------------+
+   |ivn   |immediate value n                        |
+   +------+-----------------------------------------+
+   |=i&#39;str|integer literal (str is the text of the  |
+   |      |literal)                                 |
+   +------+-----------------------------------------+
+   |=r&#39;str|real literal                             |
+   +------+-----------------------------------------+
+   |=d&#39;str|double literal                           |
+   +------+-----------------------------------------+
+   |=e&#39;str|external literal                         |
+   +------+-----------------------------------------+
+   |dr(n) |data register n                          |
+   +------+-----------------------------------------+
+   |ar(n) |address register n                       |
+   +------+-----------------------------------------+
+   |sp(n) |single precision regsiter n              |
+   +------+-----------------------------------------+
+   |dp(n) |double precision register n              |
+   +------+-----------------------------------------+
+</pre></div>
+</div>
+<ol class="arabic simple">
+<li><p>ILI Definition File.
+This file is the primary input to the ILITP utility program
+and so is described in section 13.
+It is read by ILMTP in order to extract just the following information:
+the name and opcode number of each ILI, and the number of
+operands of each ILI.
+Note that if any changes to the ILI Definition File affect these
+quantities, ILMTP must be re-run.</p></li>
+</ol>
+</li>
+</ol>
+</section>
+<section id="outputs">
+<h3>Outputs<a class="headerlink" href="#outputs" title="Permalink to this heading">¶</a></h3>
+<p>ILMTP produces two output files:</p>
+<ol class="arabic simple">
+<li><p><em>ilmtpdf.h</em>
+— contains the C data definitions and initialization
+code for the ILM templates and attributes.</p></li>
+<li><p><em>ilmtp.h</em>
+— contains the C constant symbol definitions for the
+ILM opcodes</p></li>
+</ol>
+</section>
+</section>
+<section id="miscellaneous-information">
+<h2>Miscellaneous Information<a class="headerlink" href="#miscellaneous-information" title="Permalink to this heading">¶</a></h2>
+<p>The file
+<em>ilm.h</em>
+contains various macro definitions which define
+the possible values of the ILM attributes.  This file also
+contains the declarations and typedefs for the ILM and ILM-related
+data structures (i.e., ILMINFO, the ILM templates, etc.).</p>
+</section>
+</section>
+
+
+      </div>
+      <div class="bottomnav" role="navigation" aria-label="bottom navigation">
+      
+        <p>
+        «&#160;&#160;<a href="expander.html">Expander</a>
+        &#160;&#160;::&#160;&#160;
+        <a class="uplink" href="../index.html">Contents</a>
+        &#160;&#160;::&#160;&#160;
+        <a href="ili.html">ILI</a>&#160;&#160;»
+        </p>
+
+      </div>
+
+    <div class="footer" role="contentinfo">
+        &#169; Copyright .
+      Created using <a href="https://www.sphinx-doc.org/">Sphinx</a> 5.3.0.
+    </div>
+  </body>
+</html>

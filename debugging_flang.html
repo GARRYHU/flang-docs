@@ -1,0 +1,322 @@
+
+<!DOCTYPE html>
+
+<html lang="en">
+  <head>
+    <meta charset="utf-8" />
+    <meta name="viewport" content="width=device-width, initial-scale=1.0" /><meta name="generator" content="Docutils 0.19: https://docutils.sourceforge.io/" />
+
+    <title>Debugging flang &#8212; Flang 1.0 documentation</title>
+    <link rel="stylesheet" type="text/css" href="_static/pygments.css" />
+    <link rel="stylesheet" type="text/css" href="_static/haiku.css" />
+    <script data-url_root="./" id="documentation_options" src="_static/documentation_options.js"></script>
+    <script src="_static/jquery.js"></script>
+    <script src="_static/underscore.js"></script>
+    <script src="_static/_sphinx_javascript_frameworks_compat.js"></script>
+    <script src="_static/doctools.js"></script>
+    <script src="_static/sphinx_highlight.js"></script>
+    <link rel="index" title="Index" href="genindex.html" />
+    <link rel="search" title="Search" href="search.html" />
+    <link rel="next" title="Appendix III - Target Machine" href="flang1/machar.html" />
+    <link rel="prev" title="Coding Practices" href="flang2/coding.html" /> 
+  </head><body>
+      <div class="header" role="banner"><h1 class="heading"><a href="index.html">
+          <span>Flang 1.0 documentation</span></a></h1>
+        <h2 class="heading"><span>Debugging flang</span></h2>
+      </div>
+      <div class="topnav" role="navigation" aria-label="top navigation">
+      
+        <p>
+        «&#160;&#160;<a href="flang2/coding.html">Coding Practices</a>
+        &#160;&#160;::&#160;&#160;
+        <a class="uplink" href="index.html">Contents</a>
+        &#160;&#160;::&#160;&#160;
+        <a href="flang1/machar.html">Appendix III - Target Machine</a>&#160;&#160;»
+        </p>
+
+      </div>
+      <div class="content" role="main">
+        
+        
+  <section id="debugging-flang">
+<h1>Debugging flang<a class="headerlink" href="#debugging-flang" title="Permalink to this heading">¶</a></h1>
+<p>This guide aims at presenting different debugging tools and techniques available in flang.</p>
+<section id="invocation-and-debuggers">
+<span id="invocation-and-debuggers-label"></span><h2>Invocation and debuggers<a class="headerlink" href="#invocation-and-debuggers" title="Permalink to this heading">¶</a></h2>
+<p><code class="docutils literal notranslate"><span class="pre">flang</span></code> binary program actually calls <code class="docutils literal notranslate"><span class="pre">flang1</span></code> and <code class="docutils literal notranslate"><span class="pre">flang2</span></code>, so running gdb or lldb on <code class="docutils literal notranslate"><span class="pre">flang</span></code> makes little sense unless you account for this for example by setting <code class="docutils literal notranslate"><span class="pre">follow-fork-mode</span> <span class="pre">child</span></code> in gdb before starting the process.</p>
+<p>It might be easier though to invoke gdb/lldb with <code class="docutils literal notranslate"><span class="pre">flang1</span></code> and <code class="docutils literal notranslate"><span class="pre">flang2</span></code> instead.</p>
+<p><code class="docutils literal notranslate"><span class="pre">flang1</span></code> produces ILM, consumed by <code class="docutils literal notranslate"><span class="pre">flang2</span></code> which translates from ILM to ILI and then to LLVM IR assemblies.</p>
+<p>Note that you need to pass the <code class="docutils literal notranslate"><span class="pre">-DCMAKE_BUILD_TYPE=Debug</span></code> flag to cmake to enable the debugging symbols in the binary.</p>
+</section>
+<section id="debugging-output-dumps">
+<h2>Debugging output dumps<a class="headerlink" href="#debugging-output-dumps" title="Permalink to this heading">¶</a></h2>
+<p>Both <code class="docutils literal notranslate"><span class="pre">flang1</span></code> and <code class="docutils literal notranslate"><span class="pre">flang2</span></code> are capable of providing a large number of diagnostic outputs. By default they are written into a file ending in <code class="docutils literal notranslate"><span class="pre">.qdbg</span></code> in the current working directory. Alternatively you can use debug flag <code class="docutils literal notranslate"><span class="pre">-q,0,1</span></code> to redirect the output to standard output.</p>
+<p>The flags are enabled by passing <code class="docutils literal notranslate"><span class="pre">-q</span></code> or <code class="docutils literal notranslate"><span class="pre">-qq</span></code> parameters, always carrying a “flag,value” pair. On <code class="docutils literal notranslate"><span class="pre">flang</span></code> invocation level the flags must be specified for either <code class="docutils literal notranslate"><span class="pre">flang1</span></code> or <code class="docutils literal notranslate"><span class="pre">flang2</span></code>, by specifying “H” or “M” respectively.</p>
+<p>See <a class="reference internal" href="flang2/coding.html"><span class="doc">Coding Practices</span></a> for details of the <code class="docutils literal notranslate"><span class="pre">flang2</span></code> flags meanings.</p>
+<p>Example 1: print human-readable ILM representation as read by flang2 for further processing:</p>
+<div class="highlight-console notranslate"><div class="highlight"><pre><span></span><span class="gp">$ </span>flang -c func.f90 -Mq,0,1 -Mq,4,1
+</pre></div>
+</div>
+<p>Example 2: print human-readable ILI representation as used internally by flang2:</p>
+<div class="highlight-console notranslate"><div class="highlight"><pre><span></span><span class="gp">$ </span>flang -c hello.f90 -Mq,0,1 -Mq,10,2 -Mq,10,1
+</pre></div>
+</div>
+<p>In the source code these flags are represented by <code class="docutils literal notranslate"><span class="pre">flg.dbg[i]</span></code>, where <code class="docutils literal notranslate"><span class="pre">i</span></code> is the flag number.</p>
+<p>The <code class="docutils literal notranslate"><span class="pre">-qq</span></code> parameter causes debug routines to dump human-readable views of various internal data structures. The syntax is:</p>
+<div class="highlight-default notranslate"><div class="highlight"><pre><span></span><span class="o">-</span><span class="n">qq</span><span class="p">,</span><span class="o">&lt;</span><span class="n">phase_name</span><span class="o">&gt;</span><span class="p">,</span><span class="o">&lt;</span><span class="n">object_name</span><span class="o">&gt;</span>
+</pre></div>
+</div>
+<p>E.g. to dump flang1 AST, one can pass <code class="docutils literal notranslate"><span class="pre">-Hq,0,1</span> <span class="pre">-Hqq,parser,ast</span></code> to the compiler, or to dump flang1 symtab, one can pass <code class="docutils literal notranslate"><span class="pre">-Hq,0,1</span> <span class="pre">-Hqq,parser,symtab</span></code> to the compiler.</p>
+<p>The available phase names are: init, parser, bblock, vectorize, optimize, schedule, assemble, xref, unroll</p>
+<p>The available object names are: ast, dtype, std, sstd, stdp, sym, syms, symtab, allsym, stats, area, olddtype, odtype, oldsym, osym, hsym, hsyms, common, commons, nast, stdtree, stdtrees, shape, aux</p>
+<p><strong>Note</strong>: In case you are passing arguments to <code class="docutils literal notranslate"><span class="pre">flang1</span></code> or <code class="docutils literal notranslate"><span class="pre">flang2</span></code> directly, you need to skip the “H” or “M” prefix and replace commas with whitespaces. For example, the two commands should give the same debugging output:</p>
+<div class="highlight-default notranslate"><div class="highlight"><pre><span></span><span class="n">flang</span> <span class="o">-</span><span class="n">Hq</span><span class="p">,</span><span class="mi">0</span><span class="p">,</span><span class="mi">1</span> <span class="o">-</span><span class="n">Hq</span><span class="p">,</span><span class="mi">3</span><span class="p">,</span><span class="mi">8</span> <span class="o">-</span><span class="n">Hq</span><span class="p">,</span><span class="mi">47</span><span class="p">,</span><span class="mi">1</span> <span class="o">-</span><span class="n">Hqq</span><span class="p">,</span><span class="n">parser</span><span class="p">,</span><span class="n">symtab</span> <span class="n">example</span><span class="o">.</span><span class="n">f90</span>
+<span class="o">/</span><span class="n">usr</span><span class="o">/</span><span class="n">local</span><span class="o">/</span><span class="nb">bin</span><span class="o">/</span><span class="n">flang1</span> <span class="o">-</span><span class="n">q</span> <span class="mi">0</span> <span class="mi">1</span> <span class="o">-</span><span class="n">q</span> <span class="mi">3</span> <span class="mi">8</span> <span class="o">-</span><span class="n">q</span> <span class="mi">47</span> <span class="mi">1</span> <span class="o">-</span><span class="n">qq</span> <span class="n">parser</span> <span class="n">symtab</span> <span class="n">example</span><span class="o">.</span><span class="n">f90</span>
+</pre></div>
+</div>
+</section>
+<section id="flang1-and-flang2-command-line-options">
+<h2>flang1 and flang2 command line options<a class="headerlink" href="#flang1-and-flang2-command-line-options" title="Permalink to this heading">¶</a></h2>
+<p>As mentioned in <a class="reference internal" href="#invocation-and-debuggers-label"><span class="std std-ref">Invocation and debuggers</span></a>, you may often need to run <code class="docutils literal notranslate"><span class="pre">flang1</span></code> and <code class="docutils literal notranslate"><span class="pre">flang2</span></code> separately in the debugger and thus provide them with all the parameters that a normal <code class="docutils literal notranslate"><span class="pre">flang</span></code> invocation would. Unfortunately <code class="docutils literal notranslate"><span class="pre">flang1</span></code> and <code class="docutils literal notranslate"><span class="pre">flang2</span></code> do not have <code class="docutils literal notranslate"><span class="pre">--help</span></code> option, so here is a list of possible options and their functionality. For <code class="docutils literal notranslate"><span class="pre">flang1</span></code>:</p>
+<table class="docutils align-default">
+<thead>
+<tr class="row-odd"><th class="head"><p>Flang1 Option</p></th>
+<th class="head"><p>Explanation</p></th>
+</tr>
+</thead>
+<tbody>
+<tr class="row-even"><td><p><code class="docutils literal notranslate"><span class="pre">filename</span></code></p></td>
+<td><p>source file name (method 1 of 2)</p></td>
+</tr>
+<tr class="row-odd"><td><p><code class="docutils literal notranslate"><span class="pre">src</span></code></p></td>
+<td><p>source file name (method 2 of 2)</p></td>
+</tr>
+<tr class="row-even"><td><p><code class="docutils literal notranslate"><span class="pre">output</span></code></p></td>
+<td><p>output .ilm text file name (will contain STB + ILM)</p></td>
+</tr>
+<tr class="row-odd"><td><p><code class="docutils literal notranslate"><span class="pre">stbfile</span></code></p></td>
+<td><p>output .stb symbol table text file name (will contain STB only)</p></td>
+</tr>
+<tr class="row-even"><td><p><code class="docutils literal notranslate"><span class="pre">modexport</span></code></p></td>
+<td><p>output .cmod text file name, collective content of all modules exported by given Fortran
+source file (note that separate .mod files will be also generated by Flang1!)</p></td>
+</tr>
+<tr class="row-odd"><td><p><code class="docutils literal notranslate"><span class="pre">modindex</span></code></p></td>
+<td><p>output .cmdx text file containing index of exported modules
+(including offsets in .cmod file where each of the modules begins)</p></td>
+</tr>
+<tr class="row-even"><td><p><code class="docutils literal notranslate"><span class="pre">qfile</span></code></p></td>
+<td><p>output debug .qdbg text file name, see <code class="docutils literal notranslate"><span class="pre">-q</span> <span class="pre">0</span></code></p></td>
+</tr>
+<tr class="row-odd"><td><p><code class="docutils literal notranslate"><span class="pre">opt</span></code></p></td>
+<td><p>optimization level</p></td>
+</tr>
+<tr class="row-even"><td><p><code class="docutils literal notranslate"><span class="pre">def</span></code></p></td>
+<td><p>same as clang’s <code class="docutils literal notranslate"><span class="pre">-D</span></code></p></td>
+</tr>
+<tr class="row-odd"><td><p><code class="docutils literal notranslate"><span class="pre">undef</span></code></p></td>
+<td><p>same as clang’s <code class="docutils literal notranslate"><span class="pre">-U</span></code></p></td>
+</tr>
+<tr class="row-even"><td><p><code class="docutils literal notranslate"><span class="pre">idir</span></code></p></td>
+<td><p>same as clang’s <code class="docutils literal notranslate"><span class="pre">-I</span></code></p></td>
+</tr>
+<tr class="row-odd"><td><p><code class="docutils literal notranslate"><span class="pre">moddir</span></code></p></td>
+<td><p>same as flang’s <code class="docutils literal notranslate"><span class="pre">-J</span></code></p></td>
+</tr>
+<tr class="row-even"><td><p><code class="docutils literal notranslate"><span class="pre">x</span></code></p></td>
+<td><p>magic <code class="docutils literal notranslate"><span class="pre">x</span></code> parameter</p></td>
+</tr>
+<tr class="row-odd"><td><p><code class="docutils literal notranslate"><span class="pre">y</span></code></p></td>
+<td><p>magic <code class="docutils literal notranslate"><span class="pre">y</span></code> parameter (turn off the corresponding <code class="docutils literal notranslate"><span class="pre">x</span></code> flag)</p></td>
+</tr>
+<tr class="row-even"><td><p><code class="docutils literal notranslate"><span class="pre">q</span></code></p></td>
+<td><p>magic debug parameter</p></td>
+</tr>
+<tr class="row-odd"><td><p><code class="docutils literal notranslate"><span class="pre">qq</span></code></p></td>
+<td><p>magic dump parameter</p></td>
+</tr>
+<tr class="row-even"><td><p><code class="docutils literal notranslate"><span class="pre">mp</span></code>/<code class="docutils literal notranslate"><span class="pre">nomp</span></code></p></td>
+<td><p>process OpenMP pragmas</p></td>
+</tr>
+<tr class="row-odd"><td><p><code class="docutils literal notranslate"><span class="pre">preprocess</span></code>
+/<code class="docutils literal notranslate"><span class="pre">nopreprocess</span></code></p></td>
+<td><p>process C preprocessor directives in Fortran code
+same as clang’s <code class="docutils literal notranslate"><span class="pre">-D</span></code></p></td>
+</tr>
+<tr class="row-even"><td><p><code class="docutils literal notranslate"><span class="pre">reentrant</span></code>
+/<code class="docutils literal notranslate"><span class="pre">noreentrant</span></code></p></td>
+<td><p>local variables should have RECURSIVE semantics instead of SAVE semantics
+(same as recursive/norecursive below); also inhibit special treatment of terminus functions</p></td>
+</tr>
+<tr class="row-odd"><td><p><code class="docutils literal notranslate"><span class="pre">terse</span></code></p></td>
+<td><p>reduce verbosity of error messages (0 = don’t reduce)</p></td>
+</tr>
+<tr class="row-even"><td><p><code class="docutils literal notranslate"><span class="pre">inform</span></code></p></td>
+<td><p>increase verbosity level of error messages</p></td>
+</tr>
+<tr class="row-odd"><td><p><code class="docutils literal notranslate"><span class="pre">hpf</span></code>/<code class="docutils literal notranslate"><span class="pre">nohpf</span></code></p></td>
+<td><p>handle HPF (High Performance Fortran) - off by default
+doesn’t seem to be fully implemented!</p></td>
+</tr>
+<tr class="row-even"><td><p><code class="docutils literal notranslate"><span class="pre">static</span></code>
+/<code class="docutils literal notranslate"><span class="pre">nostatic</span></code></p></td>
+<td><p>enable IPA (inter-procedural analysis), doesn’t seem to do anything, always set to OFF</p></td>
+</tr>
+<tr class="row-odd"><td><p><code class="docutils literal notranslate"><span class="pre">quad</span></code>
+//<code class="docutils literal notranslate"><span class="pre">noquad</span></code></p></td>
+<td><p>quad align (round-up size) “unconstrained objects” if sizeof &gt;= 16</p></td>
+</tr>
+<tr class="row-even"><td><p><code class="docutils literal notranslate"><span class="pre">freeform</span></code>
+/<code class="docutils literal notranslate"><span class="pre">nofreeform</span></code></p></td>
+<td><p>allow free form code</p></td>
+</tr>
+<tr class="row-odd"><td><p><code class="docutils literal notranslate"><span class="pre">tp</span></code></p></td>
+<td><p>Intel-specific target architecture name</p></td>
+</tr>
+<tr class="row-even"><td><p><code class="docutils literal notranslate"><span class="pre">stdinc</span></code></p></td>
+<td><p>‘:’-separated list of include directories</p></td>
+</tr>
+<tr class="row-odd"><td><p><code class="docutils literal notranslate"><span class="pre">vect</span></code></p></td>
+<td><p>vectorizer settings (bitmask), doesn’t seem to be examined anywhere in the frontend</p></td>
+</tr>
+<tr class="row-even"><td><p><code class="docutils literal notranslate"><span class="pre">standard</span></code>
+/<code class="docutils literal notranslate"><span class="pre">nostandard</span></code></p></td>
+<td><p>be strict about standard, e.g. disallow use of &lt;&gt; instead of /= or .ne.</p></td>
+</tr>
+<tr class="row-odd"><td><p><code class="docutils literal notranslate"><span class="pre">save</span></code>
+/<code class="docutils literal notranslate"><span class="pre">nosave</span></code></p></td>
+<td><p>local variables should have SAVE semantics instead of RECURSIVE semantics
+(typically used for overriding OpenMP’s default using -Msave)</p></td>
+</tr>
+<tr class="row-even"><td><p><code class="docutils literal notranslate"><span class="pre">extend</span></code>
+/<code class="docutils literal notranslate"><span class="pre">noextend</span></code></p></td>
+<td><p>allow lines up to 132 characters length (instead of 72 characters)</p></td>
+</tr>
+<tr class="row-odd"><td><p><code class="docutils literal notranslate"><span class="pre">recursive</span></code>
+/<code class="docutils literal notranslate"><span class="pre">norecursive</span></code></p></td>
+<td><p>local variables should have RECURSIVE semantics instead of SAVE semantics
+(OpenMP’s default, can be forced by <code class="docutils literal notranslate"><span class="pre">-Mrecursive</span></code>)</p></td>
+</tr>
+<tr class="row-even"><td><p><code class="docutils literal notranslate"><span class="pre">cmdline</span></code></p></td>
+<td><p>override command line used to invoke the compiler</p></td>
+</tr>
+</tbody>
+</table>
+<p>And for <code class="docutils literal notranslate"><span class="pre">flang2</span></code>:</p>
+<table class="docutils align-default">
+<thead>
+<tr class="row-odd"><th class="head"><p>Flang2 Option</p></th>
+<th class="head"><p>Explanation</p></th>
+</tr>
+</thead>
+<tbody>
+<tr class="row-even"><td><p><code class="docutils literal notranslate"><span class="pre">filename</span></code></p></td>
+<td><p>source .ilm file name</p></td>
+</tr>
+<tr class="row-odd"><td><p><code class="docutils literal notranslate"><span class="pre">fn</span></code></p></td>
+<td><p>(the original) Fortran source file name</p></td>
+</tr>
+<tr class="row-even"><td><p><code class="docutils literal notranslate"><span class="pre">stbfile</span></code></p></td>
+<td><p>input .stb symbol table text file name</p></td>
+</tr>
+<tr class="row-odd"><td><p><code class="docutils literal notranslate"><span class="pre">opt</span></code></p></td>
+<td><p>output .ll LLVM IR text file name</p></td>
+</tr>
+<tr class="row-even"><td><p><code class="docutils literal notranslate"><span class="pre">asm</span></code></p></td>
+<td><p>same as clang’s <code class="docutils literal notranslate"><span class="pre">-D</span></code></p></td>
+</tr>
+<tr class="row-odd"><td><p><code class="docutils literal notranslate"><span class="pre">vh</span></code></p></td>
+<td><p>build host; doesn’t seem to have any use currently</p></td>
+</tr>
+<tr class="row-even"><td><p><code class="docutils literal notranslate"><span class="pre">x</span></code></p></td>
+<td><p>magic <code class="docutils literal notranslate"><span class="pre">x</span></code> parameter</p></td>
+</tr>
+<tr class="row-odd"><td><p><code class="docutils literal notranslate"><span class="pre">y</span></code></p></td>
+<td><p>magic <code class="docutils literal notranslate"><span class="pre">y</span></code> parameter (turn off the corresponding <code class="docutils literal notranslate"><span class="pre">x</span></code> flag)</p></td>
+</tr>
+<tr class="row-even"><td><p><code class="docutils literal notranslate"><span class="pre">q</span></code></p></td>
+<td><p>magic debug parameter</p></td>
+</tr>
+<tr class="row-odd"><td><p><code class="docutils literal notranslate"><span class="pre">qq</span></code></p></td>
+<td><p>magic dump parameter</p></td>
+</tr>
+<tr class="row-even"><td><p><code class="docutils literal notranslate"><span class="pre">ieee</span></code></p></td>
+<td><p>1 = <code class="docutils literal notranslate"><span class="pre">-Kieee</span></code> (set by default), 0 = <code class="docutils literal notranslate"><span class="pre">-Knoieee</span></code> or <code class="docutils literal notranslate"><span class="pre">-fast-math</span></code> or <code class="docutils literal notranslate"><span class="pre">-Ofast</span></code></p></td>
+</tr>
+<tr class="row-odd"><td><p><code class="docutils literal notranslate"><span class="pre">inform</span></code></p></td>
+<td><p>increase verbosity level of error messages</p></td>
+</tr>
+<tr class="row-even"><td><p><code class="docutils literal notranslate"><span class="pre">endian</span></code></p></td>
+<td><p>force endianness, 0 = little, 1 = big</p></td>
+</tr>
+<tr class="row-odd"><td><p><code class="docutils literal notranslate"><span class="pre">mp</span></code>/<code class="docutils literal notranslate"><span class="pre">nomp</span></code></p></td>
+<td><p>process OpenMP pragmas</p></td>
+</tr>
+<tr class="row-even"><td><p><code class="docutils literal notranslate"><span class="pre">reentrant</span></code>
+/<code class="docutils literal notranslate"><span class="pre">noreentrant</span></code></p></td>
+<td><p>local variables should have RECURSIVE semantics instead of SAVE semantics
+(same as recursive/norecursive below); also inhibit special treatment of terminus functions</p></td>
+</tr>
+<tr class="row-odd"><td><p><code class="docutils literal notranslate"><span class="pre">terse</span></code></p></td>
+<td><p>reduce verbosity of error messages (0 = don’t reduce)</p></td>
+</tr>
+<tr class="row-even"><td><p><code class="docutils literal notranslate"><span class="pre">quad</span></code>
+/<code class="docutils literal notranslate"><span class="pre">noquad</span></code></p></td>
+<td><p>quad align (round-up size) “unconstrained objects” if sizeof &gt;= 16</p></td>
+</tr>
+<tr class="row-odd"><td><p><code class="docutils literal notranslate"><span class="pre">tp</span></code></p></td>
+<td><p>Intel-specific target architecture name</p></td>
+</tr>
+<tr class="row-even"><td><p><code class="docutils literal notranslate"><span class="pre">save</span></code>
+/<code class="docutils literal notranslate"><span class="pre">nosave</span></code></p></td>
+<td><p>local variables should have SAVE semantics instead of RECURSIVE semantics
+(typically used for overriding OpenMP’s default using -Msave)</p></td>
+</tr>
+<tr class="row-odd"><td><p><code class="docutils literal notranslate"><span class="pre">astype</span></code></p></td>
+<td><p>assembler syntax: 0 = ELF, 1 = COFF</p></td>
+</tr>
+<tr class="row-even"><td><p><code class="docutils literal notranslate"><span class="pre">vect</span></code></p></td>
+<td><p>vectorizer settings (bitmask), doesn’t seem to be examined anywhere in the frontend</p></td>
+</tr>
+<tr class="row-odd"><td><p><code class="docutils literal notranslate"><span class="pre">debug</span></code>
+/<code class="docutils literal notranslate"><span class="pre">nodebug</span></code></p></td>
+<td><p>debug ON/OFF flag</p></td>
+</tr>
+<tr class="row-even"><td><p><code class="docutils literal notranslate"><span class="pre">recursive</span></code>
+/<code class="docutils literal notranslate"><span class="pre">norecursive</span></code></p></td>
+<td><p>local variables should have RECURSIVE semantics instead of SAVE semantics
+(OpenMP’s default, can be forced by <code class="docutils literal notranslate"><span class="pre">-Mrecursive</span></code>)</p></td>
+</tr>
+<tr class="row-odd"><td><p><code class="docutils literal notranslate"><span class="pre">cmdline</span></code></p></td>
+<td><p>override command line used to invoke the compiler</p></td>
+</tr>
+</tbody>
+</table>
+</section>
+<section id="xflags">
+<h2>xflags<a class="headerlink" href="#xflags" title="Permalink to this heading">¶</a></h2>
+<p>Compilers have a number of supported and unsupported switches that are used internal to the compilers. These are referred to as “xflags”. See <a class="reference internal" href="flang2/xflag.html"><span class="doc">Other Compiler Switches</span></a> for details on the available xflags and how to use them.</p>
+<p>In the code these flags are represented by <code class="docutils literal notranslate"><span class="pre">flg.x[n]</span></code>, where <code class="docutils literal notranslate"><span class="pre">n</span></code> is the ID of the flag.</p>
+</section>
+</section>
+
+
+      </div>
+      <div class="bottomnav" role="navigation" aria-label="bottom navigation">
+      
+        <p>
+        «&#160;&#160;<a href="flang2/coding.html">Coding Practices</a>
+        &#160;&#160;::&#160;&#160;
+        <a class="uplink" href="index.html">Contents</a>
+        &#160;&#160;::&#160;&#160;
+        <a href="flang1/machar.html">Appendix III - Target Machine</a>&#160;&#160;»
+        </p>
+
+      </div>
+
+    <div class="footer" role="contentinfo">
+        &#169; Copyright .
+      Created using <a href="https://www.sphinx-doc.org/">Sphinx</a> 5.3.0.
+    </div>
+  </body>
+</html>

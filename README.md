@@ -1,2 +1,1 @@
-# flang-sphinx-docs
-classic flang sphinx docs
+# flang sphinx docs

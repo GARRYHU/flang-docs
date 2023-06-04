@@ -1,0 +1,250 @@
+
+<!DOCTYPE html>
+
+<html lang="en">
+  <head>
+    <meta charset="utf-8" />
+    <meta name="viewport" content="width=device-width, initial-scale=1.0" /><meta name="generator" content="Docutils 0.19: https://docutils.sourceforge.io/" />
+
+    <title>Data Initialization File &#8212; Flang 1.0 documentation</title>
+    <link rel="stylesheet" type="text/css" href="../_static/pygments.css" />
+    <link rel="stylesheet" type="text/css" href="../_static/haiku.css" />
+    <script data-url_root="../" id="documentation_options" src="../_static/documentation_options.js"></script>
+    <script src="../_static/jquery.js"></script>
+    <script src="../_static/underscore.js"></script>
+    <script src="../_static/_sphinx_javascript_frameworks_compat.js"></script>
+    <script src="../_static/doctools.js"></script>
+    <script src="../_static/sphinx_highlight.js"></script>
+    <link rel="index" title="Index" href="../genindex.html" />
+    <link rel="search" title="Search" href="../search.html" />
+    <link rel="next" title="Symbol Table" href="symtab.html" />
+    <link rel="prev" title="ILI" href="ili.html" /> 
+  </head><body>
+      <div class="header" role="banner"><h1 class="heading"><a href="../index.html">
+          <span>Flang 1.0 documentation</span></a></h1>
+        <h2 class="heading"><span>Data Initialization File</span></h2>
+      </div>
+      <div class="topnav" role="navigation" aria-label="top navigation">
+      
+        <p>
+        «&#160;&#160;<a href="ili.html">ILI</a>
+        &#160;&#160;::&#160;&#160;
+        <a class="uplink" href="../index.html">Contents</a>
+        &#160;&#160;::&#160;&#160;
+        <a href="symtab.html">Symbol Table</a>&#160;&#160;»
+        </p>
+
+      </div>
+      <div class="content" role="main">
+        
+        
+  <section id="data-initialization-file">
+<h1>Data Initialization File<a class="headerlink" href="#data-initialization-file" title="Permalink to this heading">¶</a></h1>
+<p>The Data Initialization File is an external binary file defining the
+initialization of external and static variables.  It is written by
+the Semantic Analyzer as it processes initializers for external
+and static variables, and is read by the Assembler in order to
+write the necessary <code class="docutils literal notranslate"><span class="pre">TXT</span></code> blocks and/or assembler directives
+to initialize the data.</p>
+<p>The file consists of one or more
+<em>records.</em>
+Each record consists of 2 fields, a <code class="docutils literal notranslate"><span class="pre">short</span> <span class="pre">int</span></code> (dtype)
+and a 32-bit <code class="docutils literal notranslate"><span class="pre">INT</span></code> (conval).
+Records are written to, and read from the file via the routines
+<code class="docutils literal notranslate"><span class="pre">dinit_put</span></code> and <code class="docutils literal notranslate"><span class="pre">dinit_read</span></code> in the module
+<em>dinitutil.c</em>.  These routines are also responsible
+for opening and possibly buffering the file.</p>
+<p>There are several types of record in the file,
+distinguished by the value of the first field (dtype):</p>
+<p><code class="docutils literal notranslate"><span class="pre">dtype</span> <span class="pre">=</span> <span class="pre">DINIT_LOC</span></code></p>
+<blockquote>
+<div><p><code class="docutils literal notranslate"><span class="pre">DINIT_LOC</span></code>
+is a special value chosen so as to not conflict
+with any of the other possible values of this field.
+<code class="docutils literal notranslate"><span class="pre">conval</span></code>, the second field of the record, will be a
+symbol table pointer to a variable, array, pointer, or structure.
+This record indicates that a new symbol is being initialized.
+It results in a <code class="docutils literal notranslate"><span class="pre">$LOC</span></code> directive being written to
+the Object Code Listing.  Ensuing records, up to the next
+<code class="docutils literal notranslate"><span class="pre">DINIT_LOC</span></code>, will initialize consecutive locations
+within this variable.</p>
+</div></blockquote>
+<dl class="simple">
+<dt><code class="docutils literal notranslate"><span class="pre">dtype</span> <span class="pre">=</span> <span class="pre">DINIT_OFFSET</span></code></dt><dd><p><code class="docutils literal notranslate"><span class="pre">(FORTRAN)</span></code>.
+The value in <code class="docutils literal notranslate"><span class="pre">conval</span></code> is added to the base address given by the
+<code class="docutils literal notranslate"><span class="pre">DINIT_LOC</span></code> record to determine the effective address for data
+initialization.  This is useful for Fortran style structures where fields
+in a structure can be skipped and individual array elements can be
+initialized.</p>
+</dd>
+</dl>
+<p><code class="docutils literal notranslate"><span class="pre">dtype</span> <span class="pre">=</span> <span class="pre">DINIT_PAD</span></code></p>
+<blockquote>
+<div><p>This record indicates that the next <code class="docutils literal notranslate"><span class="pre">conval</span></code> bytes are to
+be zerofilled for padding.</p>
+</div></blockquote>
+<p><code class="docutils literal notranslate"><span class="pre">dtype</span> <span class="pre">=</span> <span class="pre">DINIT_ZEROES</span></code></p>
+<blockquote>
+<div><p>This record indicates that the next <code class="docutils literal notranslate"><span class="pre">conval</span></code> bytes are to
+be zerofilled.</p>
+</div></blockquote>
+<p><code class="docutils literal notranslate"><span class="pre">dtype</span> <span class="pre">=</span> <span class="pre">DINIT_REPEAT</span></code></p>
+<blockquote>
+<div><p><code class="docutils literal notranslate"><span class="pre">(FORTRAN)</span></code>.
+The value of <code class="docutils literal notranslate"><span class="pre">conval</span></code> specifies the repeat count for the constant
+that is specified in the following dinit record.</p>
+</div></blockquote>
+<p><code class="docutils literal notranslate"><span class="pre">dtype</span> <span class="pre">=</span> <span class="pre">DINIT_LEN</span></code></p>
+<blockquote>
+<div><p><code class="docutils literal notranslate"><span class="pre">(C)</span></code>.
+This record follows the record initializing an array of char with a string
+and is used to provide extra information for the initialization.
+Its conval field indicates the number of characters to use from the string.
+This value will either be the length of the string with the null terminating
+character or the length of the string without the null terminating character.</p>
+</div></blockquote>
+<p><code class="docutils literal notranslate"><span class="pre">dtype</span> <span class="pre">=</span> <span class="pre">DT_DBLE</span></code></p>
+<blockquote>
+<div><p>Indicates that 2 32-bit words are to be initialized with
+a 64-bit double precision floating point value.
+<code class="docutils literal notranslate"><span class="pre">conval</span></code> is a symbol table pointer to a double precision constant.</p>
+</div></blockquote>
+<p><code class="docutils literal notranslate"><span class="pre">dtype</span> <span class="pre">=</span> <span class="pre">DT_CMPLX</span></code></p>
+<blockquote>
+<div><p><code class="docutils literal notranslate"><span class="pre">(FORTRAN)</span></code>.
+Indicates that 2 32-bit words are to be initialized with
+two 32-bit floating point values.
+<code class="docutils literal notranslate"><span class="pre">conval</span></code> is a symbol table pointer to a
+<code class="docutils literal notranslate"><span class="pre">complex</span></code>
+constant.</p>
+</div></blockquote>
+<p><code class="docutils literal notranslate"><span class="pre">dtype</span> <span class="pre">=</span> <span class="pre">DT_DCMPLX</span></code></p>
+<blockquote>
+<div><p><code class="docutils literal notranslate"><span class="pre">(FORTRAN)</span></code>.
+Indicates that 2 64-bit words are to be initialized with
+two 64-bit double precision floating point values.
+<code class="docutils literal notranslate"><span class="pre">conval</span></code> is a symbol table pointer to a
+<code class="docutils literal notranslate"><span class="pre">doublecomplex</span></code>
+constant.</p>
+</div></blockquote>
+<p><code class="docutils literal notranslate"><span class="pre">dtype</span> <span class="pre">=</span> <span class="pre">pointer</span> <span class="pre">to</span> <span class="pre">x,</span> <span class="pre">conval</span> <span class="pre">=</span> <span class="pre">address</span> <span class="pre">constant</span></code></p>
+<blockquote>
+<div><p>Indicates that the next 32-bit word is to be initialized
+to a variable address plus an optional byte offset.
+<code class="docutils literal notranslate"><span class="pre">conval</span></code> is a symbol table pointer to an address constant.</p>
+</div></blockquote>
+<p><code class="docutils literal notranslate"><span class="pre">dtype</span> <span class="pre">=</span> <span class="pre">pointer</span> <span class="pre">to</span> <span class="pre">x,</span> <span class="pre">conval</span> <span class="pre">=</span> <span class="pre">string</span></code></p>
+<blockquote>
+<div><p><code class="docutils literal notranslate"><span class="pre">(C)</span></code>.
+Indicates that a sequence of bytes is to be initialized
+to the characters in the string, possibly including the terminating
+null character.  This record immediately precedes a record of type
+<code class="docutils literal notranslate"><span class="pre">DINIT_LEN</span></code>
+which indicates the number of characters to use from string
+for the initialization.
+<code class="docutils literal notranslate"><span class="pre">conval</span></code> is a symbol table pointer to a string.</p>
+</div></blockquote>
+<p><code class="docutils literal notranslate"><span class="pre">dtype</span> <span class="pre">=</span> <span class="pre">other</span> <span class="pre">C</span> <span class="pre">types</span></code></p>
+<blockquote>
+<div><p>Includes the
+<em>integral</em>
+and single precision data types.
+Indicates that the current byte (e.g. <code class="docutils literal notranslate"><span class="pre">DT_CHAR</span></code>),
+halfword (e.g. <code class="docutils literal notranslate"><span class="pre">DT_SINT</span></code>),
+or word (e.g. <code class="docutils literal notranslate"><span class="pre">DT_FLOAT</span></code>),
+is to be initialized
+to the value in conval.
+The Assembler must perform word or halfword
+alignment if necessary.</p>
+</div></blockquote>
+<p><code class="docutils literal notranslate"><span class="pre">dtype</span> <span class="pre">=</span> <span class="pre">Fortran</span> <span class="pre">Hollerith</span> <span class="pre">or</span> <span class="pre">CHARACTER</span></code></p>
+<blockquote>
+<div><p><code class="docutils literal notranslate"><span class="pre">dtype</span></code>
+is actually <code class="docutils literal notranslate"><span class="pre">DT_CHAR</span></code> which indicates that
+a sequence of bytes is to be initialized to the
+characters in the
+<code class="docutils literal notranslate"><span class="pre">Hollerith</span></code>
+or
+<code class="docutils literal notranslate"><span class="pre">CHARACTER</span></code>
+string.
+<code class="docutils literal notranslate"><span class="pre">conval</span></code>
+is a symbol table pointer to the
+<em>string</em>
+constant.
+The length of the initialization is derived from the
+<em>string</em>’s
+<code class="docutils literal notranslate"><span class="pre">DTYPE</span></code>,
+not
+<code class="docutils literal notranslate"><span class="pre">dtype</span></code>.</p>
+</div></blockquote>
+<p><code class="docutils literal notranslate"><span class="pre">dtype</span> <span class="pre">=</span> <span class="pre">other</span> <span class="pre">Fortran</span> <span class="pre">types</span></code></p>
+<blockquote>
+<div><p>Includes the integer, logical, and single precision data
+types.
+Indicates that the current byte (e.g. <code class="docutils literal notranslate"><span class="pre">DT_BINT</span></code>),
+halfword (e.g. <code class="docutils literal notranslate"><span class="pre">DT_SINT</span></code>),
+or word (e.g. <code class="docutils literal notranslate"><span class="pre">DT_FLOAT</span></code>),
+is to be initialized
+to the value in conval.
+The Assembler must perform word or halfword
+alignment if necessary.</p>
+</div></blockquote>
+<p><code class="docutils literal notranslate"><span class="pre">dtype</span> <span class="pre">=</span> <span class="pre">DINIT_LABEL</span></code></p>
+<blockquote>
+<div><p>Indicates that the next 64-bit word is to be initialized
+to the address of a label.  <code class="docutils literal notranslate"><span class="pre">conval</span></code> is a symbol
+table pointer to a label.</p>
+</div></blockquote>
+<p><code class="docutils literal notranslate"><span class="pre">dtype</span> <span class="pre">=</span> <span class="pre">0</span> <span class="pre">-</span> <span class="pre">alignment</span> <span class="pre">record</span></code></p>
+<blockquote>
+<div><p>Indicates that byte, halfword, or word alignment is required.
+The value of conval will be 0, 1, 3, or 7 respectively.
+Note that in the usual case (e.g. a char followed by an int),
+alignment is automatic and this record is not written.
+This record is only required for certain cases where a struct
+is a member of another struct or is an array element.
+For example, word alignment is required between the initialization
+record for c and the one for d in the following code:</p>
+<div class="highlight-none notranslate"><div class="highlight"><pre><span></span>struct {
+    char c;
+    struct {
+        char d;
+        int e;
+    } f;
+} x = { &#39;c&#39;, {&#39;d&#39;, 77}};
+</pre></div>
+</div>
+</div></blockquote>
+<p><code class="docutils literal notranslate"><span class="pre">dtype</span> <span class="pre">=</span> <span class="pre">DINIT_FIELD</span></code></p>
+<blockquote>
+<div><p><code class="docutils literal notranslate"><span class="pre">(C)</span></code>.
+This record is only used for certain implementations where bit fields
+are initialized in a special way.
+Normally, bit fields are initialized using “dtype” dinit records
+whose <code class="docutils literal notranslate"><span class="pre">conval</span></code> fields have been filled by the data initalizing
+process during semantic analysis.
+If used, this record always precedes the records which initialize a
+sequence of fields.</p>
+</div></blockquote>
+</section>
+
+
+      </div>
+      <div class="bottomnav" role="navigation" aria-label="bottom navigation">
+      
+        <p>
+        «&#160;&#160;<a href="ili.html">ILI</a>
+        &#160;&#160;::&#160;&#160;
+        <a class="uplink" href="../index.html">Contents</a>
+        &#160;&#160;::&#160;&#160;
+        <a href="symtab.html">Symbol Table</a>&#160;&#160;»
+        </p>
+
+      </div>
+
+    <div class="footer" role="contentinfo">
+        &#169; Copyright .
+      Created using <a href="https://www.sphinx-doc.org/">Sphinx</a> 5.3.0.
+    </div>
+  </body>
+</html>

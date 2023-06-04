@@ -1,0 +1,945 @@
+
+<!DOCTYPE html>
+
+<html lang="en">
+  <head>
+    <meta charset="utf-8" />
+    <meta name="viewport" content="width=device-width, initial-scale=1.0" /><meta name="generator" content="Docutils 0.19: https://docutils.sourceforge.io/" />
+
+    <title>Error Messages &#8212; Flang 1.0 documentation</title>
+    <link rel="stylesheet" type="text/css" href="../_static/pygments.css" />
+    <link rel="stylesheet" type="text/css" href="../_static/haiku.css" />
+    <script data-url_root="../" id="documentation_options" src="../_static/documentation_options.js"></script>
+    <script src="../_static/jquery.js"></script>
+    <script src="../_static/underscore.js"></script>
+    <script src="../_static/_sphinx_javascript_frameworks_compat.js"></script>
+    <script src="../_static/doctools.js"></script>
+    <script src="../_static/sphinx_highlight.js"></script>
+    <link rel="index" title="Index" href="../genindex.html" />
+    <link rel="search" title="Search" href="../search.html" />
+    <link rel="next" title="Register Classes" href="register.html" />
+    <link rel="prev" title="Appendix VII - Intrinsics &amp; Generics" href="symini.html" /> 
+  </head><body>
+      <div class="header" role="banner"><h1 class="heading"><a href="../index.html">
+          <span>Flang 1.0 documentation</span></a></h1>
+        <h2 class="heading"><span>Error Messages</span></h2>
+      </div>
+      <div class="topnav" role="navigation" aria-label="top navigation">
+      
+        <p>
+        «&#160;&#160;<a href="symini.html">Appendix VII - Intrinsics &amp; Generics</a>
+        &#160;&#160;::&#160;&#160;
+        <a class="uplink" href="../index.html">Contents</a>
+        &#160;&#160;::&#160;&#160;
+        <a href="register.html">Register Classes</a>&#160;&#160;»
+        </p>
+
+      </div>
+      <div class="content" role="main">
+        
+        
+  <section id="error-messages">
+<h1>Error Messages<a class="headerlink" href="#error-messages" title="Permalink to this heading">¶</a></h1>
+<p>Error message severities:</p>
+<blockquote>
+<div><p>I - informative.
+W - warning.
+S - severe error.
+F - fatal error.
+V - variable.</p>
+</div></blockquote>
+<dl class="simple">
+<dt><strong>V000</strong> <em>Internal compiler error. $ $</em></dt><dd><p>This  message indicates an error in the compiler, rather than
+a user error - although it may be possible for a user error to
+cause an internal error.  The severity may vary; if it is informative or
+warning, correct object code was probably generated - but it is not
+real safe to rely on this.
+Regardless of the severity or cause, internal errors should be reported
+to the compiler maintenance group.</p>
+</dd>
+<dt><strong>F001</strong> <em>Source input file name not specified</em></dt><dd><p>On the command line, source file name should be specified either before all
+the switches, or after them.</p>
+</dd>
+<dt><strong>F002</strong> <em>Unable to open source input file: $</em></dt><dd><p>Source file name misspelled, file not in current working directory,
+or file is read protected.</p>
+</dd>
+<dt><strong>F003</strong> <em>Unable to open listing file</em></dt><dd><p>Probably, user does not have write permission for the current working
+directory.</p>
+</dd>
+<dt><strong>F004</strong> <em>Unable to open object file</em></dt><dd><p>Probably, user does not have write permission for the current working
+directory.</p>
+</dd>
+<dt><strong>F005</strong> <em>Unable to open temporary file</em></dt><dd><p>Compiler uses directory “/usr/tmp” or “/tmp” in which to create
+temporary files.  If neither of these directories is available on
+the node on which the compiler is being used, this error will occur.</p>
+</dd>
+<dt><strong>S006</strong> <em>Input file empty</em></dt><dd><p>Source input file does not contain any Fortran statements other
+than comments or compiler directives.</p>
+</dd>
+<dt><strong>F007</strong> <em>Subprogram too large to compile at this optimization level $</em></dt><dd><p>Internal compiler data structure overflow, working storage
+exhausted, or some other non-recoverable
+problem related to the size of the subprogram.
+If this error occurs at opt 2, reducing the opt level to 1 may
+work around the problem.
+Moving the subprogram being compiled to its own source file may
+eliminate the problem.
+If this error occurs while compiling a subprogram of fewer than
+2000 statements it should be reported to the compiler maintenance
+group as a possible compiler problem.</p>
+</dd>
+<dt><strong>F008</strong> <em>Error limit exceeded</em></dt><dd><p>The compiler gives up after 50 severe errors.</p>
+</dd>
+<dt><strong>F009</strong> <em>Unable to open assembly file</em></dt><dd><p>Probably, user does not have write permission for the current working
+directory.</p>
+</dd>
+<dt><strong>F010</strong> <em>File write error occurred $</em></dt><dd><p>Probably, file system is full.</p>
+</dd>
+<dt><strong>S011</strong> <em>Unrecognized command line switch: $</em></dt><dd><p>Refer to PDS reference document for list of allowed compiler switches.</p>
+</dd>
+<dt><strong>S012</strong> <em>Value required for command line switch: $</em></dt><dd><p>Certain switches require an immediately following value,
+such as “-opt 2”.</p>
+</dd>
+</dl>
+<p><strong>S013</strong> <em>Unrecognized value specified for command line switch: $</em></p>
+<dl class="simple">
+<dt><strong>S014</strong> <em>Ambiguous command line switch: $</em></dt><dd><p>Too short an abbreviation was used for one of the switches.</p>
+</dd>
+</dl>
+<p><strong>W015</strong> <em>Hexadecimal or octal constant truncated to fit data type</em></p>
+<dl class="simple">
+<dt><strong>I016</strong> <em>Identifier, $, truncated to 63 chars</em></dt><dd><p>An identifier may be at most 63 characters in length;
+characters after the 63rd are ignored.</p>
+</dd>
+<dt><strong>S017</strong> <em>Unable to open include file: $</em></dt><dd><p>File is missing, read protected, or maximum include depth (10) exceeded.
+Remember that the file name should be enclosed in quotes.</p>
+</dd>
+<dt><strong>S018</strong> <em>Illegal label field</em></dt><dd><p>The label field (first five characters) of the indicated line contains
+a non-numeric character.</p>
+</dd>
+<dt><strong>S019</strong> <em>Illegally placed continuation line</em></dt><dd><p>A continuation line does not follow an initial line, or more than
+99 continuation lines were specified.</p>
+</dd>
+<dt><strong>S020</strong> <em>Unrecognized compiler directive</em></dt><dd><p>Refer to PDS reference manual for list of allowed compiler directives.</p>
+</dd>
+<dt><strong>S021</strong> <em>Label field of continuation line is not blank</em></dt><dd><p>The first five characters of a continuation line must be blank.</p>
+</dd>
+</dl>
+<p><strong>S022</strong> <em>Unexpected end of file - missing END statement</em></p>
+<p><strong>S023</strong> <em>Syntax error - unbalanced parentheses</em></p>
+<dl class="simple">
+<dt><strong>W024</strong> <em>CHARACTER or Hollerith constant truncated to fit data type</em></dt><dd><p>A character or hollerith constant was converted to a data type that was not
+large enough to contain all of the characters in the constant.  This type
+conversion occurs when the constant is used in an arithmetic expression or is
+assigned to a non-character variable.  The character or hollerith constant is
+truncated on the right, that is, if 4 characters are needed then the first 4
+are used and the remaining characters are discarded.</p>
+</dd>
+<dt><strong>W025</strong> <em>Illegal character ($) - ignored</em></dt><dd><p>The current line contains a character, possibly non-printing,
+which is not a legal Fortran character (characters inside of character
+or Hollerith constants cannot cause this error).
+As a general rule, all non-printing characters are treated as white space
+characters (blanks and tabs); no error message is generated when this occurs.
+If for some reason, a non-printing character is not treated as a white
+space character,
+its hex representation is printed in the form dd where each d is a hex digit.</p>
+</dd>
+</dl>
+<p><strong>S026</strong> <em>Unmatched quote</em></p>
+<dl class="simple">
+<dt><strong>S027</strong> <em>Illegal integer constant: $</em></dt><dd><p>Integer constant is too large for 32 bit word.</p>
+</dd>
+</dl>
+<p><strong>S028</strong> <em>Illegal real or double precision constant: $</em></p>
+<dl class="simple">
+<dt><strong>S029</strong> <em>Illegal hexadecimal constant: $</em></dt><dd><p>A hexadecimal constant consists of digits 0..9 and letters A..F or a..f.
+Any other character in a hexadecimal constant is illegal.</p>
+</dd>
+<dt><strong>S030</strong> <em>Illegal octal constant: $</em></dt><dd><p>An octal constant consists of digits 0..7.  Any other digit or
+character  in an octal constant is illegal.</p>
+</dd>
+<dt><strong>S031</strong> <em>Illegal data type length specifier for $</em></dt><dd><p>The data type length specifier (e.g. 4 in INTEGER*4) is not a
+constant expression that is a member of the set of allowed
+values for this particular data type.</p>
+</dd>
+<dt><strong>W032</strong> <em>Data type length specifier not allowed for $</em></dt><dd><p>The data type length specifier (e.g. 4 in INTEGER*4) is not allowed
+in the given syntax (e.g. DIMENSION A(10)*4).</p>
+</dd>
+<dt><strong>S033</strong> <em>Illegal use of constant $</em></dt><dd><p>A constant was used in an illegal context, such as on the left side of
+an assignment statement or as the target of a data initialization
+statement.</p>
+</dd>
+</dl>
+<p><strong>S034</strong> <em>Syntax error at or near $</em></p>
+<dl class="simple">
+<dt><strong>I035</strong> <em>Predefined intrinsic $ loses intrinsic property</em></dt><dd><p>An intrinsic name was used in a manner inconsistent with the language
+definition for that intrinsic.  The compiler, based on the context, will
+treat the name as a variable or an external function.</p>
+</dd>
+<dt><strong>S036</strong> <em>Illegal implicit character range</em></dt><dd><p>First character must alphabetically precede second.</p>
+</dd>
+<dt><strong>S037</strong> <em>Contradictory data type specified for $</em></dt><dd><p>The indicated identifier appears in more than one type specification
+statement and different data types are specified for it.</p>
+</dd>
+<dt><strong>S038</strong> <em>Symbol, $, has not been explicitly declared</em></dt><dd><p>The indicated identifier must be declared in a type statement;
+this is required when the IMPLICIT NONE statement occurs in the
+subprogram.</p>
+</dd>
+<dt><strong>W039</strong> <em>Symbol, $, appears illegally in a SAVE statement</em></dt><dd><p>An identifier appearing in a SAVE statement must be a local
+variable or array.</p>
+</dd>
+<dt><strong>S040</strong> <em>Illegal common variable $</em></dt><dd><p>Indicated identifier is a dummy variable, is already in
+a common block, or has previously been defined to be
+something other than a variable or array.</p>
+</dd>
+<dt><strong>W041</strong> <em>Illegal use of dummy argument $</em></dt><dd><p>This error can occur in several situations.  It can occur if dummy
+arguments were specified on a PROGRAM statement.  It can also occur
+if a dummy argument name occurs in a DATA, COMMON, SAVE, or EQUIVALENCE
+statement.
+A program statement must have an empty argument list.</p>
+</dd>
+</dl>
+<p><strong>S042</strong> <em>$ is a duplicate dummy argument</em></p>
+<dl class="simple">
+<dt><strong>S043</strong> <em>Illegal attempt to redefine $ $</em></dt><dd><p>An attempt was made to define a symbol in a manner inconsistent with
+an earlier definition of the same symbol.  This can happen for a number
+of reasons.  The message attempts to indicate the situation that occurred.
+* *(tfintrinsic*(rf -
+An attempt was made to redefine an intrinsic function.
+A symbol that represents an intrinsic function may be redefined if that
+symbol has not been previously verified to be an intrinsic function.  For
+example, the intrinsic *(tfsin*(rf can be defined to be an integer array.
+If a symbol is verified to be an intrinsic function via the
+*(cfINTRINSIC*(rf statement or via an intrinsic function reference then
+it must be referred to as an intrinsic function for the remainder of the
+program unit.
+* *(tfsymbol*(rf -
+An attempt was made to redefine a symbol that was
+previously defined.  An example of this is to declare a symbol to be
+a *(rfPARAMETER*(rf which was previously declared to be a subprogram
+argument.</p>
+</dd>
+<dt><strong>S044</strong> <em>Multiple declaration for symbol $</em></dt><dd><p>A redundant declaration of a symbol has occurred.
+For example, an attempt was made to declare a symbol
+as an *(cfENTRY*(rf when that symbol
+was previously declared as an *(cfENTRY*(rf.</p>
+</dd>
+<dt><strong>S045</strong> <em>Data type of entry point $ disagrees with function $</em></dt><dd><p>The current function has entry points with data types inconsistent with the
+data type of the current function.  For example, the function returns type
+character and an entry point returns type complex.</p>
+</dd>
+<dt><strong>S046</strong> <em>Data type length specifier in wrong position</em></dt><dd><p>The CHARACTER data type specifier has a different position for the length
+specifier from the other data types.  Suppose, we want to declare arrays
+ARRAYA and ARRAYB to have 8 elements each having an element length of
+4 bytes.  The difference is that ARRAYA is character and ARRAYB is integer.
+The declarations would be CHARACTER ARRAYA(8)*4 and INTEGER ARRAYB*4(8).</p>
+</dd>
+</dl>
+<p><strong>S047</strong> <em>More than seven dimensions specified for array</em></p>
+<dl class="simple">
+<dt><strong>S048</strong> <em>Illegal use of ‘</em>’ in declaration of array $*</dt><dd><p>An asterisk may be used only as the upper bound of the last dimension.</p>
+</dd>
+<dt><strong>S049</strong> <em>Illegal use of ‘</em>’ in non-subroutine subprogram*</dt><dd><p>The alternate return specifier ‘*’ is legal only in the subroutine
+statement.  Programs, functions, and block data are not allowed to
+have alternate return specifiers.</p>
+</dd>
+</dl>
+<p><strong>S050</strong> <em>Adjustable or assumed size array, $, is not a dummy argument</em></p>
+<dl class="simple">
+<dt><strong>S051</strong> <em>Unrecognized built-in % function</em></dt><dd><p>The allowable built-in functions are %VAL, %REF, %LOC, and %FILL.  One
+was encountered that did not match one of these allowed forms.</p>
+</dd>
+</dl>
+<p><strong>S052</strong> <em>Illegal argument to %VAL or %LOC</em></p>
+<dl class="simple">
+<dt><strong>S053</strong> <em>%REF or %VAL not legal in this context</em></dt><dd><p>The built-in functions %REF and %VAL can only be used as actual
+parameters in procedure calls.</p>
+</dd>
+<dt><strong>W054</strong> <em>Implicit character $ used in a previous implicit statement</em></dt><dd><p>An implicit character has been given an implied data type more than once.
+The implied data type for the implicit character is changed anyway.</p>
+</dd>
+<dt><strong>W055</strong> <em>Multiple implicit none statements</em></dt><dd><p>The IMPLICIT NONE statement can occur only once in a subprogram.</p>
+</dd>
+<dt><strong>W056</strong> <em>Implicit type declaration</em></dt><dd><p>The -dclchk switch and an implicit declaration following an IMPLICIT
+NONE statement will produce a warning message for IMPLICIT statements.</p>
+</dd>
+<dt><strong>S057</strong> <em>Illegal equivalence of dummy variable, $</em></dt><dd><p>Dummy arguments may not appear in EQUIVALENCE statements.</p>
+</dd>
+<dt><strong>S058</strong> <em>Equivalenced variables $ and $ not in same common block</em></dt><dd><p>A common block variable must not be equivalenced with a variable
+in another common block.</p>
+</dd>
+<dt><strong>S059</strong> <em>Conflicting equivalence between $ and $</em></dt><dd><p>The indicated equivalence implies a storage layout inconsistent
+with other equivalences.</p>
+</dd>
+<dt><strong>S060</strong> <em>Illegal equivalence of structure variable, $</em></dt><dd><p>STRUCTURE and UNION variables may not appear in EQUIVALENCE statements.</p>
+</dd>
+</dl>
+<p><strong>S061</strong> <em>Equivalence of $ and $ extends common block backwards</em></p>
+<dl class="simple">
+<dt><strong>W062</strong> <em>Equivalence forces $ to be unaligned</em></dt><dd><p>EQUIVALENCE statements have defined an address for the variable
+which has an alignment not optimal for variables of its data type.
+This can occur when INTEGER and CHARACTER data are equivalenced,
+for instance.</p>
+</dd>
+</dl>
+<p><strong>I063</strong> <em>Gap in common block $ before $</em></p>
+<dl class="simple">
+<dt><strong>S064</strong> <em>Illegal use of $ in DATA statement implied DO loop</em></dt><dd><p>The indicated variable is referenced where it is
+not an active implied DO index variable.</p>
+</dd>
+</dl>
+<p><strong>S065</strong> <em>Repeat factor less than or equal to zero</em></p>
+<p><strong>S066</strong> <em>Too few data constants in initialization statement</em></p>
+<p><strong>S067</strong> <em>Too many data constants in initialization statement</em></p>
+<dl class="simple">
+<dt><strong>S068</strong> <em>Numeric initializer for CHARACTER $ out of range 0 through 255</em></dt><dd><p>A CHARACTER*1 variable or character array element
+can be initialized to an integer, octal, or hexadecimal constant if that
+constant is in the range 0 through 255.</p>
+</dd>
+<dt><strong>S069</strong> <em>Illegal implied DO expression</em></dt><dd><p>The only operations allowed within an implied DO expression are
+integer +, -, *, and /.</p>
+</dd>
+<dt><strong>S070</strong> <em>Incorrect sequence of statements $</em></dt><dd><p>The statement order is incorrect.  For instance, an IMPLICIT NONE statement
+must precede a specification statement which in turn must precede an
+executable statement.</p>
+</dd>
+</dl>
+<p><strong>S071</strong> <em>Executable statements not allowed in block data</em></p>
+<dl class="simple">
+<dt><strong>S072</strong> <em>Assignment operation illegal to $ $</em></dt><dd><p>The destination of an assignment operation must be a variable, array
+reference, or vector reference.  The assignment operation may be by
+way of an assignment statement, a data statement, or the index variable
+of an implied DO-loop.  The compiler has determined that the identifier
+used as the destination, is not a storage location.  The error message
+attempts to indicate the type of entity used.
+* *(tfentry point*(rf -
+An assignment to an entry point that was not
+a function procedure was attempted.
+* *(tfexternal procedure*(rf -
+An assignment to an external procedure
+or a Fortran intrinsic name was attempted.
+if the identifier is the name of an entry point
+that is not a function, an external procedure…</p>
+</dd>
+</dl>
+<p><strong>S073</strong> <em>Intrinsic or predeclared, $, cannot be passed as an argument</em></p>
+<dl class="simple">
+<dt><strong>S074</strong> <em>Illegal number or type of arguments to $</em></dt><dd><p>The indicated symbol is an intrinsic or generic function, or
+a predeclared subroutine or function,
+requiring a certain number of arguments of a fixed data type.</p>
+</dd>
+<dt><strong>S075</strong> <em>Subscript, substring, or argument illegal in this context for $</em></dt><dd><p>This can happen if you try to doubly index an array such as ra(2)(3).
+This also applies to substring and function references.</p>
+</dd>
+</dl>
+<p><strong>S076</strong> <em>Subscripts specified for non-array variable $</em></p>
+<p><strong>S077</strong> <em>Subscripts omitted from array $</em></p>
+<p><strong>S078</strong> <em>Wrong number of subscripts specified for $</em></p>
+<p><strong>S079</strong> <em>Keyword form of intrinsic argument illegal in this context for $</em></p>
+<p><strong>S080</strong> <em>Subscript for array $ is out of bounds</em></p>
+<dl class="simple">
+<dt><strong>S081</strong> <em>Matrix/vector $ illegal as subprogram argument</em></dt><dd><p>A matrix/vector reference cannot be used as a subprogram argument.</p>
+</dd>
+<dt><strong>S082</strong> <em>Illegal substring expression for variable $</em></dt><dd><p>Substring expressions must be of type integer and if constant
+must be greater than zero.</p>
+</dd>
+<dt><strong>S083</strong> <em>Vector expression used where scalar expression required</em></dt><dd><p>A vector expression was used in an illegal context.  For example,
+iscalar = iarray, where a scalar is assigned the value of an array.
+Also, character and record references are not vectorizable.</p>
+</dd>
+<dt><strong>S084</strong> <em>Illegal use of symbol $ $</em></dt><dd><p>This message is used for many different errors.</p>
+</dd>
+</dl>
+<p><strong>S085</strong> <em>Incorrect number of arguments to statement function $</em></p>
+<p><strong>S086</strong> <em>Dummy argument to statement function must be a variable</em></p>
+<p><strong>S087</strong> <em>Non-constant expression where constant expression required</em></p>
+<dl class="simple">
+<dt><strong>S088</strong> <em>Recursive subroutine or function call of $</em></dt><dd><p>A function may not call itself.</p>
+</dd>
+<dt><strong>S089</strong> <em>Illegal use of symbol, $, with character length = *</em></dt><dd><p>Symbols of type CHARACTER*(*) must be dummy variables and must
+not be used as statement function dummy parameters and statement
+function names.  Also, a dummy variable of type CHARACTER*(*) cannot
+be used as a function.</p>
+</dd>
+<dt><strong>S090</strong> <em>Hollerith constant more than 4 characters</em></dt><dd><p>In certain contexts, Hollerith constants may not be more
+than 4 characters long.</p>
+</dd>
+</dl>
+<p><strong>S091</strong> <em>Constant expression of wrong data type</em></p>
+<dl class="simple">
+<dt><strong>S092</strong> <em>Illegal use of variable length character expression</em></dt><dd><p>A character expression used as an actual argument, or in certain
+contexts within I/O statements, must not consist of a concatenation
+involving a passed length character variable.</p>
+</dd>
+<dt><strong>W093</strong> <em>Type conversion of expression performed</em></dt><dd><p>An expression of some data type appears in a context which requires
+an expression of some other data type.
+The compiler generates code to convert the expression into the required type.</p>
+</dd>
+<dt><strong>S094</strong> <em>Variable $ is of wrong data type $</em></dt><dd><p>The indicated variable is used in a context which requires a variable
+of some other data type.</p>
+</dd>
+<dt><strong>S095</strong> <em>Expression has wrong data type</em></dt><dd><p>An expression of some data type appears in a context which requires
+an expression of some other data type.</p>
+</dd>
+<dt><strong>S096</strong> <em>Illegal complex comparison</em></dt><dd><p>The relations .LT., .GT., .GE., and .LE. are not
+allowed for complex values.</p>
+</dd>
+<dt><strong>S097</strong> <em>Statement label $ has been defined more than once</em></dt><dd><p>More than one statement with the indicated
+statement number occurs in the subprogram.</p>
+</dd>
+</dl>
+<p><strong>S098</strong> <em>Divide by zero</em></p>
+<dl class="simple">
+<dt><strong>S099</strong> <em>Illegal use of an aggregate RECORD</em></dt><dd><p>Aggregate record references may only appear in aggregate assignment
+statements, unformatted I/O statements, and as parameters to subprograms.
+They may not appear, for example, in expressions.  Also, records with
+differing structure types may not be assigned to one another.</p>
+</dd>
+<dt><strong>S100</strong> <em>Expression cannot be promoted to a vector</em></dt><dd><p>An expression was used that required a scalar quantity to be promoted
+to a vector illegally.  For example, the assignment of a character constant
+string to a character array.  Records, too, cannot be promoted to vectors.</p>
+</dd>
+<dt><strong>S101</strong> <em>Vector operation not allowed on $</em></dt><dd><p>Record and character typed entities may only be referenced as scalar quantities.</p>
+</dd>
+<dt><strong>S102</strong> <em>Arithmetic IF expression has wrong data type</em></dt><dd><p>The parenthetical expression of an arithmetic if statement must be an
+integer, real, or doubleprecision scalar expression.</p>
+</dd>
+<dt><strong>S103</strong> <em>Type conversion of subscript expression for $</em></dt><dd><p>The data type of a subscript expression must be integer.  If it is not, it is
+converted.</p>
+</dd>
+<dt><strong>S104</strong> <em>Illegal control structure $</em></dt><dd><p>This message is issued for a number of errors involving
+IF-THEN statements and DO loops.
+If the line number specified is the last line (END statement) of
+the subprogram, the error is probably an unterminated DO loop or
+IF-THEN statement.</p>
+</dd>
+<dt><strong>S105</strong> <em>Unmatched ELSEIF, ELSE or ENDIF statement</em></dt><dd><p>An ELSEIF, ELSE, or ENDIF statement cannot be matched with a
+preceding IF-THEN statement.</p>
+</dd>
+<dt><strong>S106</strong> <em>DO index variable must be a scalar variable</em></dt><dd><p>The DO index variable cannot be an array name, a subscripted variable,
+a PARAMETER name, a function name, a structure name, etc.</p>
+</dd>
+</dl>
+<p><strong>S107</strong> <em>Illegal assigned goto variable $</em></p>
+<dl class="simple">
+<dt><strong>S108</strong> <em>Illegal variable, $, in NAMELIST group $</em></dt><dd><p>A NAMELIST group can only consist of arrays and scalars which are not
+dummy arguments and pointer-based variables.</p>
+</dd>
+<dt><strong>I109</strong> <em>Overflow in hexadecimal constant $, constant truncated at left</em></dt><dd><p>A hexadecimal constant requiring more than
+64-bits produces an overflow.  The hexadecimal constant is truncated at
+left (e.g. ‘1234567890abcdef1’x will be ‘234567890abcdef1’x).</p>
+</dd>
+<dt><strong>I110</strong> <em>Overflow in octal constant $, constant truncated at left</em></dt><dd><p>An octal constant requiring more than
+64-bits produces an overflow.  The octal constant is truncated at
+left (e.g. ‘2777777777777777777777’o will be ‘777777777777777777777’o).</p>
+</dd>
+</dl>
+<p><strong>I111</strong> <em>Underflow of real or double precision constant</em></p>
+<p><strong>I112</strong> <em>Overflow of real or double precision constant</em></p>
+<p><strong>S113</strong> <em>Label $ is referenced but never defined</em></p>
+<p><strong>S114</strong> **</p>
+<p><strong>W115</strong> <em>Assignment to DO variable $ in loop</em></p>
+<p><strong>S116</strong> <em>Illegal use of pointer-based variable $ $</em></p>
+<p><strong>S117</strong> <em>Statement not allowed within STRUCTURE definition</em></p>
+<p><strong>S118</strong> <em>Statement not allowed in DO, IF, or WHERE block</em></p>
+<dl class="simple">
+<dt><strong>I119</strong> <em>Redundant specification for $</em></dt><dd><p>Data type of indicated symbol specified more than once.</p>
+</dd>
+</dl>
+<p><strong>I120</strong> <em>Label $ is defined but never referenced</em></p>
+<dl class="simple">
+<dt><strong>I121</strong> <em>Operation requires logical or integer data types</em></dt><dd><p>An operation in an expression was attempted on data having a data type
+incompatible with the operation.  For example, a logical expression can
+consist of only logical elements of type integer or logical.  Real data
+would be invalid.</p>
+</dd>
+<dt><strong>I122</strong> <em>Character string truncated</em></dt><dd><p>Character string or Hollerith constant appearing in a DATA statement
+or PARAMETER statement has been truncated to fit the declared size of
+the corresponding identifier.</p>
+</dd>
+<dt><strong>W123</strong> <em>Hollerith length specification too big, reduced</em></dt><dd><p>The length specifier field of a hollerith constant specified more characters
+than were present in the character field of the hollerith constant.  The
+length specifier was reduced to agree with the number of characters
+present.</p>
+</dd>
+<dt><strong>S124</strong> <em>Relational expression mixes character with numeric data</em></dt><dd><p>A relational expression is used to compare two arithmetic expressions or
+two character expressions.  A character expression cannot be compared to an
+arithmetic expression.</p>
+</dd>
+<dt><strong>I125</strong> <em>Dummy procedure $ not declared EXTERNAL</em></dt><dd><p>A dummy argument which is not declared in an EXTERNAL statement is used
+as the subprogram name in a CALL statement, or is called as a function,
+and is therefore assumed to be a dummy procedure.
+This message can result from a failure to declare a dummy array.</p>
+</dd>
+</dl>
+<p><strong>I126</strong> <em>Name $ is not an intrinsic function</em></p>
+<p><strong>I127</strong> <em>Optimization level for $ changed to opt 1 $</em></p>
+<dl class="simple">
+<dt><strong>W128</strong> <em>Integer constant truncated to fit data type: $</em></dt><dd><p>An integer constant will be truncated when assigned to data types smaller
+than 32-bits, such as a BYTE.</p>
+</dd>
+</dl>
+<p><strong>I129</strong> <em>Floating point overflow. Check constants and constant expressions</em></p>
+<p><strong>I130</strong> <em>Floating point underflow. Check constants and constant expressions</em></p>
+<p><strong>I131</strong> <em>Integer overflow. Check floating point expressions cast to integer</em></p>
+<p><strong>I132</strong> <em>Floating pt. invalid oprnd. Check constants and constant expressions</em></p>
+<p><strong>I133</strong> <em>Divide by 0.0. Check constants and constant expressions</em></p>
+<p><strong>W134</strong> **</p>
+<dl class="simple">
+<dt><strong>W135</strong> <em>Missing STRUCTURE name field</em></dt><dd><p>A STRUCTURE name field is required on the outermost structure.</p>
+</dd>
+<dt><strong>W136</strong> <em>Field-namelist not allowed</em></dt><dd><p>The field-namelist field of the STRUCTURE statement is disallowed on the
+outermost structure.</p>
+</dd>
+</dl>
+<p><strong>W137</strong> <em>Field-namelist is required in nested structures</em></p>
+<dl class="simple">
+<dt><strong>W138</strong> <em>Multiply defined STRUCTURE member name $</em></dt><dd><p>A member name was used more than once within a structure.</p>
+</dd>
+<dt><strong>W139</strong> <em>Structure $ in RECORD statement not defined</em></dt><dd><p>A RECORD statement contains a reference to a STRUCTURE that has not yet been
+defined.</p>
+</dd>
+</dl>
+<p><strong>S140</strong> <em>Variable $ is not a RECORD</em></p>
+<p><strong>S141</strong> <em>RECORD required on left of .</em></p>
+<p><strong>S142</strong> <em>$ is not a member of this RECORD</em></p>
+<p><strong>W143</strong> **</p>
+<dl class="simple">
+<dt><strong>W144</strong> <em>NEED ERROR MESSAGE $ $</em></dt><dd><p>This is used as a temporary message for compiler development.</p>
+</dd>
+<dt><strong>W145</strong> <em>%FILL only valid within STRUCTURE block</em></dt><dd><p>The %FILL special name was used outside of a STRUCTURE multiline statement.
+It is only valid when used within a STRUCTURE multiline statement even
+though it is ignored.</p>
+</dd>
+</dl>
+<p><strong>S146</strong> <em>Expression must be character type</em></p>
+<p><strong>S147</strong> <em>Character expression not allowed in this context</em></p>
+<dl class="simple">
+<dt><strong>S148</strong> <em>Non-record where aggregate record reference required</em></dt><dd><p>An aggregate reference to a record was expected during statement compilation
+but another data type was found instead.</p>
+</dd>
+<dt><strong>S149</strong> <em>Record where arithmetic value required</em></dt><dd><p>An aggregate record reference was encountered when an arithmetic
+expression was expected.</p>
+</dd>
+<dt><strong>S150</strong> <em>Structure, Record, or member $ not allowed in this context</em></dt><dd><p>A structure, record, or member reference was found in a context which is
+not supported.  For example, the use of structures, records, or members
+within a data statement is disallowed.</p>
+</dd>
+<dt><strong>S151</strong> <em>Empty STRUCTURE, UNION, or MAP</em></dt><dd><p>STRUCTURE - ENDSTRUCTURE, UNION - ENDUNION MAP - ENDMAP
+declaration contains no members.</p>
+</dd>
+</dl>
+<p><strong>S152</strong> <em>All dimension specifiers must be ‘:’</em></p>
+<p><strong>S153</strong> **</p>
+<p><strong>S154</strong> **</p>
+<dl class="simple">
+<dt><strong>S155</strong> <em>$ $</em></dt><dd><p>Generic error message which should be self-explanatory.</p>
+</dd>
+</dl>
+<p><strong>S156</strong> **</p>
+<p><strong>S157</strong> **</p>
+<dl class="simple">
+<dt><strong>S158</strong> <em>Alternate return not specified in SUBROUTINE or ENTRY</em></dt><dd><p>An alternate return can only be used if alternate return
+specifiers appeared in the SUBROUTINE or ENTRY statements.</p>
+</dd>
+<dt><strong>S159</strong> <em>Alternate return illegal in FUNCTION subprogram</em></dt><dd><p>An alternate return cannot be used in a FUNCTION.</p>
+</dd>
+</dl>
+<p><strong>S160</strong> <em>ENDSTRUCTURE, ENDUNION, or ENDMAP does not match top</em></p>
+<p><strong>S161</strong> **</p>
+<p><strong>W162</strong> <em>Not equal test of loop control variable $ replaced with &lt; or &gt; test.</em></p>
+<p><strong>S163</strong> <em>Cannot data initialize member $ of ALLOCATABLE COMMON $</em></p>
+<dl class="simple">
+<dt><strong>S164</strong> <em>Overlapping data initializations of $</em></dt><dd><p>An attempt was made to data initialize a variable or
+array element already initialized.</p>
+</dd>
+<dt><strong>S165</strong> <em>$ appeared more than once as a subprogram</em></dt><dd><p>A subprogram name appeared more than once in the source file.
+The message is applicable only when an assembly file is the
+output of the compiler.</p>
+</dd>
+<dt><strong>S166</strong> <em>$ cannot be a common block and a subprogram</em></dt><dd><p>A name appeared as a common block name and a subprogram name.
+The message is applicable only when an assembly file is the
+output of the compiler.</p>
+</dd>
+<dt><strong>I167</strong> <em>Inconsistent size of common block $</em></dt><dd><p>A common block occurs in more than one subprogram of a source file
+and its size is not identical. The maximum size is chosen.
+The message is applicable only when an assembly file is the
+output of the compiler.</p>
+</dd>
+<dt><strong>S168</strong> <em>Incompatible size of common block $</em></dt><dd><p>A common block occurs in more than one subprogram of a source file
+and is initialized in one subprogram.
+Its initialized size was found to be less than
+its size in the other subprogram(s).
+The message is applicable only when an assembly file is the
+output of the compiler.</p>
+</dd>
+<dt><strong>W169</strong> <em>Multiple data initializations of common block $</em></dt><dd><p>A common block is initialized in more than one subprogram of a source file.
+Only the first set of initializations apply.
+The message is applicable only when an assembly file is the
+output of the compiler.</p>
+</dd>
+<dt><strong>W170</strong> <em>F77 extension: $</em></dt><dd><p>Use of a nonstandard feature. A description of the feature is provided.</p>
+</dd>
+</dl>
+<p><strong>W171</strong> <em>F77 extension: nonstandard statement type $</em></p>
+<dl class="simple">
+<dt><strong>W172</strong> <em>F77 extension: numeric initialization of CHARACTER $</em></dt><dd><p>A CHARACTER*1 variable or array element was initialized with a numeric value.</p>
+</dd>
+</dl>
+<p><strong>W173</strong> <em>F77 extension: nonstandard use of data type length specifier</em></p>
+<p><strong>W174</strong> <em>F77 extension: type declaration contains data initialization</em></p>
+<p><strong>W175</strong> <em>F77 extension: IMPLICIT range contains nonalpha characters</em></p>
+<p><strong>W176</strong> <em>F77 extension: nonstandard operator $</em></p>
+<p><strong>W177</strong> <em>F77 extension: nonstandard use of keyword argument $</em></p>
+<p><strong>W178</strong> <em>F77 extension: matrix/vector reference $</em></p>
+<p><strong>W179</strong> <em>F77 extension: use of structure field reference $</em></p>
+<p><strong>W180</strong> <em>F77 extension: nonstandard form of constant</em></p>
+<p><strong>W181</strong> <em>F77 extension: &amp; alternate return</em></p>
+<p><strong>W182</strong> <em>F77 extension: mixed non-character and character elements in COMMON $</em></p>
+<p><strong>W183</strong> <em>F77 extension: mixed non-character and character EQUIVALENCE ($,$)</em></p>
+<p><strong>W184</strong> <em>Mixed type elements (numeric and/or character types) in COMMON $</em></p>
+<p><strong>W185</strong> <em>Mixed numeric and/or character type EQUIVALENCE ($,$)</em></p>
+<dl class="simple">
+<dt><strong>W190</strong> <em>Possible use of $ before definition in $</em></dt><dd><p>The optimizer has detected the possibility that a variable is used
+before it has been assigned a value.
+The names of the variable and the function in which
+the use occurred are listed.
+The line number, if specified, is the line number of the basic block
+containing the use of the variable.</p>
+</dd>
+<dt><strong>W191</strong> <em>Unable to open VPU intrinsic lib: $</em></dt><dd><p>Unable to open intrinsic definition file using pathname passed to compiler
+via -idf switch.  Sparc/VPU compilers only.</p>
+</dd>
+<dt><strong>W192</strong> <em>VPU intrinsic lib - bad format (line $) file not read</em></dt><dd><p>IDF file illegal, out of date format.  Line # of IDF file given.
+Sparc/VPU compilers only.</p>
+</dd>
+<dt><strong>S197</strong> <em>Invalid qualifier or qualifier value (/$) in OPTIONS statement</em></dt><dd><p>An illegal qualifier was found or a value was specified for a qualifier
+which does not expect a value.
+In either case, the qualifier for which the error occurred is indicated
+in the error message.</p>
+</dd>
+</dl>
+<p><strong>S198</strong> <em>$ $ in ALLOCATE/DEALLOCATE</em></p>
+<dl class="simple">
+<dt><strong>W199</strong> <em>Unaligned memory reference $ $</em></dt><dd><p>A memory reference occurred whose address does not meet its
+data alignment requirement.</p>
+</dd>
+</dl>
+<p><strong>S200</strong> <em>Missing UNIT/FILE specifier</em></p>
+<p><strong>S201</strong> <em>Illegal I/O specifier - $</em></p>
+<p><strong>S202</strong> <em>Repeated I/O specifier - $</em></p>
+<p><strong>S203</strong> <em>FORMAT statement has no label</em></p>
+<p><strong>S204</strong> <em>Syntax error - unbalanced angle brackets</em></p>
+<dl class="simple">
+<dt><strong>S205</strong> <em>Illegal specification of scale factor</em></dt><dd><p>The integer following + or - has been omitted, or P does not follow
+the integer value.</p>
+</dd>
+</dl>
+<p><strong>S206</strong> <em>Repeat count is zero</em></p>
+<p><strong>S207</strong> <em>Integer constant expected in edit descriptor</em></p>
+<p><strong>S208</strong> <em>Period expected in edit descriptor</em></p>
+<p><strong>S209</strong> <em>Illegal edit descriptor</em></p>
+<p><strong>S210</strong> <em>Exponent width not used in the Ew.dEe or Gw.dEe edit descriptors</em></p>
+<p><strong>S211</strong> <em>Internal I/O $</em></p>
+<dl class="simple">
+<dt><strong>S212</strong> <em>Illegal NAMELIST I/O</em></dt><dd><p>Namelist I/O cannot be performed with internal, unformatted, formatted,
+and list-directed I/O. Also, I/O lists must not be present.</p>
+</dd>
+</dl>
+<p><strong>S213</strong> <em>$ is not a NAMELIST group name</em></p>
+<p><strong>S214</strong> <em>Input item is not a variable reference</em></p>
+<dl class="simple">
+<dt><strong>S215</strong> <em>Assumed sized array name cannot be used as an I/O item or specifier</em></dt><dd><p>An assumed sized array was used as an item to be read or written or as
+an I/O specifier (i.e., FMT = array-name).  In these contexts the size
+of the array must be known.</p>
+</dd>
+</dl>
+<p><strong>S216</strong> <em>STRUCTURE/UNION cannot be used as an I/O item</em></p>
+<p><strong>S217</strong> <em>ENCODE/DECODE buffer must be a variable, array, or array element</em></p>
+<p><strong>S218</strong> <em>Statement labeled $ is not a FORMAT</em></p>
+<dl class="simple">
+<dt><strong>S221</strong> <em>#elif after #else</em></dt><dd><p>A preprocessor #elif directive was found after a #else directive; only
+#endif is allowed in this context.</p>
+</dd>
+<dt><strong>S222</strong> <em>#else after #else</em></dt><dd><p>A preprocessor #else directive was found after a #else directive; only
+#endif is allowed in this context.</p>
+</dd>
+<dt><strong>S223</strong> <em>#if-directives too deeply nested</em></dt><dd><p>Preprocessor #if directive nesting exceeded the maximum allowed (currently
+10).</p>
+</dd>
+<dt><strong>S224</strong> <em>Actual parameters too long for $</em></dt><dd><p>The total length of the
+parameters in a macro call to the indicated macro exceeded the maximum
+allowed (currently 2048).</p>
+</dd>
+<dt><strong>W225</strong> <em>Argument mismatch for $</em></dt><dd><p>The number of arguments supplied in the call to the indicated macro did
+not agree with the number of parameters in the macro’s definition.</p>
+</dd>
+<dt><strong>F226</strong> <em>Can’t find include file $</em></dt><dd><p>The indicated include file could not be opened.</p>
+</dd>
+<dt><strong>S227</strong> <em>Definition too long for $</em></dt><dd><p>The length of the macro definition of the indicated macro exceeded the
+maximum allowed (currently 2048).</p>
+</dd>
+<dt><strong>S228</strong> <em>EOF in comment</em></dt><dd><p>The end of a file was encountered while processing a comment.</p>
+</dd>
+<dt><strong>S229</strong> <em>EOF in macro call to $</em></dt><dd><p>The end of a file was encountered while processing a call to the indicated
+macro.</p>
+</dd>
+<dt><strong>S230</strong> <em>EOF in string</em></dt><dd><p>The end of a file was encountered while processing a quoted string.</p>
+</dd>
+<dt><strong>S231</strong> <em>Formal parameters too long for $</em></dt><dd><p>The total length of the
+parameters in the definition
+of the indicated macro exceeded the maximum
+allowed (currently 2048).</p>
+</dd>
+<dt><strong>S232</strong> <em>Identifier too long</em></dt><dd><p>The length of an identifier
+exceeded the maximum allowed (currently
+2048).</p>
+</dd>
+</dl>
+<p><strong>S233</strong> **</p>
+<dl class="simple">
+<dt><strong>W234</strong> <em>Illegal directive name</em></dt><dd><p>The sequence of characters following a # sign was not an identifier.</p>
+</dd>
+<dt><strong>W235</strong> <em>Illegal macro name</em></dt><dd><p>A macro name was not an identifier.</p>
+</dd>
+<dt><strong>S236</strong> <em>Illegal number $</em></dt><dd><p>The indicated number contained a syntax error.</p>
+</dd>
+<dt><strong>F237</strong> <em>Line too long</em></dt><dd><p>The input source line length exceeded the maximum allowed (currently 2048).</p>
+</dd>
+<dt><strong>W238</strong> <em>Missing #endif</em></dt><dd><p>End of file was encountered before a required #endif directive was found.</p>
+</dd>
+<dt><strong>W239</strong> <em>Missing argument list for $</em></dt><dd><p>A call of the indicated macro had no argument list.</p>
+</dd>
+<dt><strong>S240</strong> <em>Number too long</em></dt><dd><p>The length of a number exceeded the maximum allowed (currently 2048).</p>
+</dd>
+<dt><strong>W241</strong> <em>Redefinition of symbol $</em></dt><dd><p>The indicated macro name was redefined.</p>
+</dd>
+<dt><strong>I242</strong> <em>Redundant definition for symbol $</em></dt><dd><p>A definition for the indicated macro name was found that was the same as
+a previous definition.</p>
+</dd>
+<dt><strong>F243</strong> <em>String too long</em></dt><dd><p>The length of a quoted string exceeded the maximum allowed (currently 2048).</p>
+</dd>
+<dt><strong>S244</strong> <em>Syntax error in #define, formal $ not identifier</em></dt><dd><p>A formal parameter that was not an identifier was used in a macro definition.</p>
+</dd>
+<dt><strong>W245</strong> <em>Syntax error in #define, missing blank after name or arglist</em></dt><dd><p>There was no space or tab between a macro name or argument list
+and the macro’s definition.</p>
+</dd>
+<dt><strong>S246</strong> <em>Syntax error in #if</em></dt><dd><p>A syntax error was found while parsing the expression following a
+#if or #elif directive.</p>
+</dd>
+<dt><strong>S247</strong> <em>Syntax error in #include</em></dt><dd><p>The #include directive was not correctly formed.</p>
+</dd>
+<dt><strong>W248</strong> <em>Syntax error in #line</em></dt><dd><p>A #line directive was not correctly formed.</p>
+</dd>
+<dt><strong>W249</strong> <em>Syntax error in #module</em></dt><dd><p>A #module directive was not correctly formed.</p>
+</dd>
+<dt><strong>W250</strong> <em>Syntax error in #undef</em></dt><dd><p>A #undef directive was not correctly formed.</p>
+</dd>
+<dt><strong>W251</strong> <em>Token after #ifdef must be identifier</em></dt><dd><p>The #ifdef directive was not followed by an identifier.</p>
+</dd>
+<dt><strong>W252</strong> <em>Token after #ifndef must be identifier</em></dt><dd><p>The #ifndef directive was not followed by an identifier.</p>
+</dd>
+<dt><strong>S253</strong> <em>Too many actual parameters to $</em></dt><dd><p>The number of actual arguments to the indicated macro exceeded the maximum
+allowed (currently 31).</p>
+</dd>
+<dt><strong>S254</strong> <em>Too many formal parameters to $</em></dt><dd><p>The number of formal arguments to the indicated macro exceeded the maximum
+allowed (currently 31).</p>
+</dd>
+<dt><strong>F255</strong> <em>Too much pushback</em></dt><dd><p>The preprocessor ran out of space while processing a macro expansion.
+The macro may be recursive.</p>
+</dd>
+<dt><strong>W256</strong> <em>Undefined directive $</em></dt><dd><p>The identifier following a # was not a directive name.</p>
+</dd>
+<dt><strong>S257</strong> <em>EOF in #include directive</em></dt><dd><p>End of file was encountered while processing a #include directive.</p>
+</dd>
+<dt><strong>S258</strong> <em>Unmatched #elif</em></dt><dd><p>A #elif directive was encountered with no preceding #if or #elif
+directive.</p>
+</dd>
+<dt><strong>S259</strong> <em>Unmatched #else</em></dt><dd><p>A #else directive was encountered with no preceding #if or #elif
+directive.</p>
+</dd>
+<dt><strong>S260</strong> <em>Unmatched #endif</em></dt><dd><p>A #endif directive was encountered with no preceding #if, #ifdef, or
+#ifndef directive.</p>
+</dd>
+<dt><strong>S261</strong> <em>Include files nested too deeply</em></dt><dd><p>The nesting depth of #include directives exceeded the maximum
+(currently 20).</p>
+</dd>
+<dt><strong>S262</strong> <em>Unterminated macro definition for $</em></dt><dd><p>A newline was encountered in the formal parameter list for the indicated
+macro.</p>
+</dd>
+<dt><strong>S263</strong> <em>Unterminated string or character constant</em></dt><dd><p>A newline with no preceding backslash was found in a quoted string.</p>
+</dd>
+<dt><strong>I264</strong> <em>Possible nested comment</em></dt><dd><p>The characters /* were found within a comment.</p>
+</dd>
+</dl>
+<p><strong>W268</strong> <em>Cannot inline subprogram; common block mismatch</em></p>
+<dl class="simple">
+<dt><strong>W269</strong> <em>Cannot inline subprogram; argument type mismatch</em></dt><dd><p>This message may be Severe if have gone too far to undo inlining process.</p>
+</dd>
+</dl>
+<p><strong>F270</strong> <em>Missing -exlib option</em></p>
+<p><strong>W271</strong> <em>Can’t inline $ - wrong number of arguments</em></p>
+<p><strong>I272</strong> <em>Argument of inlined function not used</em></p>
+<p><strong>S273</strong> <em>Inline library not specified on command line (-inlib switch)</em></p>
+<p><strong>F274</strong> <em>Unable to access file $/TOC</em></p>
+<p><strong>S275</strong> <em>Unable to open file $ while extracting or inlining</em></p>
+<p><strong>F276</strong> <em>Assignment to constant actual parameter in inlined subprogram</em></p>
+<p><strong>I277</strong> <em>Inlining of function $ may result in recursion</em></p>
+<p><strong>W278</strong> <em>Can’t inline $ - too large</em></p>
+<p><strong>W279</strong> <em>Cannot inline function $ - data type mismatch</em></p>
+<dl class="simple">
+<dt><strong>W280</strong> <em>Syntax error in directive $</em></dt><dd><p>messages 280-300 rsvd for directive handling</p>
+</dd>
+</dl>
+<p><strong>W281</strong> <em>Directive ignored - $ $</em></p>
+<dl class="simple">
+<dt><strong>S282</strong> <em>ISHFT: shift is greater than the bit size of the value argument</em></dt><dd><p>In integer shift, ISHFT(I, SHIFT), absolute value of SHIFT cannot be bigger than bit size of I.</p>
+</dd>
+</dl>
+<p><strong>S350</strong> <em>Invalid constraint $ in extended ASM operand $</em></p>
+<p><strong>W351</strong> <em>Unsupported clobber register ‘$’ ignored in extended ASM</em></p>
+<p><strong>W352</strong> <em>Constraint/expression type mismatch in extended ASM operand $</em></p>
+<p><strong>S353</strong> <em>Unsupported constraint ‘$’ in extended ASM operand $</em></p>
+<p><strong>S354</strong> <em>Can’t find a register in class ‘$’ for extended ASM operand $</em></p>
+<p><strong>W355</strong> <em>Operand constraints for extended ASM differ in number of alternatives</em></p>
+<p><strong>S356</strong> <em>Unsupported modifier $ in extended ASM string</em></p>
+<p><strong>S357</strong> <em>Invalid asm: Operand number missing after $</em></p>
+<p><strong>W358</strong> <em>Output constraint $ for operand $ is not at the beginning</em></p>
+<p><strong>S359</strong> <em>Missing or incorrectly positioned $ in constraint for operand $</em></p>
+<p><strong>S360</strong> <em>Duplicate asm operand name ‘$’</em></p>
+<p><strong>W361</strong> <em>Use of a matching constraint with read/write (‘+’) operand $ is ambiguous</em></p>
+<p><strong>W362</strong> <em>Ignoring matching constraint for non-register operand $</em></p>
+<p><strong>S363</strong> <em>Invalid register name `$’</em></p>
+<p><strong>W364</strong> <em>Call-clobbered register `$’ used for global register variable</em></p>
+<p><strong>S365</strong> <em>Address of register variable `$’ requested in operand $</em></p>
+<p><strong>W366</strong> <em>Profiling inhibited for templated functions</em></p>
+<p><strong>F367</strong> <em>Extended precision long doubles are not supported as extended ASM operands</em></p>
+<dl class="simple">
+<dt><strong>W370</strong> <em>License for accelerator feature was not found; accelerator code generation is disabled</em></dt><dd><p>The accelerator feature in the PGI compilers is separately licensed;
+that license was not found.
+Please update your licenses to use this feature.
+Starting from 1100, Reserved for OpenMP GPU</p>
+</dd>
+<dt><strong>F701</strong> <em>Error reading temp file - $</em></dt><dd><p>This may occur if the file system failed, or the file system or directory containing
+the temporary file filled up.
+The compiler typically uses the “/tmp” directory to create temporary files.
+You may specify a directory to use for temporary files with the TMPDIR environment variable.</p>
+</dd>
+<dt><strong>F702</strong> <em>Error writing temp file - $</em></dt><dd><p>This may occur if the file system containing the temporary file is full.
+The compiler typically uses the “/tmp” directory to create temporary files.
+You may specify a directory to use for temporary files with the TMPDIR environment variable.</p>
+</dd>
+<dt><strong>F703</strong> <em>only the last -preinclude switch is processed</em></dt><dd><p>We have one spot for the preinclude file in the gbl. structure.  This is not
+a user visible switch.</p>
+</dd>
+<dt><strong>F704</strong> <em>Compilation aborted due to previous errors.</em></dt><dd><p>Compilation will abort immediately in case of Severe or Fatal error.</p>
+</dd>
+</dl>
+<p><strong>F705</strong> <em>Half precision implementation missing support - $</em></p>
+<p><strong>W972</strong> <em>The directive #pragma acc mirror is deprecated; use #pragma acc declare create instead</em></p>
+<p><strong>W973</strong> <em>The directive #pragma acc reflected is deprecated; use #pragma acc declare present</em></p>
+<p><strong>W974</strong> <em>The directive #pragma acc region is deprecated; use #pragma acc kernels instead</em></p>
+<p><strong>W975</strong> <em>The directive #pragma acc data region is deprecated; use #pragma acc data instead</em></p>
+<p><strong>W976</strong> <em>The directive #pragma acc for is deprecated; use #pragma acc loop instead</em></p>
+<p><strong>W977</strong> <em>The directive #pragma acc for kernel is deprecated; use #pragma acc loop instead</em></p>
+<p><strong>W978</strong> <em>The clause parallel is deprecated; use clause gang instead</em></p>
+<p><strong>W979</strong> <em>The directive #pragma acc region for is deprecated; use #pragma acc kernels loop instead</em></p>
+<p><strong>W980</strong> <em>The directive #pragma acc region loop is deprecated; use #pragma acc kernels loop instead</em></p>
+<p><strong>W981</strong> <em>The directive #pragma acc kernels for is deprecated; use #pragma acc kernels loop instead</em></p>
+<p><strong>W982</strong> <em>The directive #pragma acc deviceptr is deprecated; use #pragma acc declare deviceptr instead</em></p>
+<p><strong>W983</strong> <em>The directive #pragma acc parallel for is deprecated; use #pragma acc parallel loop instead</em></p>
+<p><strong>W984</strong> <em>The directive #pragma acc scalar region is deprecated; use #pragma acc serial instead</em></p>
+<p><strong>W985</strong> <em>The clause local is deprecated; use clause create instead</em></p>
+<p><strong>W986</strong> <em>The clause cache is deprecated; use directive #pragma acc cache instead</em></p>
+<p><strong>W987</strong> <em>The clause update host is deprecated; use separate update host directive after the region instead</em></p>
+<p><strong>W988</strong> <em>The clause update device is deprecated; use separate update device directive before the region instead</em></p>
+<p><strong>W989</strong> <em>The clause update in is deprecated; use separate update device directeve before the region instead</em></p>
+<p><strong>W990</strong> <em>The clause update out is deprecated; use update self instead</em></p>
+<p><strong>W991</strong> <em>The clause pnot is deprecated; use no_create instead</em></p>
+<p><strong>W992</strong> <em>The clause updatein is deprecated; use update device instead</em></p>
+<p><strong>W993</strong> <em>The clause updateout is deprecated; use update self instead</em></p>
+<p><strong>W994</strong> <em>The directive #pragma acc copy is deprecated; use #pragma acc declare copy instead</em></p>
+<p><strong>W995</strong> <em>The directive #pragma acc copyin is deprecated; use #pragma acc declare copyin instead</em></p>
+<p><strong>W996</strong> <em>The directive #pragma acc copyout is deprecated; use #pragma acc declare copyout instead</em></p>
+<p><strong>W997</strong> <em>The directive #pragma acc device_resident is deprecated; use #pragma acc declare device_resident instead</em></p>
+<p><strong>W998</strong> <em>The directive #pragma acc for host is deprecated; no OpenACC equivalent</em></p>
+<p><strong>W999</strong> <em>The directive #pragma acc loop kernel is deprecated; no OpenACC equivalent</em></p>
+<p><strong>S1000</strong> <em>Call in OpenACC region to procedure ‘$’ which has no acc routine information</em></p>
+<p><strong>S1001</strong> <em>All selected compute capabilities were disabled (see -Minfo)</em></p>
+<p><strong>S1002</strong> <em>Reduction type not supported for this variable datatype - $</em></p>
+<p><strong>W1003</strong> <em>Lambda capture by reference not supported in Accellerated region</em></p>
+<p><strong>W1004</strong> <em>Lambda capture ‘this’ by reference not supported in Accellerated region</em></p>
+<p><strong>W1005</strong> <em>The clause unroll is deprecated; no OpenACC equivalent</em></p>
+<p><strong>W1006</strong> <em>The clause mirror is deprecated; no OpenACC equivalent</em></p>
+<p><strong>W1007</strong> <em>The clause host is deprecated; no OpenACC equivalent</em></p>
+<p><strong>S1011</strong> <em>Device variable cannot be THREADPRIVATE - $</em></p>
+<p><strong>S1012</strong> <em>Threadprivate variables are not supported in acc routine - $</em></p>
+<p><strong>S1013</strong> <em>Static Threadprivate variables are not supported - $</em></p>
+<p><strong>S1014</strong> <em>Global Threadprivate variables are not supported - $</em></p>
+<p><strong>F1015</strong> <em>No shape directive is defined in structure $</em></p>
+<p><strong>F1016</strong> <em>No shape name $ is defined in structure $</em></p>
+<p><strong>F1017</strong> <em>arrays/pointers appearing in the OpenACC shape and policy directives must be a member of current aggregate type</em></p>
+<p><strong>F1018</strong> <em>Only one unnamed Shape directive is allowed in one aggregate type (struct/union)</em></p>
+<p><strong>F1019</strong> <em>Type clause must be used to specified structure type when Shape/Policy is defined outside (struct/union/class) definition</em></p>
+<p><strong>F1020</strong> <em>Data-Type appearing in type clause cannot be found</em></p>
+<p><strong>F1021</strong> <em>Data-Type appearing in type clause must be struct/union type</em></p>
+<p><strong>F1022</strong> <em>Duplicated shape names $ are defined for structure/union/class $</em></p>
+<p><strong>F1023</strong> <em>Duplicated policy names $ are defined for structure/union/class $</em></p>
+<p><strong>F1024</strong> <em>Type clause is not allowed within structure/union/class definition</em></p>
+<p><strong>F1025</strong> <em>The number of dimension section descriptions doesn’t match member $ which requires $ dimensions</em></p>
+<p><strong>F1026</strong> <em>Pointers appearing within relative clause must be their sibling members</em></p>
+<p><strong>F1027</strong> <em>As motion clauses, only create, copyin, copyout, copy, update, and deviceptr are allowed in policy directive</em></p>
+<p><strong>F1028</strong> <em>The variable $ doesn’t have predefined policy $ available</em></p>
+<p><strong>F1029</strong> <em>The variable $ using policy $ is not a structure-based type</em></p>
+<p><strong>F1030</strong> <em>Policy motion $ is not allowed in $ directive</em></p>
+<p><strong>W1031</strong> <em>The directive #pragma acc create is deprecated; use #pragma acc declare create instead</em></p>
+<p><strong>W1032</strong> <em>The directive #pragma acc present is deprecated; use #pragma acc declare present instead</em></p>
+<p><strong>W1033</strong> <em>The directive #pragma acc link is deprecated; use #pragma acc declare link instead</em></p>
+<p><strong>F1034</strong> <em>Only signed/unsigned 32 bits and 64 bits integer variables are allowed in bound expression. $ is is not such variable</em></p>
+<p><strong>F1035</strong> <em>Only integer sibling members and global variables are allowed in bound expression. $ is is neither of them.</em></p>
+<p><strong>F1036</strong> <em>No global variable named $ has been defined</em></p>
+<p><strong>F1037</strong> <em>Default clause can only contain include and exclude keyword.</em></p>
+<p><strong>W1038</strong> <em>COPY clause on a dummy variable with INTENT(IN) attribute demoted to COPYIN - $</em></p>
+<p><strong>S1039</strong> <em>OpenACC data clause expected after $</em></p>
+<p><strong>S1040</strong> <em>OpenACC $ data clause may not follow a device_type clause.</em></p>
+<p><strong>S1041</strong> <em>OpenACC $ clause may not follow a device_type clause.</em></p>
+<dl class="simple">
+<dt><strong>W1042</strong> <em>acc loop vector clause ignored because of inner vector loop.</em></dt><dd><p>Nested acc loop vector directives will not be honored if the loops cannot be
+effectively collapsed or tiled.</p>
+</dd>
+<dt><strong>W1043</strong> <em>acc loop worker clause ignored because of inner worker loop.</em></dt><dd><p>Nested acc loop worker directives will not be honored if the loops cannot be
+effectively collapsed or tiled.</p>
+</dd>
+</dl>
+<p><strong>S1044</strong> <em>acc loop gang not allowed in an acc routine($) procedure.</em></p>
+<p><strong>S1045</strong> <em>call to acc routine(gang$) procedure not allowed in acc loop $.</em></p>
+<p><strong>S1046</strong> <em>OpenACC compute region ignored: no parallel kernels found.</em></p>
+<p><strong>S1047</strong> <em>Inner collapsed loop bounds are not invariant in outer loop.</em></p>
+<p><strong>S1100</strong> <em>Cannot collapse non-tightly-nested loops</em></p>
+<p><strong>S1198</strong> <em>OpenMP GPU - The feature is not implemented yet for the target device</em></p>
+<p><strong>W1199</strong> <em>OpenMP GPU - &quot;$&quot; is ignored for the target device</em></p>
+<p><strong>S1200</strong> <em>OpenMP GPU - &quot;$&quot; is used, it is not implemented yet</em></p>
+<p><strong>S1201</strong> <em>OpenMP GPU - [$] is used with [$], this usage is not implemented yet.</em></p>
+<p><strong>S1202</strong> <em>OpenMP GPU - [$] is used independently than [$], this usage is not implemented yet.</em></p>
+<p><strong>S1204</strong> <em>OpenMP GPU - Internal compiler error. Reason: [$] at [$]</em></p>
+</section>
+
+
+      </div>
+      <div class="bottomnav" role="navigation" aria-label="bottom navigation">
+      
+        <p>
+        «&#160;&#160;<a href="symini.html">Appendix VII - Intrinsics &amp; Generics</a>
+        &#160;&#160;::&#160;&#160;
+        <a class="uplink" href="../index.html">Contents</a>
+        &#160;&#160;::&#160;&#160;
+        <a href="register.html">Register Classes</a>&#160;&#160;»
+        </p>
+
+      </div>
+
+    <div class="footer" role="contentinfo">
+        &#169; Copyright .
+      Created using <a href="https://www.sphinx-doc.org/">Sphinx</a> 5.3.0.
+    </div>
+  </body>
+</html>

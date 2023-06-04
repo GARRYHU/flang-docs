@@ -1,0 +1,139 @@
+
+<!DOCTYPE html>
+
+<html lang="en">
+  <head>
+    <meta charset="utf-8" />
+    <meta name="viewport" content="width=device-width, initial-scale=1.0" /><meta name="generator" content="Docutils 0.19: https://docutils.sourceforge.io/" />
+
+    <title>Introduction &#8212; Flang 1.0 documentation</title>
+    <link rel="stylesheet" type="text/css" href="../_static/pygments.css" />
+    <link rel="stylesheet" type="text/css" href="../_static/haiku.css" />
+    <script data-url_root="../" id="documentation_options" src="../_static/documentation_options.js"></script>
+    <script src="../_static/jquery.js"></script>
+    <script src="../_static/underscore.js"></script>
+    <script src="../_static/_sphinx_javascript_frameworks_compat.js"></script>
+    <script src="../_static/doctools.js"></script>
+    <script src="../_static/sphinx_highlight.js"></script>
+    <link rel="index" title="Index" href="../genindex.html" />
+    <link rel="search" title="Search" href="../search.html" />
+    <link rel="next" title="Communication Optimizer" href="commopt.html" />
+    <link rel="prev" title="How to add an intrinsic to flang" href="howto_intrinsics.html" /> 
+  </head><body>
+      <div class="header" role="banner"><h1 class="heading"><a href="../index.html">
+          <span>Flang 1.0 documentation</span></a></h1>
+        <h2 class="heading"><span>Introduction</span></h2>
+      </div>
+      <div class="topnav" role="navigation" aria-label="top navigation">
+      
+        <p>
+        «&#160;&#160;<a href="howto_intrinsics.html">How to add an intrinsic to flang</a>
+        &#160;&#160;::&#160;&#160;
+        <a class="uplink" href="../index.html">Contents</a>
+        &#160;&#160;::&#160;&#160;
+        <a href="commopt.html">Communication Optimizer</a>&#160;&#160;»
+        </p>
+
+      </div>
+      <div class="content" role="main">
+        
+        
+  <section id="introduction">
+<h1>Introduction<a class="headerlink" href="#introduction" title="Permalink to this heading">¶</a></h1>
+<p>The Fortran compiler consists of several phases and a number of utility modules.
+These are outlined here and described in detail in later chapters.</p>
+<section id="phases">
+<h2>Phases<a class="headerlink" href="#phases" title="Permalink to this heading">¶</a></h2>
+<section id="front-end">
+<h3>Front End<a class="headerlink" href="#front-end" title="Permalink to this heading">¶</a></h3>
+<p>The Fotran Front End parses the source program and creates a symbol table and
+an Abstract Syntax Tree (AST) that represents the source program.  The
+front end is described in Chapters 3 (scanner), 4 (parser), and 5 (semantic
+analyzer).  The grammar used by the parser is presented in Chapter 22.</p>
+</section>
+<section id="transformer">
+<h3>Transformer<a class="headerlink" href="#transformer" title="Permalink to this heading">¶</a></h3>
+<p>The Transformer performs a number of manipulations on the AST.  The object
+of these manipulations is to transform the AST and
+symbol table into a canonical form that
+is more easily manipulated by later phases.  Fortran-90 array assignments
+and WHERE statements
+are transformed to FORALL constructs, and subroutine arguments are
+rewritten.
+Also, Fortran directives are processed into a canonical
+form.
+The Transformer is described in Chapter 8.</p>
+</section>
+<section id="output-converter">
+<h3>Output Converter<a class="headerlink" href="#output-converter" title="Permalink to this heading">¶</a></h3>
+<p>The output converter converts foralls into DO loops, handles allocate
+and deallocate statements, and optimizes array descriptor handling.
+The output converter is described
+in Chapter 11.</p>
+</section>
+<section id="output">
+<h3>Output<a class="headerlink" href="#output" title="Permalink to this heading">¶</a></h3>
+<p>The ASTs are lowered to the compiler’s ILM intermediate format. This phase
+is described in Chapter 12.</p>
+</section>
+</section>
+<section id="utilities">
+<h2>Utilities<a class="headerlink" href="#utilities" title="Permalink to this heading">¶</a></h2>
+<section id="cross-reference">
+<h3>Cross Reference<a class="headerlink" href="#cross-reference" title="Permalink to this heading">¶</a></h3>
+<p>Utilities are provided to generate a cross-reference table in the listing.
+These are described in Chapter 13.</p>
+</section>
+<section id="data-initialization-file">
+<h3>Data Initialization File<a class="headerlink" href="#data-initialization-file" title="Permalink to this heading">¶</a></h3>
+<p>Data initializations are written to a data initialization file.  This
+file and associated utilities are described in Chapter 14.</p>
+</section>
+<section id="symbol-table">
+<h3>Symbol Table<a class="headerlink" href="#symbol-table" title="Permalink to this heading">¶</a></h3>
+<p>The Symbol Table contains information about all the symbols
+in the Fortran program.  The Symbol Table is described in Chapters 27 and 28.</p>
+</section>
+<section id="error-messages">
+<h3>Error Messages<a class="headerlink" href="#error-messages" title="Permalink to this heading">¶</a></h3>
+<p>A module is provided to output error messages in a consistent fashion.  This
+module is described in Chapters 15 and 23.</p>
+</section>
+<section id="asts">
+<h3>ASTs<a class="headerlink" href="#asts" title="Permalink to this heading">¶</a></h3>
+<p>The ASTs are the internal representation of the Fortran program and are described
+in Chapter 30.</p>
+</section>
+<section id="target-machine">
+<h3>Target Machine<a class="headerlink" href="#target-machine" title="Permalink to this heading">¶</a></h3>
+<p>Target machine characteristics are available through the
+machine characteristics utility, descibed in Chapter 24.</p>
+</section>
+</section>
+<section id="other-information">
+<h2>Other Information<a class="headerlink" href="#other-information" title="Permalink to this heading">¶</a></h2>
+<p>Various compiler maintenance information is available in Chapters 16, 17,
+and 18.</p>
+</section>
+</section>
+
+
+      </div>
+      <div class="bottomnav" role="navigation" aria-label="bottom navigation">
+      
+        <p>
+        «&#160;&#160;<a href="howto_intrinsics.html">How to add an intrinsic to flang</a>
+        &#160;&#160;::&#160;&#160;
+        <a class="uplink" href="../index.html">Contents</a>
+        &#160;&#160;::&#160;&#160;
+        <a href="commopt.html">Communication Optimizer</a>&#160;&#160;»
+        </p>
+
+      </div>
+
+    <div class="footer" role="contentinfo">
+        &#169; Copyright .
+      Created using <a href="https://www.sphinx-doc.org/">Sphinx</a> 5.3.0.
+    </div>
+  </body>
+</html>

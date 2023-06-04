@@ -1,0 +1,260 @@
+
+<!DOCTYPE html>
+
+<html lang="en">
+  <head>
+    <meta charset="utf-8" />
+    <meta name="viewport" content="width=device-width, initial-scale=1.0" /><meta name="generator" content="Docutils 0.19: https://docutils.sourceforge.io/" />
+
+    <title>How to add an intrinsic to flang &#8212; Flang 1.0 documentation</title>
+    <link rel="stylesheet" type="text/css" href="../_static/pygments.css" />
+    <link rel="stylesheet" type="text/css" href="../_static/haiku.css" />
+    <script data-url_root="../" id="documentation_options" src="../_static/documentation_options.js"></script>
+    <script src="../_static/jquery.js"></script>
+    <script src="../_static/underscore.js"></script>
+    <script src="../_static/_sphinx_javascript_frameworks_compat.js"></script>
+    <script src="../_static/doctools.js"></script>
+    <script src="../_static/sphinx_highlight.js"></script>
+    <link rel="index" title="Index" href="../genindex.html" />
+    <link rel="search" title="Search" href="../search.html" />
+    <link rel="next" title="Introduction" href="intro.html" />
+    <link rel="prev" title="libpgmath" href="../libpgmath.html" /> 
+  </head><body>
+      <div class="header" role="banner"><h1 class="heading"><a href="../index.html">
+          <span>Flang 1.0 documentation</span></a></h1>
+        <h2 class="heading"><span>How to add an intrinsic to flang</span></h2>
+      </div>
+      <div class="topnav" role="navigation" aria-label="top navigation">
+      
+        <p>
+        «&#160;&#160;<a href="../libpgmath.html">libpgmath</a>
+        &#160;&#160;::&#160;&#160;
+        <a class="uplink" href="../index.html">Contents</a>
+        &#160;&#160;::&#160;&#160;
+        <a href="intro.html">Introduction</a>&#160;&#160;»
+        </p>
+
+      </div>
+      <div class="content" role="main">
+        
+        
+  <section id="how-to-add-an-intrinsic-to-flang">
+<h1>How to add an intrinsic to flang<a class="headerlink" href="#how-to-add-an-intrinsic-to-flang" title="Permalink to this heading">¶</a></h1>
+<p>This page contains a guide of how to add a new function/intrinsic to FLANG library. It was based on the intrinsics <code class="docutils literal notranslate"><span class="pre">TRAILZ</span></code> and <code class="docutils literal notranslate"><span class="pre">LEADZ</span></code>, which are math runtime intrinsics. Therefore all the steps may need some changes based on which type of intrinsic is being added to FLANG library. The function/intrinsic will be added inside <code class="docutils literal notranslate"><span class="pre">&lt;directory_where_cloned&gt;/flang/runtime/flang</span></code>. <code class="docutils literal notranslate"><span class="pre">runtime</span></code> is the fortran runtime library.</p>
+<section id="step-by-step-guide">
+<h2>Step-by-step guide<a class="headerlink" href="#step-by-step-guide" title="Permalink to this heading">¶</a></h2>
+<p>How to link a new intrinsic in flang?</p>
+<ol class="arabic">
+<li><p>Create the .c (<code class="docutils literal notranslate"><span class="pre">your_intrinsic.c</span></code>) file in the directory e.g. <code class="docutils literal notranslate"><span class="pre">runtime/flang</span></code>. It is common sense to create one file for each data type. For instance, numbers can be expressed as <code class="docutils literal notranslate"><span class="pre">integers</span></code>, <code class="docutils literal notranslate"><span class="pre">long</span> <span class="pre">int</span></code>, <code class="docutils literal notranslate"><span class="pre">short</span> <span class="pre">int</span></code> and so on. So in this case it is better to create one file for each intrinsic. Each one of these intrinsics has a different input according to its data type.</p></li>
+<li><p>In the directory <code class="docutils literal notranslate"><span class="pre">tools/flang1/utils/symtab</span></code> there are 2 files <code class="docutils literal notranslate"><span class="pre">symini_ftn.n</span></code> and <code class="docutils literal notranslate"><span class="pre">symini.cpp</span></code> that need to be changed. Symini adds a reference of the new intrinsic in the AST (Abstract Syntaxe Tree) using <code class="docutils literal notranslate"><span class="pre">symini.cpp</span></code> and <code class="docutils literal notranslate"><span class="pre">symini_ft.n</span></code>.</p>
+<blockquote>
+<div><ol class="loweralpha simple">
+<li><p>In <code class="docutils literal notranslate"><span class="pre">tools/flang1/utils/symtab/symini_ftn.n</span></code> add the lines below where it is suitable. This file is needed by <code class="docutils literal notranslate"><span class="pre">ast.n</span></code> because it has the symbols of the intrinsics to build the ILM file. You can look into the file <code class="docutils literal notranslate"><span class="pre">symini_ftn.n</span></code> to understand the syntax of the file.</p></li>
+</ol>
+<div class="highlight-c notranslate"><div class="highlight"><pre><span></span>i. .AT elemental I
+.H1 YOUR_INTRINSIC –
+ii. .AT elemental i
+.H7 YOUR_INTRINSIC --
+</pre></div>
+</div>
+<ol class="loweralpha simple" start="2">
+<li><p>In file <code class="docutils literal notranslate"><span class="pre">tools/flang1/utils/symtab/symini.cpp</span></code> find array <code class="docutils literal notranslate"><span class="pre">const</span> <span class="pre">char</span> <span class="pre">*SyminiFE90::init_namesX[]</span></code> (where <code class="docutils literal notranslate"><span class="pre">x</span></code> is a number) add your intrinsic between brackets <code class="docutils literal notranslate"><span class="pre">&quot;</span> <span class="pre">your_intrinsic</span> <span class="pre">&quot;</span></code> . Do not know which one of the <code class="docutils literal notranslate"><span class="pre">X``s</span> <span class="pre">(``SyminiFE90::init_namesX[]</span></code>) is the most correct, but I believe any one of them will work.</p></li>
+</ol>
+</div></blockquote>
+</li>
+<li><p><code class="docutils literal notranslate"><span class="pre">tools/flang1/flang1exe/</span></code>. Basically there are 3 files to that you need to modify, they are: <code class="docutils literal notranslate"><span class="pre">lowerexp.c</span></code>, <code class="docutils literal notranslate"><span class="pre">stout.c</span></code> and <code class="docutils literal notranslate"><span class="pre">semfunc.c</span></code> . The changes will allow flang1 to build the ILM file. ILM is the intermediate file between Fortran and flang2.</p>
+<blockquote>
+<div><ol class="loweralpha">
+<li><p><code class="docutils literal notranslate"><span class="pre">/tools/flang1/flang1exe/lowerexp.c</span></code> has routines used by <code class="docutils literal notranslate"><span class="pre">lower.c</span></code> for lowering to ILMs. <code class="docutils literal notranslate"><span class="pre">lower.c</span></code> creates the back-end ILM structure. It lowers the AST and the ILM for something that the next layer can use. You must add the reference of your intrinsic in two functions:</p>
+<blockquote>
+<div><ol class="lowerroman simple">
+<li><p>In <code class="docutils literal notranslate"><span class="pre">static</span> <span class="pre">int</span> <span class="pre">intrinsic_arg_dtype(int</span> <span class="pre">intr,</span> <span class="pre">int</span> <span class="pre">ast,</span> <span class="pre">int</span> <span class="pre">args,</span> <span class="pre">int</span> <span class="pre">nargs)</span></code> add the line bellow and change <code class="docutils literal notranslate"><span class="pre">YOUR_INTRINSIC</span></code> for the name of the function you have implemented in upper case.</p></li>
+</ol>
+<div class="highlight-c notranslate"><div class="highlight"><pre><span></span><span class="k">case</span><span class="w"> </span><span class="no">I_</span><span class="w"> </span><span class="no">YOUR_INTRINSIC</span><span class="w"> </span><span class="p">:</span><span class="w"></span>
+</pre></div>
+</div>
+<ol class="lowerroman simple" start="2">
+<li><p>In <code class="docutils literal notranslate"><span class="pre">static</span> <span class="pre">int</span> <span class="pre">lower_intrinsic(int</span> <span class="pre">ast)</span></code> , add the line below and change <code class="docutils literal notranslate"><span class="pre">YOUR_INTRINSIC</span></code> for the name of the intrinsic you have implemented in upper case. The function <code class="docutils literal notranslate"><span class="pre">intrin_name_bsik</span> <span class="pre">(char</span> <span class="pre">*name,</span> <span class="pre">int</span> <span class="pre">ast)</span></code> recognises the type of the data that follows the intrinsic and writes in the ILM.</p></li>
+</ol>
+<div class="highlight-c notranslate"><div class="highlight"><pre><span></span><span class="k">case</span><span class="w"> </span><span class="no">I_</span><span class="w"> </span><span class="no">YOUR_INTRINSIC</span><span class="w"> </span><span class="p">:</span><span class="w"></span>
+<span class="w">    </span><span class="n">ilm</span><span class="w"> </span><span class="o">=</span><span class="w"> </span><span class="n">intrin_name_bsik</span><span class="p">(</span><span class="s">&quot; YOUR_INTRINSIC &quot;</span><span class="p">,</span><span class="w"> </span><span class="n">ast</span><span class="p">);</span><span class="w"></span>
+<span class="w">    </span><span class="k">break</span><span class="p">;</span><span class="w"></span>
+</pre></div>
+</div>
+</div></blockquote>
+</li>
+<li><p>In file <code class="docutils literal notranslate"><span class="pre">/tools/flang1/flang1exe/astout.c</span></code> in the function <code class="docutils literal notranslate"><span class="pre">static</span> <span class="pre">void</span> <span class="pre">print_as</span> <span class="pre">t(int</span> <span class="pre">ast)</span></code>:</p></li>
+</ol>
+<div class="highlight-c notranslate"><div class="highlight"><pre><span></span><span class="cp">#ifdef I_YOUR_INTRINSIC</span>
+<span class="k">case</span><span class="w"> </span><span class="no">I_</span><span class="w"> </span><span class="no">YOUR_INTRINSIC</span><span class="w"> </span><span class="p">:</span><span class="w"></span>
+<span class="k">if</span><span class="w"> </span><span class="p">(</span><span class="n">XBIT</span><span class="p">(</span><span class="mi">49</span><span class="p">,</span><span class="w"> </span><span class="mh">0x1040000</span><span class="p">))</span><span class="w"></span>
+<span class="cm">/* T3D/T3E or C90 Cray targets */</span><span class="w"></span>
+<span class="n">put_call</span><span class="p">(</span><span class="n">ast</span><span class="p">,</span><span class="w"> </span><span class="mi">0</span><span class="p">,</span><span class="w"> </span><span class="nb">NULL</span><span class="p">,</span><span class="w"> </span><span class="mi">0</span><span class="p">);</span><span class="w"></span>
+<span class="k">break</span><span class="p">;</span><span class="w"></span>
+<span class="p">}</span><span class="w"></span>
+
+<span class="n">rtlRtn</span><span class="w"> </span><span class="o">=</span><span class="w"> </span><span class="n">RTE_</span><span class="w"> </span><span class="n">your_intrinsic</span><span class="w"> </span><span class="p">;</span><span class="w"></span>
+<span class="k">goto</span><span class="w"> </span><span class="n">make_func_name</span><span class="p">;</span><span class="w"></span>
+<span class="cp">#endif</span>
+</pre></div>
+</div>
+<ol class="loweralpha simple" start="3">
+<li><p><code class="docutils literal notranslate"><span class="pre">/tools/flang1/flang1exe/semfunc.c</span></code> is Fortran front-end utility routines used by Semantic Analyzer to process functions, subroutines, predeclares, etc. In the function <code class="docutils literal notranslate"><span class="pre">int</span> <span class="pre">ref_pd(SST</span> <span class="pre">*stktop,</span> <span class="pre">ITEM</span> <span class="pre">*list)</span></code> add the line below. The goal is to write in the ILM the pre-defined function.</p></li>
+</ol>
+<div class="highlight-c notranslate"><div class="highlight"><pre><span></span><span class="k">case</span><span class="w"> </span><span class="no">PD_</span><span class="w"> </span><span class="no">your_intrinsic</span><span class="w"> </span><span class="p">:</span><span class="w"></span>
+</pre></div>
+</div>
+</div></blockquote>
+</li>
+<li><p>The directory <code class="docutils literal notranslate"><span class="pre">tools/shared</span></code> has functions that provide the front-end access to the runtime library structure. You need also to change the files <code class="docutils literal notranslate"><span class="pre">rtlRtns.h</span></code> and <code class="docutils literal notranslate"><span class="pre">rtlRtns.c</span></code>. <code class="docutils literal notranslate"><span class="pre">rtlRtns.h</span></code> has the Enumerator for some (eventually all) the RTL library routines. <code class="docutils literal notranslate"><span class="pre">rtlRtns.c</span></code> has the entries that must be sorted on the <code class="docutils literal notranslate"><span class="pre">baseNm</span></code> field. <em>NOTE:</em> make sure they are in the same order in the list, otherwise it may generate an error.</p>
+<blockquote>
+<div><ol class="loweralpha simple">
+<li><p><code class="docutils literal notranslate"><span class="pre">/tools/shared/rtlRtns.h</span></code> in <code class="docutils literal notranslate"><span class="pre">typedef</span> <span class="pre">enum</span> <span class="pre">{</span></code> add:</p></li>
+</ol>
+<div class="highlight-c notranslate"><div class="highlight"><pre><span></span><span class="n">RTE_your_intrinsic</span><span class="w"></span>
+</pre></div>
+</div>
+<ol class="loweralpha simple" start="2">
+<li><p><code class="docutils literal notranslate"><span class="pre">/tools/shared/rtlRtns.c</span></code> in <code class="docutils literal notranslate"><span class="pre">FtnRteRtn</span> <span class="pre">ftnRtlRtns[]</span> <span class="pre">=</span> <span class="pre">{</span></code> add:</p></li>
+</ol>
+<div class="highlight-c notranslate"><div class="highlight"><pre><span></span><span class="p">{</span><span class="s">&quot; your_intrinsic &quot;</span><span class="p">,</span><span class="w"> </span><span class="s">&quot;&quot;</span><span class="p">,</span><span class="w"> </span><span class="n">FALSE</span><span class="p">,</span><span class="w"> </span><span class="s">&quot;&quot;</span><span class="p">},</span><span class="w"></span>
+</pre></div>
+</div>
+</div></blockquote>
+</li>
+<li><p><code class="docutils literal notranslate"><span class="pre">tools/flang2/flang2exe</span></code> is responsible for the front-end of the stage 2[1], therefore <code class="docutils literal notranslate"><span class="pre">flang2exe</span></code> files are the ones that change the file from ILM to ILI and at the end to LLVM IR. In this directory you may need to change some files as well. Have a look at <code class="docutils literal notranslate"><span class="pre">math.h</span></code>, <code class="docutils literal notranslate"><span class="pre">iliutil.cpp</span></code> and <code class="docutils literal notranslate"><span class="pre">exp_ftn.cpp</span></code>.</p>
+<blockquote>
+<div><ol class="loweralpha simple">
+<li><p><code class="docutils literal notranslate"><span class="pre">/tools/flang2/flang2exe/mth.h</span></code> this library parameterizes the names of the <code class="docutils literal notranslate"><span class="pre">__mth_i/__fmth_i</span> <span class="pre">...</span></code> functions. In case the intrinsic has different behaviour for different inputs, then you should create one <code class="docutils literal notranslate"><span class="pre">#define</span></code> function for each behavior, for instance:</p></li>
+</ol>
+<div class="highlight-c notranslate"><div class="highlight"><pre><span></span><span class="cp">#define MTH_I_I YOUR_INTRINSIC I &quot;__mth_i_i your_intrinsic i&quot;. </span><span class="c1">//for data type of 8 or 16 bits</span>
+<span class="cp">#define MTH_I_I YOUR_INTRINSIC &quot;__mth_i_i your_intrinsic &quot;. </span><span class="c1">//for data type equals to 32 bits</span>
+<span class="cp">#define MTH_I_K YOUR_INTRINSIC &quot;__mth_i_k your_intrinsic &quot; </span><span class="c1">//for data type equals to 64 bits</span>
+</pre></div>
+</div>
+<ol class="loweralpha simple" start="2">
+<li><p><code class="docutils literal notranslate"><span class="pre">/tools/flang2/flang2exe/iliutil.cpp</span></code> has the ILI utility module. They contain the reference of your intrinsics created at <code class="docutils literal notranslate"><span class="pre">mth.h</span></code>. <code class="docutils literal notranslate"><span class="pre">void</span> <span class="pre">prilitree(int</span> <span class="pre">i)</span> <span class="pre">{</span></code> add reference to the intrinsic. The <code class="docutils literal notranslate"><span class="pre">goto</span> <span class="pre">intrinsic</span></code> writes on the <code class="docutils literal notranslate"><span class="pre">gbl.dbgfi</span></code>. Add one case statement for each <code class="docutils literal notranslate"><span class="pre">mth_i</span></code> created on <code class="docutils literal notranslate"><span class="pre">mth.h</span></code></p></li>
+</ol>
+<div class="highlight-c notranslate"><div class="highlight"><pre><span></span><span class="k">case</span><span class="w"> </span><span class="no">IL_I</span><span class="w"> </span><span class="no">YOUR_INTRINSIC</span><span class="w"> </span><span class="no">I</span><span class="p">:</span><span class="w"> </span><span class="c1">//mth_i_i your_intrinsic i</span>
+<span class="n">n</span><span class="w"> </span><span class="o">=</span><span class="w"> </span><span class="mi">2</span><span class="p">;</span><span class="w"></span>
+<span class="n">opval</span><span class="w"> </span><span class="o">=</span><span class="w"> </span><span class="s">&quot; your_intrinsic &quot;</span><span class="p">;</span><span class="w"></span>
+<span class="k">goto</span><span class="w"> </span><span class="n">intrinsic</span><span class="p">;</span><span class="w"></span>
+<span class="k">case</span><span class="w"> </span><span class="no">IL_I</span><span class="w"> </span><span class="no">YOUR_INTRINSIC</span><span class="w"> </span><span class="p">:</span><span class="w"> </span><span class="c1">//mth_i_i your_intrinsic</span>
+<span class="k">case</span><span class="w"> </span><span class="no">IL_K</span><span class="w"> </span><span class="no">YOUR_INTRINSIC</span><span class="w"> </span><span class="p">:</span><span class="w"> </span><span class="c1">//mth_i_k your_intrinsic</span>
+<span class="n">n</span><span class="w"> </span><span class="o">=</span><span class="w"> </span><span class="mi">1</span><span class="p">;</span><span class="w"></span>
+<span class="n">opval</span><span class="w"> </span><span class="o">=</span><span class="w"> </span><span class="s">&quot; your_intrinsic &quot;</span><span class="p">;</span><span class="w"></span>
+<span class="k">goto</span><span class="w"> </span><span class="n">intrinsic</span><span class="p">;</span><span class="w"></span>
+</pre></div>
+</div>
+<ol class="loweralpha simple" start="3">
+<li><p><code class="docutils literal notranslate"><span class="pre">/tools/flang2/flang2exe/exp_ftn.cpp</span></code> has the Fortran-specific expander routines. In <code class="docutils literal notranslate"><span class="pre">void</span> <span class="pre">exp_ac(ILM_OP</span> <span class="pre">opc,</span> <span class="pre">ILM</span> <span class="pre">*ilmp,</span> <span class="pre">int</span> <span class="pre">curilm)</span></code> add the following lines. <code class="docutils literal notranslate"><span class="pre">exp_ac()</span></code> is called in <code class="docutils literal notranslate"><span class="pre">eval_ilm()</span></code> in <code class="docutils literal notranslate"><span class="pre">expand.cpp</span></code> . It looks like <code class="docutils literal notranslate"><span class="pre">expand.cpp</span></code> file works on top of ILM and will expand it.</p></li>
+</ol>
+<div class="highlight-c notranslate"><div class="highlight"><pre><span></span><span class="k">case</span><span class="w"> </span><span class="no">IM_K</span><span class="w"> </span><span class="no">YOUR_INTRINSIC</span><span class="w"> </span><span class="p">:</span><span class="w"></span>
+<span class="n">op1</span><span class="w"> </span><span class="o">=</span><span class="w"> </span><span class="n">ILI_OF</span><span class="p">(</span><span class="n">ILM_OPND</span><span class="p">(</span><span class="n">ilmp</span><span class="p">,</span><span class="w"> </span><span class="mi">1</span><span class="p">));</span><span class="w"></span>
+<span class="c1">//takes the op from ILM to build the ILI</span>
+<span class="k">if</span><span class="w"> </span><span class="p">(</span><span class="n">XBIT</span><span class="p">(</span><span class="mi">124</span><span class="p">,</span><span class="w"> </span><span class="mh">0x400</span><span class="p">)).</span><span class="w"></span>
+<span class="c1">//124 is a mask and 0x400: 64 bits of precision for integer*8 and logical*8 operations [2].</span>
+<span class="n">ilix</span><span class="w"> </span><span class="o">=</span><span class="w"> </span><span class="n">ad1ili</span><span class="p">(</span><span class="n">IL_K</span><span class="w"> </span><span class="n">YOUR_INTRINSIC</span><span class="w"> </span><span class="p">,</span><span class="w"> </span><span class="n">op1</span><span class="p">);</span><span class="w"> </span><span class="c1">// add op to ILI ad1ili(ILI_OP opc, int opn1 ) in iliutil.cpp</span>
+<span class="k">else</span><span class="w"> </span><span class="p">{</span><span class="w"></span>
+<span class="n">op1</span><span class="w"> </span><span class="o">=</span><span class="w"> </span><span class="n">kimove</span><span class="p">(</span><span class="n">op1</span><span class="p">);</span><span class="w"></span>
+<span class="c1">// kimove(int ilix) in iliutil.cpp</span>
+<span class="n">ilix</span><span class="w"> </span><span class="o">=</span><span class="w"> </span><span class="n">ad1ili</span><span class="p">(</span><span class="n">IL_I</span><span class="w"> </span><span class="n">YOUR_INTRINSIC</span><span class="w"> </span><span class="p">,</span><span class="w"> </span><span class="n">op1</span><span class="p">);</span><span class="w"></span>
+<span class="p">}</span><span class="w"></span>
+<span class="n">ILM_RESULT</span><span class="p">(</span><span class="n">curilm</span><span class="p">)</span><span class="w"> </span><span class="o">=</span><span class="w"> </span><span class="n">ilix</span><span class="p">.</span><span class="w"></span>
+</pre></div>
+</div>
+</div></blockquote>
+</li>
+<li><p><code class="docutils literal notranslate"><span class="pre">/tools/flang2/utils/ilitp</span></code> has 3 more directories, one for each microprocessor architecture where Flang may be used : aarch64, ppc64le and x86_64 . In each of these directories there are files <code class="docutils literal notranslate"><span class="pre">ilitp.n</span></code>, <code class="docutils literal notranslate"><span class="pre">ilitp_longdouble.n</span></code>. According to what you are doing you need to change both. But usually you should change only <code class="docutils literal notranslate"><span class="pre">ilitp.n</span></code> in each one of the directories (aarch64, ppc64le and x86_64). They are responsible for writing ILI optimised for each architecture. The <code class="docutils literal notranslate"><span class="pre">iliutil.cpp</span></code> reads the ILI file with the help of <code class="docutils literal notranslate"><span class="pre">ilitp.n</span></code>.</p>
+<blockquote>
+<div><div class="highlight-c notranslate"><div class="highlight"><pre><span></span><span class="n">IL</span><span class="w"> </span><span class="n">I</span><span class="w"> </span><span class="n">YOUR_INTRINCIS</span><span class="w"> </span><span class="n">I</span><span class="w"> </span><span class="n">irlnk</span><span class="w"> </span><span class="n">stc</span><span class="w"></span>
+<span class="mi">8</span><span class="o">-/</span><span class="mi">16</span><span class="o">-</span><span class="w"> </span><span class="n">bit</span><span class="w"> </span><span class="n">integer</span><span class="w"> </span><span class="n">YOUR_INTRINSIC</span><span class="w"> </span><span class="n">intrinsic</span><span class="p">.</span><span class="w"></span>
+<span class="n">The</span><span class="w"> </span><span class="n">value</span><span class="p">,</span><span class="w"> </span><span class="mi">0</span><span class="w"> </span><span class="n">or</span><span class="w"> </span><span class="mi">1</span><span class="p">,</span><span class="w"> </span><span class="n">of</span><span class="w"> </span><span class="n">the</span><span class="w"> </span><span class="n">second</span><span class="w"> </span><span class="n">operand</span><span class="w"> </span><span class="n">indicates</span><span class="w"></span>
+<span class="mi">8</span><span class="o">-</span><span class="n">bit</span><span class="w"> </span><span class="n">or</span><span class="w"> </span><span class="mi">16</span><span class="o">-</span><span class="n">bit</span><span class="p">,</span><span class="w"> </span><span class="n">respectively</span><span class="p">.</span><span class="w"></span>
+<span class="p">.</span><span class="n">AT</span><span class="w"> </span><span class="n">arth</span><span class="w"> </span><span class="n">null</span><span class="w"> </span><span class="n">ir</span><span class="w"> </span><span class="n">cse</span><span class="w"></span>
+
+<span class="p">.</span><span class="n">IL</span><span class="w"> </span><span class="n">I</span><span class="w"> </span><span class="n">YOUR_INTRINSIC</span><span class="w"> </span><span class="n">irlnk</span><span class="w"></span>
+<span class="mi">32</span><span class="o">-</span><span class="n">bit</span><span class="w"> </span><span class="n">integer</span><span class="w"> </span><span class="n">YOUR_INTRINSIC</span><span class="w"> </span><span class="n">intrinsic</span><span class="p">.</span><span class="w"></span>
+<span class="p">.</span><span class="n">AT</span><span class="w"> </span><span class="n">arth</span><span class="w"> </span><span class="n">null</span><span class="w"> </span><span class="n">ir</span><span class="w"> </span><span class="n">cse</span><span class="w"></span>
+<span class="p">.</span><span class="n">CG</span><span class="w"> </span><span class="s">&quot;?????&quot;</span><span class="w"> </span><span class="sc">&#39;l&#39;</span><span class="w"></span>
+
+<span class="p">.</span><span class="n">IL</span><span class="w"> </span><span class="n">K</span><span class="w"> </span><span class="n">YOUR_INTRINSIC</span><span class="w"> </span><span class="n">krlnk</span><span class="w"></span>
+<span class="mi">64</span><span class="o">-</span><span class="n">bit</span><span class="w"> </span><span class="n">integer</span><span class="w"> </span><span class="n">YOUR_INTRINSIC</span><span class="w"> </span><span class="n">intrinsic</span><span class="p">.</span><span class="w"></span>
+<span class="p">.</span><span class="n">AT</span><span class="w"> </span><span class="n">arth</span><span class="w"> </span><span class="n">null</span><span class="w"> </span><span class="n">kr</span><span class="w"> </span><span class="n">cse</span><span class="w"></span>
+<span class="p">.</span><span class="n">CG</span><span class="w"> </span><span class="s">&quot;??????t&quot;</span><span class="w"> </span><span class="sc">&#39;q&#39;</span><span class="w"></span>
+</pre></div>
+</div>
+</div></blockquote>
+</li>
+<li><p><code class="docutils literal notranslate"><span class="pre">/tools/flang2/utils/ilmtp/</span></code> has also 3 directories one for each architecture aarch64, xb6_64 and ppc64le . In these you will find <code class="docutils literal notranslate"><span class="pre">ilmtp.n</span></code>. You need to modify this file as well by adding the following lines:</p>
+<blockquote>
+<div><div class="highlight-c notranslate"><div class="highlight"><pre><span></span><span class="p">.</span><span class="n">IL</span><span class="w"> </span><span class="n">B</span><span class="w"> </span><span class="n">YOUR_INTRINSIC</span><span class="w"> </span><span class="n">intr</span><span class="w"> </span><span class="n">lnk</span><span class="w"></span>
+<span class="mi">8</span><span class="o">-</span><span class="n">bit</span><span class="w"> </span><span class="n">integer</span><span class="w"> </span><span class="n">YOUR_INSTRINSIC</span><span class="w"> </span><span class="n">intrinsic</span><span class="w"></span>
+<span class="p">.</span><span class="n">OP</span><span class="w"> </span><span class="n">I</span><span class="w"> </span><span class="n">YOUR_INSTRINSIC</span><span class="w"> </span><span class="n">I</span><span class="w"> </span><span class="n">r</span><span class="w"> </span><span class="n">p1</span><span class="w"> </span><span class="n">iv0</span><span class="w"></span>
+<span class="p">.</span><span class="n">IL</span><span class="w"> </span><span class="n">S</span><span class="w"> </span><span class="n">YOUR_INSTRINSIC</span><span class="w"> </span><span class="n">intr</span><span class="w"> </span><span class="n">lnk</span><span class="w"></span>
+<span class="mi">16</span><span class="o">-</span><span class="n">bit</span><span class="w"> </span><span class="n">integer</span><span class="w"> </span><span class="n">YOUR_INSTRINSIC</span><span class="w"> </span><span class="n">intrinsic</span><span class="w"></span>
+<span class="p">.</span><span class="n">OP</span><span class="w"> </span><span class="n">I</span><span class="w"> </span><span class="n">YOUR_INSTRINSIC</span><span class="w"> </span><span class="n">I</span><span class="w"> </span><span class="n">r</span><span class="w"> </span><span class="n">p1</span><span class="w"> </span><span class="n">iv1</span><span class="w"></span>
+<span class="p">.</span><span class="n">IL</span><span class="w"> </span><span class="n">I</span><span class="w"> </span><span class="n">YOUR_INSTRINSIC</span><span class="w"> </span><span class="n">intr</span><span class="w"> </span><span class="n">lnk</span><span class="w"></span>
+<span class="mi">32</span><span class="o">-</span><span class="n">bit</span><span class="w"> </span><span class="n">integer</span><span class="w"> </span><span class="n">YOUR_INTRINSIC</span><span class="w"> </span><span class="n">intrinsic</span><span class="w"></span>
+<span class="p">.</span><span class="n">OP</span><span class="w"> </span><span class="n">I</span><span class="w"> </span><span class="n">YOUR_INSTRINSIC</span><span class="w"> </span><span class="n">r</span><span class="w"> </span><span class="n">p1</span><span class="w"></span>
+<span class="p">.</span><span class="n">IL</span><span class="w"> </span><span class="n">K</span><span class="w"> </span><span class="n">YOUR_INSTRINSIC</span><span class="w"> </span><span class="n">intr</span><span class="w"> </span><span class="n">lnk</span><span class="w"></span>
+<span class="mi">64</span><span class="o">-</span><span class="n">bit</span><span class="w"> </span><span class="n">integer</span><span class="w"> </span><span class="n">YOUR_INSTRINSIC</span><span class="w"> </span><span class="n">intrinsic</span><span class="w"></span>
+<span class="p">.</span><span class="n">AT</span><span class="w"> </span><span class="n">i8</span><span class="w"></span>
+<span class="p">.</span><span class="n">OP</span><span class="w"> </span><span class="n">K</span><span class="w"> </span><span class="n">YOUR_INSTRINSIC</span><span class="w"> </span><span class="n">r</span><span class="w"> </span><span class="n">p1</span><span class="w"></span>
+</pre></div>
+</div>
+</div></blockquote>
+</li>
+<li><p>After all the modifications made above, it is needed to check if it works. First run make files in build-flang. Type the commands :</p>
+<blockquote>
+<div><ol class="loweralpha simple">
+<li><p><code class="docutils literal notranslate"><span class="pre">make</span> <span class="pre">-j48</span></code></p></li>
+<li><p><code class="docutils literal notranslate"><span class="pre">make</span> <span class="pre">install</span></code></p></li>
+</ol>
+</div></blockquote>
+</li>
+<li><p>If you pass the make then it is time to build the test for the new intrinsic/function. I suggest before adding the test on flang, to create a local directory and write a small test for your new intrinsic. The directory <code class="docutils literal notranslate"><span class="pre">flang/test/f90_correct</span></code> has the tests for intrinsics. They run with <code class="docutils literal notranslate"><span class="pre">make</span> <span class="pre">check-all</span></code>. Inside <code class="docutils literal notranslate"><span class="pre">f90_correct</span></code> there are 3 more directories, they are: <code class="docutils literal notranslate"><span class="pre">inc</span></code>, <code class="docutils literal notranslate"><span class="pre">lit</span></code> and <code class="docutils literal notranslate"><span class="pre">src</span></code> . <code class="docutils literal notranslate"><span class="pre">src</span></code> has fortran tests in <code class="docutils literal notranslate"><span class="pre">.f90</span></code>, in <code class="docutils literal notranslate"><span class="pre">inc</span></code> is the bash script to call the test function and run it, and <code class="docutils literal notranslate"><span class="pre">inc</span></code> has sh files.</p></li>
+<li><p>After you have created your tests build flang again and type:</p>
+<blockquote>
+<div><ol class="loweralpha simple">
+<li><p><code class="docutils literal notranslate"><span class="pre">make</span> <span class="pre">-j48</span></code></p></li>
+<li><p><code class="docutils literal notranslate"><span class="pre">make</span> <span class="pre">install</span></code></p></li>
+<li><p><code class="docutils literal notranslate"><span class="pre">make</span> <span class="pre">check-all</span></code>, this last command will run the tests on <code class="docutils literal notranslate"><span class="pre">f90_correct</span></code> and if something went wrong it will tell.</p></li>
+</ol>
+</div></blockquote>
+</li>
+<li><p>When the new intrinsic passed all the tests you can commit for review with the following commands:</p>
+<blockquote>
+<div><ol class="loweralpha simple">
+<li><p><code class="docutils literal notranslate"><span class="pre">git</span> <span class="pre">add</span> <span class="pre">.</span></code></p></li>
+<li><p><code class="docutils literal notranslate"><span class="pre">git</span> <span class="pre">commit</span> <span class="pre">-m</span> <span class="pre">&quot;message</span> <span class="pre">of</span> <span class="pre">the</span> <span class="pre">commit&quot;</span></code> or <code class="docutils literal notranslate"><span class="pre">git</span> <span class="pre">commit</span> <span class="pre">--amend</span></code>; the first when it is the first time you commit and the second when you are just updating.</p></li>
+<li><p><code class="docutils literal notranslate"><span class="pre">git</span> <span class="pre">pull</span> <span class="pre">--rebase</span></code>;</p></li>
+<li><p><code class="docutils literal notranslate"><span class="pre">git</span> <span class="pre">review</span></code></p></li>
+</ol>
+</div></blockquote>
+</li>
+<li><p>You should check if the changes done in rebase are not affected. If so change what needs to be changed and apply step 10 again.</p></li>
+</ol>
+</section>
+</section>
+
+
+      </div>
+      <div class="bottomnav" role="navigation" aria-label="bottom navigation">
+      
+        <p>
+        «&#160;&#160;<a href="../libpgmath.html">libpgmath</a>
+        &#160;&#160;::&#160;&#160;
+        <a class="uplink" href="../index.html">Contents</a>
+        &#160;&#160;::&#160;&#160;
+        <a href="intro.html">Introduction</a>&#160;&#160;»
+        </p>
+
+      </div>
+
+    <div class="footer" role="contentinfo">
+        &#169; Copyright .
+      Created using <a href="https://www.sphinx-doc.org/">Sphinx</a> 5.3.0.
+    </div>
+  </body>
+</html>

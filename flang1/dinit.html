@@ -1,0 +1,202 @@
+
+<!DOCTYPE html>
+
+<html lang="en">
+  <head>
+    <meta charset="utf-8" />
+    <meta name="viewport" content="width=device-width, initial-scale=1.0" /><meta name="generator" content="Docutils 0.19: https://docutils.sourceforge.io/" />
+
+    <title>Data Initialization File &#8212; Flang 1.0 documentation</title>
+    <link rel="stylesheet" type="text/css" href="../_static/pygments.css" />
+    <link rel="stylesheet" type="text/css" href="../_static/haiku.css" />
+    <script data-url_root="../" id="documentation_options" src="../_static/documentation_options.js"></script>
+    <script src="../_static/jquery.js"></script>
+    <script src="../_static/underscore.js"></script>
+    <script src="../_static/_sphinx_javascript_frameworks_compat.js"></script>
+    <script src="../_static/doctools.js"></script>
+    <script src="../_static/sphinx_highlight.js"></script>
+    <link rel="index" title="Index" href="../genindex.html" />
+    <link rel="search" title="Search" href="../search.html" />
+    <link rel="next" title="Symbol Table" href="symtab.html" />
+    <link rel="prev" title="Abstract Syntax Tree" href="ast.html" /> 
+  </head><body>
+      <div class="header" role="banner"><h1 class="heading"><a href="../index.html">
+          <span>Flang 1.0 documentation</span></a></h1>
+        <h2 class="heading"><span>Data Initialization File</span></h2>
+      </div>
+      <div class="topnav" role="navigation" aria-label="top navigation">
+      
+        <p>
+        «&#160;&#160;<a href="ast.html">Abstract Syntax Tree</a>
+        &#160;&#160;::&#160;&#160;
+        <a class="uplink" href="../index.html">Contents</a>
+        &#160;&#160;::&#160;&#160;
+        <a href="symtab.html">Symbol Table</a>&#160;&#160;»
+        </p>
+
+      </div>
+      <div class="content" role="main">
+        
+        
+  <section id="data-initialization-file">
+<h1>Data Initialization File<a class="headerlink" href="#data-initialization-file" title="Permalink to this heading">¶</a></h1>
+<p>The file,
+<em>astb.df</em>,
+and the
+Data Initialization File are external binary files defining the
+initialization of variables.
+<em>astb.df</em>
+is written by
+the Semantic Analyzer as it processes initializers for variables
+and is read by the ast transformer in order to
+write the necessary data initialization statements.
+The Data Initialization File is written by many phases of the compiler
+to effect data initialization statements for certain variables
+(format arrays, namelist descriptors, array constructors) created
+by the compiler; this file is also processed by the ast transformer.</p>
+<p>The file ,
+<em>astb.df</em>,
+is written by the semantic analyzer as it processes initialization
+statements; this includes DATA statements and initializers in type
+statements.
+The file consists of a sequence of records, where a group of
+three consecutive records represents a single DATA statement.
+The first record is a single word whose value (a 4-byte value) is
+the line number where the initialization occurred in the source file.
+The second record is a variable length record which is the
+Initializer Variable List (IVL) representing the variables, implied-do’s, etc.
+which are being initialized (see the chapter
+<em>Semantic Analyzer</em>).
+The third record is a variable length record which is the
+Initializer Constant Tree associated with the IVL
+(see the chapter
+<em>Semantic Analyzer</em>).</p>
+<p>The Data Initialization File consists of one or more
+<em>records.</em>
+Each record consists of 2 fields, a <code class="docutils literal notranslate"><span class="pre">short</span> <span class="pre">int</span></code> (dtype)
+and a 32-bit <code class="docutils literal notranslate"><span class="pre">INT</span></code> (conval).
+Records are written to, and read from the file via the routines
+<code class="docutils literal notranslate"><span class="pre">dinit_put</span></code> and <code class="docutils literal notranslate"><span class="pre">dinit_read</span></code> in the module
+<em>dinitutil.c</em>.  These routines are also responsible
+for opening and possibly buffering the file.</p>
+<p>There are several types of record in the file,
+distinguished by the value of the first field (dtype):</p>
+<p><code class="docutils literal notranslate"><span class="pre">dtype</span> <span class="pre">=</span> <span class="pre">DINIT_LOC</span></code></p>
+<blockquote>
+<div><p><code class="docutils literal notranslate"><span class="pre">DINIT_LOC</span></code>
+is a special value chosen so as to not conflict
+with any of the other possible values of this field.
+<code class="docutils literal notranslate"><span class="pre">conval</span></code>, the second field of the record, will be a
+symbol table pointer to a variable, array, pointer, or structure.
+This record indicates that a new symbol is being initialized.
+It results in the name of the variable being written.
+Ensuing records, up to the
+<code class="docutils literal notranslate"><span class="pre">DINIT_END</span></code> record, will initialize consecutive
+locations within this variable.</p>
+</div></blockquote>
+<p><code class="docutils literal notranslate"><span class="pre">dtype</span> <span class="pre">=</span> <span class="pre">DINIT_FMT</span></code></p>
+<blockquote>
+<div><p>The value of <code class="docutils literal notranslate"><span class="pre">conval</span></code> is the symbol table of the array which
+represents the format descriptor for the specifiers in a FORMAT
+statement.
+Ensuing records, up to the next
+<code class="docutils literal notranslate"><span class="pre">DINIT_END</span></code>, will initialize consecutive
+locations within this array.</p>
+</div></blockquote>
+<p><code class="docutils literal notranslate"><span class="pre">dtype</span> <span class="pre">=</span> <span class="pre">DINIT_NML</span></code></p>
+<blockquote>
+<div><p>The value of <code class="docutils literal notranslate"><span class="pre">conval</span></code> is the symbol table of the array which
+represents the namelist descriptor for the variables in a NAMELIST
+statement.
+Ensuing records, up to the next
+<code class="docutils literal notranslate"><span class="pre">DINIT_END</span></code>, will initialize consecutive
+locations within this array.</p>
+</div></blockquote>
+<p><code class="docutils literal notranslate"><span class="pre">dtype</span> <span class="pre">=</span> <span class="pre">DINIT_END</span></code></p>
+<blockquote>
+<div><p>This record marks the end of the initializers for the variable specified
+in the corresponding DINIT_LOC, DINIT_FMT, or DINIT_NML.</p>
+</div></blockquote>
+<p><code class="docutils literal notranslate"><span class="pre">dtype</span> <span class="pre">=</span> <span class="pre">DT_DBLE</span></code></p>
+<blockquote>
+<div><p>Indicates that 2 32-bit words are to be initialized with
+a 64-bit double precision floating point value.
+<code class="docutils literal notranslate"><span class="pre">conval</span></code> is a symbol table pointer to a double precision constant.</p>
+</div></blockquote>
+<p><code class="docutils literal notranslate"><span class="pre">dtype</span> <span class="pre">=</span> <span class="pre">DT_CMPLX</span></code></p>
+<blockquote>
+<div><p>Indicates that 2 32-bit words are to be initialized with
+two 32-bit floating point values.
+<code class="docutils literal notranslate"><span class="pre">conval</span></code> is a symbol table pointer to a
+<code class="docutils literal notranslate"><span class="pre">complex</span></code>
+constant.</p>
+</div></blockquote>
+<p><code class="docutils literal notranslate"><span class="pre">dtype</span> <span class="pre">=</span> <span class="pre">DT_DCMPLX</span></code></p>
+<blockquote>
+<div><p>Indicates that 2 64-bit words are to be initialized with
+two 64-bit double precision floating point values.
+<code class="docutils literal notranslate"><span class="pre">conval</span></code> is a symbol table pointer to a
+<code class="docutils literal notranslate"><span class="pre">doublecomplex</span></code>
+constant.</p>
+</div></blockquote>
+<p><code class="docutils literal notranslate"><span class="pre">dtype</span> <span class="pre">=</span> <span class="pre">Fortran</span> <span class="pre">Hollerith</span> <span class="pre">or</span> <span class="pre">CHARACTER</span></code></p>
+<blockquote>
+<div><p><code class="docutils literal notranslate"><span class="pre">dtype</span></code>
+is actually <code class="docutils literal notranslate"><span class="pre">DT_CHAR</span></code> which indicates that
+a sequence of bytes is to be initialized to the
+characters in the
+<code class="docutils literal notranslate"><span class="pre">Hollerith</span></code>
+or
+<code class="docutils literal notranslate"><span class="pre">CHARACTER</span></code>
+string.
+<code class="docutils literal notranslate"><span class="pre">conval</span></code>
+is a symbol table pointer to the
+<em>string</em>
+constant.
+The length of the initialization is derived from the
+<em>string</em>’s
+<code class="docutils literal notranslate"><span class="pre">DTYPE</span></code>,
+not
+<code class="docutils literal notranslate"><span class="pre">dtype</span></code>.</p>
+</div></blockquote>
+<p><code class="docutils literal notranslate"><span class="pre">dtype</span> <span class="pre">=</span> <span class="pre">other</span> <span class="pre">Fortran</span> <span class="pre">types</span></code></p>
+<blockquote>
+<div><p>Includes the integer, logical, and single precision data
+types.
+Indicates that the value of the current initializer
+is conval.</p>
+</div></blockquote>
+<dl class="simple">
+<dt><code class="docutils literal notranslate"><span class="pre">dtype</span> <span class="pre">=</span> <span class="pre">DINIT_LABEL</span></code></dt><dd><p>Indicates that the next integer is to be initialized with the address
+of a variable.
+<code class="docutils literal notranslate"><span class="pre">conval</span></code>
+is the symbol table pointer for the variable.
+An initializer of this type does not actually appear in the
+DATA statement which is emitted.
+Instead, an assignment statement is added to the prologue of
+the subprogram and each applicable ENTRY.
+For example, a namelist descriptor requires the address of a variable.</p>
+</dd>
+</dl>
+</section>
+
+
+      </div>
+      <div class="bottomnav" role="navigation" aria-label="bottom navigation">
+      
+        <p>
+        «&#160;&#160;<a href="ast.html">Abstract Syntax Tree</a>
+        &#160;&#160;::&#160;&#160;
+        <a class="uplink" href="../index.html">Contents</a>
+        &#160;&#160;::&#160;&#160;
+        <a href="symtab.html">Symbol Table</a>&#160;&#160;»
+        </p>
+
+      </div>
+
+    <div class="footer" role="contentinfo">
+        &#169; Copyright .
+      Created using <a href="https://www.sphinx-doc.org/">Sphinx</a> 5.3.0.
+    </div>
+  </body>
+</html>

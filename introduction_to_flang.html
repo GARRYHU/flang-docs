@@ -1,0 +1,139 @@
+
+<!DOCTYPE html>
+
+<html lang="en">
+  <head>
+    <meta charset="utf-8" />
+    <meta name="viewport" content="width=device-width, initial-scale=1.0" /><meta name="generator" content="Docutils 0.19: https://docutils.sourceforge.io/" />
+
+    <title>Introduction to Flang &#8212; Flang 1.0 documentation</title>
+    <link rel="stylesheet" type="text/css" href="_static/pygments.css" />
+    <link rel="stylesheet" type="text/css" href="_static/haiku.css" />
+    <script data-url_root="./" id="documentation_options" src="_static/documentation_options.js"></script>
+    <script src="_static/jquery.js"></script>
+    <script src="_static/underscore.js"></script>
+    <script src="_static/_sphinx_javascript_frameworks_compat.js"></script>
+    <script src="_static/doctools.js"></script>
+    <script src="_static/sphinx_highlight.js"></script>
+    <link rel="index" title="Index" href="genindex.html" />
+    <link rel="search" title="Search" href="search.html" />
+    <link rel="next" title="Coding Practices" href="flang2/coding.html" />
+    <link rel="prev" title="Flang glossary" href="glossary.html" /> 
+  </head><body>
+      <div class="header" role="banner"><h1 class="heading"><a href="index.html">
+          <span>Flang 1.0 documentation</span></a></h1>
+        <h2 class="heading"><span>Introduction to Flang</span></h2>
+      </div>
+      <div class="topnav" role="navigation" aria-label="top navigation">
+      
+        <p>
+        «&#160;&#160;<a href="glossary.html">Flang glossary</a>
+        &#160;&#160;::&#160;&#160;
+        <a class="uplink" href="index.html">Contents</a>
+        &#160;&#160;::&#160;&#160;
+        <a href="flang2/coding.html">Coding Practices</a>&#160;&#160;»
+        </p>
+
+      </div>
+      <div class="content" role="main">
+        
+        
+  <section id="introduction-to-flang">
+<h1>Introduction to Flang<a class="headerlink" href="#introduction-to-flang" title="Permalink to this heading">¶</a></h1>
+<p>This guide is meant to help you understand how flang compiler works and is organized internally.</p>
+<p>It’s a good idea to see <a class="reference internal" href="glossary.html#flang-glossary"><span class="std std-ref">Flang glossary</span></a> to understand all the abbreviations being used.</p>
+<section id="frontend-pipeline">
+<h2>Frontend pipeline<a class="headerlink" href="#frontend-pipeline" title="Permalink to this heading">¶</a></h2>
+<section id="flang1-phases">
+<h3>Flang1 phases<a class="headerlink" href="#flang1-phases" title="Permalink to this heading">¶</a></h3>
+<p><strong>scanner</strong>: extracts text tokens</p>
+<p><strong>parser</strong>: creates tokensAST and symbol table</p>
+<p><strong>transformer</strong>: transforms ASTcanonical to AST</p>
+<p><strong>output converter</strong>: converts canonical AST to optimised AST</p>
+<p><strong>output</strong>: creates an AST ILM (PGI IR1)</p>
+</section>
+<section id="flang2-phases">
+<h3>Flang2 phases<a class="headerlink" href="#flang2-phases" title="Permalink to this heading">¶</a></h3>
+<p><strong>expander</strong>: ILM expanded to ILI (PGI IR1 expanded to PGI IR2)</p>
+<p><strong>optimiser</strong>: ILI becomes optimised ILI</p>
+<p><strong>code scheduler</strong> (The Bridge): Optimized ILI becomes LLVM IR</p>
+</section>
+</section>
+<section id="code-structure">
+<h2>Code structure<a class="headerlink" href="#code-structure" title="Permalink to this heading">¶</a></h2>
+<p>The source code of Flang is mainly ANSI C98 and some C++. Fortran routines are present in runtime library. Documentation is maintained in nroff (<code class="docutils literal notranslate"><span class="pre">*.n</span></code>) files and can be build with <code class="docutils literal notranslate"><span class="pre">-DLLVM_INCLUDE_DOCS=on</span></code>.</p>
+<p>The main directories are listed here and some of them are explained in more details below:</p>
+<ul class="simple">
+<li><p><strong>lib, include</strong> - auxiliary libraries shared by flang1, flang2 and the Fortran runtime library.</p></li>
+<li><p><strong>runtime</strong> - the Fortran runtime library.</p></li>
+<li><p><strong>tools/flang1</strong> - Flang1, Fortran to ILM translator.</p></li>
+<li><p><strong>tools/flang2</strong> - Flang2, ILM to LLVM IR translator.</p></li>
+<li><p><strong>tools/include/symtab</strong> - <code class="docutils literal notranslate"><span class="pre">gbldefs.h</span></code> (one of three headers with that name!) and global.h (one of four) header files.</p></li>
+<li><p><strong>utils</strong> - the errmsggen ( errmsg.cpp ) utility, used to generate two errmsgdf.h files (one for flang1, one for flang2), error message text.</p></li>
+</ul>
+<section id="lib-directory-structure">
+<h3><code class="docutils literal notranslate"><span class="pre">lib</span></code> directory structure<a class="headerlink" href="#lib-directory-structure" title="Permalink to this heading">¶</a></h3>
+<ul class="simple">
+<li><p><strong>ADT</strong> (Abstract Data Types) - hash.c - open addressing, quadratically probed hash tables.</p></li>
+<li><p><strong>ArgParser</strong> - command line arguments parser routines, common to <code class="docutils literal notranslate"><span class="pre">flang1</span></code> and <code class="docutils literal notranslate"><span class="pre">flang2</span></code>.</p></li>
+<li><p><strong>scutil</strong> - various routines, mostly sophisticated file I/O handling.</p></li>
+</ul>
+</section>
+<section id="tools-flang1-directory-structure">
+<h3><code class="docutils literal notranslate"><span class="pre">tools/flang1</span></code> directory structure<a class="headerlink" href="#tools-flang1-directory-structure" title="Permalink to this heading">¶</a></h3>
+<ul class="simple">
+<li><p><strong>flang1exe</strong> - the frontend, stage 1.</p></li>
+<li><p><strong>include/platform.h.in</strong> - template for platform.h header file generated by CMake (platform specific definitions).</p></li>
+<li><p><strong>utils</strong> - utilities required during flang1 building process.</p>
+<ul>
+<li><p><strong>ast</strong> - <code class="docutils literal notranslate"><span class="pre">astutil</span></code> , generates <code class="docutils literal notranslate"><span class="pre">ast.h</span></code> and <code class="docutils literal notranslate"><span class="pre">astdf.h</span></code> from <code class="docutils literal notranslate"><span class="pre">ast.in.h</span></code> .</p></li>
+<li><p><strong>common</strong> - nroff-to-C converter used by <code class="docutils literal notranslate"><span class="pre">astutil</span></code> , <code class="docutils literal notranslate"><span class="pre">machar</span></code> and <code class="docutils literal notranslate"><span class="pre">fen2rst</span></code> .</p></li>
+<li><p><strong>machar</strong> - machine characteristics utility definitions, generates <code class="docutils literal notranslate"><span class="pre">machar.h</span></code> and <code class="docutils literal notranslate"><span class="pre">machardf.h</span></code>.</p></li>
+<li><p><strong>n2rst</strong> - nroff ( .n ) to Shpinx ( .rst ) format conversion utility.</p></li>
+<li><p><strong>prstb</strong> - parse table generator; grammar definition and parser tables, prodstr utility, lr utility.</p></li>
+<li><p><strong>symtab</strong> - symbol table generator and utilities.</p></li>
+</ul>
+</li>
+</ul>
+</section>
+<section id="tools-flang2-directory-structure">
+<h3><code class="docutils literal notranslate"><span class="pre">tools/flang2</span></code> directory structure<a class="headerlink" href="#tools-flang2-directory-structure" title="Permalink to this heading">¶</a></h3>
+<ul class="simple">
+<li><p><strong>flang2exe</strong> - the frontend, stage 2.</p></li>
+<li><p><strong>include/platform.h.in</strong> - template for platform.h header file generated by CMake (platform specific definitions)</p></li>
+<li><p><strong>utils</strong></p>
+<ul>
+<li><p><strong>common</strong> - nroff-to-C converter used by <code class="docutils literal notranslate"><span class="pre">ilitp</span></code> , <code class="docutils literal notranslate"><span class="pre">ilmtp</span></code> , <code class="docutils literal notranslate"><span class="pre">fsymutil</span></code> , <code class="docutils literal notranslate"><span class="pre">fesymutil</span></code> , <code class="docutils literal notranslate"><span class="pre">fsymini</span></code> , <code class="docutils literal notranslate"><span class="pre">fesymini</span></code> and <code class="docutils literal notranslate"><span class="pre">fmachar</span></code>.</p></li>
+<li><p><strong>ilmtp</strong> - ILM template utility; reads ILM definition file (<code class="docutils literal notranslate"><span class="pre">ilmtp.n</span></code>) and generates <code class="docutils literal notranslate"><span class="pre">ilmtp.h</span></code> and <code class="docutils literal notranslate"><span class="pre">ilmtpdf.h</span></code>; architecture specific <code class="docutils literal notranslate"><span class="pre">.n</span></code> files for aarch64 , ppc64le and x86_64.</p></li>
+<li><p><strong>ilitp</strong> - ILI template utility; reads ILI definition file (<code class="docutils literal notranslate"><span class="pre">ilitp.n</span></code>) and generates <code class="docutils literal notranslate"><span class="pre">iliatt.h</span></code> and <code class="docutils literal notranslate"><span class="pre">ilinofodf.h</span></code>; architecture specific <code class="docutils literal notranslate"><span class="pre">.n</span></code> files for aarch64 , ppc64le and x86_64.</p></li>
+<li><p><strong>machar</strong> - see above.</p></li>
+<li><p><strong>n2rst</strong> - see above.</p></li>
+<li><p><strong>symtab</strong> - see above.</p></li>
+<li><p><strong>upper</strong> - upperl utility, turns <code class="docutils literal notranslate"><span class="pre">upperilm.in</span></code> into <code class="docutils literal notranslate"><span class="pre">upperilm.h</span></code>; included by <code class="docutils literal notranslate"><span class="pre">flang2exe/upper.c</span></code> which imports the lowered Fortran code.</p></li>
+</ul>
+</li>
+</ul>
+</section>
+</section>
+</section>
+
+
+      </div>
+      <div class="bottomnav" role="navigation" aria-label="bottom navigation">
+      
+        <p>
+        «&#160;&#160;<a href="glossary.html">Flang glossary</a>
+        &#160;&#160;::&#160;&#160;
+        <a class="uplink" href="index.html">Contents</a>
+        &#160;&#160;::&#160;&#160;
+        <a href="flang2/coding.html">Coding Practices</a>&#160;&#160;»
+        </p>
+
+      </div>
+
+    <div class="footer" role="contentinfo">
+        &#169; Copyright .
+      Created using <a href="https://www.sphinx-doc.org/">Sphinx</a> 5.3.0.
+    </div>
+  </body>
+</html>

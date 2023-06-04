@@ -1,0 +1,166 @@
+
+<!DOCTYPE html>
+
+<html lang="en">
+  <head>
+    <meta charset="utf-8" />
+    <meta name="viewport" content="width=device-width, initial-scale=1.0" /><meta name="generator" content="Docutils 0.19: https://docutils.sourceforge.io/" />
+
+    <title>Error Reporting Utils &#8212; Flang 1.0 documentation</title>
+    <link rel="stylesheet" type="text/css" href="../_static/pygments.css" />
+    <link rel="stylesheet" type="text/css" href="../_static/haiku.css" />
+    <script data-url_root="../" id="documentation_options" src="../_static/documentation_options.js"></script>
+    <script src="../_static/jquery.js"></script>
+    <script src="../_static/underscore.js"></script>
+    <script src="../_static/_sphinx_javascript_frameworks_compat.js"></script>
+    <script src="../_static/doctools.js"></script>
+    <script src="../_static/sphinx_highlight.js"></script>
+    <link rel="index" title="Index" href="../genindex.html" />
+    <link rel="search" title="Search" href="../search.html" />
+    <link rel="next" title="Maintenance Info" href="fin.html" />
+    <link rel="prev" title="Appendix III - Target Machine" href="../flang1/machar.html" /> 
+  </head><body>
+      <div class="header" role="banner"><h1 class="heading"><a href="../index.html">
+          <span>Flang 1.0 documentation</span></a></h1>
+        <h2 class="heading"><span>Error Reporting Utils</span></h2>
+      </div>
+      <div class="topnav" role="navigation" aria-label="top navigation">
+      
+        <p>
+        «&#160;&#160;<a href="../flang1/machar.html">Appendix III - Target Machine</a>
+        &#160;&#160;::&#160;&#160;
+        <a class="uplink" href="../index.html">Contents</a>
+        &#160;&#160;::&#160;&#160;
+        <a href="fin.html">Maintenance Info</a>&#160;&#160;»
+        </p>
+
+      </div>
+      <div class="content" role="main">
+        
+        
+  <section id="error-reporting-utils">
+<h1>Error Reporting Utils<a class="headerlink" href="#error-reporting-utils" title="Permalink to this heading">¶</a></h1>
+<section id="overview">
+<h2>Overview<a class="headerlink" href="#overview" title="Permalink to this heading">¶</a></h2>
+<p>The Error Reporting Utilities are a set of routines
+used throughout <strong>Flang</strong> to format and write error messages and
+error summary messages to the user’s terminal (c
+<code class="docutils literal notranslate"><span class="pre">stderr</span></code>)
+and to the Listing File.</p>
+<p>The text of error messages is stored in a data structure
+which is initialized by C code created by the utility program
+ERRMSG, which uses the error message definition file as input.</p>
+<p>Appendix II of this document lists the <strong>Flang</strong> error messages
+and describes them.
+This appendix was created from the error message definition file.</p>
+</section>
+<section id="program-units">
+<h2>Program Units<a class="headerlink" href="#program-units" title="Permalink to this heading">¶</a></h2>
+<p>The following routines belong to the source code module
+<em>error.c</em>.</p>
+<p><code class="docutils literal notranslate"><span class="pre">VOID</span> <span class="pre">errini()</span></code></p>
+<blockquote>
+<div><p>This routine called at the beginning of processing of each user
+subprogram unit to initialize various error counts associated
+with the subprogram to zero.</p>
+</div></blockquote>
+<dl class="simple">
+<dt><code class="docutils literal notranslate"><span class="pre">VOID</span> <span class="pre">error(ecode,</span> <span class="pre">sev,</span> <span class="pre">eline,</span> <span class="pre">op1,</span> <span class="pre">op2)</span></code></dt><dd><p>Writes error message (subject to
+<code class="docutils literal notranslate"><span class="pre">-inform</span></code>
+flag) to user’s terminal
+and Listing File.  Aborts compilation if fatal message issued.
+Maintains error statistics.</p>
+</dd>
+<dt><code class="docutils literal notranslate"><span class="pre">int</span> <span class="pre">ecode;</span></code></dt><dd><p>Error message number (see Appendix II).</p>
+</dd>
+<dt><code class="docutils literal notranslate"><span class="pre">int</span> <span class="pre">sev;</span></code></dt><dd><p>Error severity.  Allowed values are:
+.(l1 — informational
+2 — warning
+3 — severe
+4 — fatal
+.)l</p>
+</dd>
+<dt><code class="docutils literal notranslate"><span class="pre">int</span> <span class="pre">eline;</span></code></dt><dd><p>Source file line number associated with the error, possibly 0.</p>
+</dd>
+<dt><code class="docutils literal notranslate"><span class="pre">char</span> <span class="pre">\*op1;</span></code></dt><dd><p>Specifies text string to be incorporated into the message in place of
+“$”.
+If
+<code class="docutils literal notranslate"><span class="pre">NULL</span></code>,
+no text need be inserted.</p>
+</dd>
+<dt><code class="docutils literal notranslate"><span class="pre">char</span> <span class="pre">\*op2;</span></code></dt><dd><p>Same as
+<code class="docutils literal notranslate"><span class="pre">op1</span></code>
+for second string, if any.</p>
+</dd>
+<dt><code class="docutils literal notranslate"><span class="pre">VOID</span> <span class="pre">interr(txt,</span> <span class="pre">val,</span> <span class="pre">sev)</span></code></dt><dd><p>Issue internal compiler error.</p>
+</dd>
+<dt><code class="docutils literal notranslate"><span class="pre">char</span> <span class="pre">\*txt;</span></code></dt><dd><p>Text string which will be incorporated into the error message.
+To make it easier to track down the problem, the name of the function
+issuing the internal error should appear at the beginning of the string,
+followed by
+“:”.</p>
+</dd>
+<dt><code class="docutils literal notranslate"><span class="pre">int</span> <span class="pre">val;</span></code></dt><dd><p>Integer value to be included in the error message to assist debugging.</p>
+</dd>
+<dt><code class="docutils literal notranslate"><span class="pre">int</span> <span class="pre">sev;</span></code></dt><dd><p>Severity of message, in range 1 to 4.</p>
+</dd>
+<dt><code class="docutils literal notranslate"><span class="pre">VOID</span> <span class="pre">summary()</span></code></dt><dd><p>Write compilation summary message
+to
+<code class="docutils literal notranslate"><span class="pre">stderr.</span></code></p>
+</dd>
+</dl>
+</section>
+<section id="errmsg-utility">
+<h2>ERRMSG Utility<a class="headerlink" href="#errmsg-utility" title="Permalink to this heading">¶</a></h2>
+<p>This utility creates C code which initializes the error message
+text structure.
+It must be run whenever a message is deleted, added, or modified.
+Once run, the module
+<em>error.c</em>
+must be recompiled.</p>
+<p>Note that the severity level of each message is specified in this
+file, but is ignored by ERRMSG.</p>
+<section id="inputs">
+<h3>Inputs<a class="headerlink" href="#inputs" title="Permalink to this heading">¶</a></h3>
+<p>The single input to ERRMSG is the error message definition file
+(c
+<em>errmsg.n</em>).
+For the proper format of messages added to this file, just
+refer to the existing file as an example.</p>
+<p>Note that an informal description of each message, its causes
+and proper interpretation, is included in this file (see Appendix II).
+Care should be taken to keep this information up to date.
+Messages should be deleted when they are no longer used.</p>
+</section>
+<section id="outputs">
+<h3>Outputs<a class="headerlink" href="#outputs" title="Permalink to this heading">¶</a></h3>
+<p>The ERRMSG output is the file
+<em>errmsgdf.h</em>
+which is
+included into the module
+<em>error.c</em>
+to initialize the error message text.</p>
+</section>
+</section>
+</section>
+
+
+      </div>
+      <div class="bottomnav" role="navigation" aria-label="bottom navigation">
+      
+        <p>
+        «&#160;&#160;<a href="../flang1/machar.html">Appendix III - Target Machine</a>
+        &#160;&#160;::&#160;&#160;
+        <a class="uplink" href="../index.html">Contents</a>
+        &#160;&#160;::&#160;&#160;
+        <a href="fin.html">Maintenance Info</a>&#160;&#160;»
+        </p>
+
+      </div>
+
+    <div class="footer" role="contentinfo">
+        &#169; Copyright .
+      Created using <a href="https://www.sphinx-doc.org/">Sphinx</a> 5.3.0.
+    </div>
+  </body>
+</html>

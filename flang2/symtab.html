@@ -1,0 +1,2877 @@
+
+<!DOCTYPE html>
+
+<html lang="en">
+  <head>
+    <meta charset="utf-8" />
+    <meta name="viewport" content="width=device-width, initial-scale=1.0" /><meta name="generator" content="Docutils 0.19: https://docutils.sourceforge.io/" />
+
+    <title>Symbol Table &#8212; Flang 1.0 documentation</title>
+    <link rel="stylesheet" type="text/css" href="../_static/pygments.css" />
+    <link rel="stylesheet" type="text/css" href="../_static/haiku.css" />
+    <script data-url_root="../" id="documentation_options" src="../_static/documentation_options.js"></script>
+    <script src="../_static/jquery.js"></script>
+    <script src="../_static/underscore.js"></script>
+    <script src="../_static/_sphinx_javascript_frameworks_compat.js"></script>
+    <script src="../_static/doctools.js"></script>
+    <script src="../_static/sphinx_highlight.js"></script>
+    <link rel="index" title="Index" href="../genindex.html" />
+    <link rel="search" title="Search" href="../search.html" />
+    <link rel="next" title="Appendix IV - ILM Definitions" href="ilmtp.html" />
+    <link rel="prev" title="Data Initialization File" href="dinit.html" /> 
+  </head><body>
+      <div class="header" role="banner"><h1 class="heading"><a href="../index.html">
+          <span>Flang 1.0 documentation</span></a></h1>
+        <h2 class="heading"><span>Symbol Table</span></h2>
+      </div>
+      <div class="topnav" role="navigation" aria-label="top navigation">
+      
+        <p>
+        «&#160;&#160;<a href="dinit.html">Data Initialization File</a>
+        &#160;&#160;::&#160;&#160;
+        <a class="uplink" href="../index.html">Contents</a>
+        &#160;&#160;::&#160;&#160;
+        <a href="ilmtp.html">Appendix IV - ILM Definitions</a>&#160;&#160;»
+        </p>
+
+      </div>
+      <div class="content" role="main">
+        
+        
+  <section id="symbol-table">
+<h1>Symbol Table<a class="headerlink" href="#symbol-table" title="Permalink to this heading">¶</a></h1>
+<section id="overview">
+<h2>Overview<a class="headerlink" href="#overview" title="Permalink to this heading">¶</a></h2>
+<p>The Symbol Table is used throughout PGF90 to maintain information on
+user defined and compiler created symbols, constants, and labels.</p>
+<p>The Symbol Table is maintained in dynamic storage space which is extended
+if necessary.
+Each symbol table entry consists of
+16 32-bit words
+which are divided into fields of various lengths.
+The layout of the <code class="docutils literal notranslate"><span class="pre">SYM</span></code> structure is strict
+(see type <code class="docutils literal notranslate"><span class="pre">SYM</span></code> in <em>symacc.h</em>);
+overlaying fields with fields of different types is not allowed.
+Symbol table pointers
+are integers (greater than zero) which are stored as ints
+and used as relative pointers from a base pointer.</p>
+<p>A second dynamic storage area, the symbol name area, is used to
+store the text of symbol names and character string constants.</p>
+<p>Symbols are added to the Symbol Table using a set of access
+routines which are described later on in this section.</p>
+<p>Symbol Table fields are accessed via a set of C macros.  These macros are
+upper case and consist of the name of the field followed by either
+“P”
+for the put macro or
+“G”
+for the get macro.  The put macros take two arguments,
+a symbol table pointer and the value to be inserted.  The get macros take
+a single argument which is a symbol table pointer, and return the value
+of the field.
+For example:</p>
+<div class="highlight-none notranslate"><div class="highlight"><pre><span></span>STYPEP(sptr, ST_VAR);     stype = STYPEG(sptr);
+</pre></div>
+</div>
+<p>The macro definitions and the necessary C data declaration statements
+required to access the Symbol Table are in the include file
+<em>symtab.n</em>.</p>
+<p>The Symbol Table initially contains entries for all of
+the intrinsic and generic functions supported by PGFTN.
+This initial Symbol Table is created by the utility program SYMINI,
+which is described later on in this section.
+Appendix III contains the input file to SYMINI which
+defines the intrinsics and generics.</p>
+</section>
+<section id="symbol-name-overloading">
+<h2>Symbol Name Overloading<a class="headerlink" href="#symbol-name-overloading" title="Permalink to this heading">¶</a></h2>
+<p>Because of symbol name overloading, and multiple scopes,
+the Symbol Table will often contain more than one
+entry for a given name.</p>
+<p>The concept of
+<em>overloading class</em>
+is used by the compiler.
+By definition, two entities in different overloading
+classes are allowed to share the same name. The
+context in which the name is used will always determine
+which entity is being referred to.
+The overloading class of a symbol is determined by its
+stype,
+<code class="docutils literal notranslate"><span class="pre">STYPE</span></code>;
+the overloading classes are:</p>
+<dl class="simple">
+<dt><code class="docutils literal notranslate"><span class="pre">OC_TYPEDEF</span></code></dt><dd><p>Typedef names (not used by PGFTN).</p>
+</dd>
+<dt><code class="docutils literal notranslate"><span class="pre">OC_MEMBERS</span></code></dt><dd><p>Structure and union member names.  Actually, there is a separate overloading
+class for each structure or union (i.e.,
+two different structures or unions
+are allowed to have identically named members).</p>
+</dd>
+<dt><code class="docutils literal notranslate"><span class="pre">OC_STAG</span></code></dt><dd><p>Structure tags (structure template name).</p>
+</dd>
+<dt><code class="docutils literal notranslate"><span class="pre">OC_CMBLK</span></code></dt><dd><p>Common block names.</p>
+</dd>
+<dt><code class="docutils literal notranslate"><span class="pre">OC_OTHER</span></code></dt><dd><p>Other names.
+This class includes variables, functions.</p>
+</dd>
+<dt><code class="docutils literal notranslate"><span class="pre">OC_NONE</span></code></dt><dd><p>Overloading class is not applicable.</p>
+</dd>
+</dl>
+</section>
+<section id="symbol-table-fields">
+<h2>Symbol Table Fields<a class="headerlink" href="#symbol-table-fields" title="Permalink to this heading">¶</a></h2>
+<section id="shared-fields">
+<h3>Shared Fields<a class="headerlink" href="#shared-fields" title="Permalink to this heading">¶</a></h3>
+<p>In general, each type of symbol table entry (see STYPE below) has
+a different set of fields associated with it.
+This section describes those fields which are used by all or most
+of the symbol types.</p>
+<dl>
+<dt><code class="docutils literal notranslate"><span class="pre">STYPE</span></code></dt><dd><p>This field defines the type of symbol table entry.  C constant (c
+<a href="#id1"><span class="problematic" id="id2">``</span></a>#define``d)
+symbols
+are used for the various values which the stype may take on.
+The different symbol types and their values are:</p>
+<dl>
+<dt><code class="docutils literal notranslate"><span class="pre">ST_UNKNOWN</span></code></dt><dd><p>Symbol entered initially by scanner but not yet resolved by semantic analysis.</p>
+</dd>
+<dt><code class="docutils literal notranslate"><span class="pre">ST_IDENT</span></code></dt><dd><p>Identifier.  Used for symbols during semantic analysis until the true
+type of the symbol can be determined.  See note below.</p>
+</dd>
+<dt><code class="docutils literal notranslate"><span class="pre">ST_LABEL</span></code></dt><dd><p>Statement label.</p>
+</dd>
+<dt><code class="docutils literal notranslate"><span class="pre">ST_CONST</span></code></dt><dd><p>Constant.  Includes integer, real, character, etc. constants.</p>
+</dd>
+<dt><code class="docutils literal notranslate"><span class="pre">ST_STAG</span></code></dt><dd><p>Structure template name</p>
+</dd>
+<dt><code class="docutils literal notranslate"><span class="pre">ST_MEMBER</span></code></dt><dd><p>Member of a struct or union.</p>
+</dd>
+<dt><code class="docutils literal notranslate"><span class="pre">ST_VAR</span></code></dt><dd><p>Scalar variable.</p>
+</dd>
+<dt><code class="docutils literal notranslate"><span class="pre">ST_ARRAY</span></code></dt><dd><p>Array.</p>
+</dd>
+<dt><code class="docutils literal notranslate"><span class="pre">ST_STRUCT</span></code></dt><dd><p>Structure variable.</p>
+</dd>
+<dt><code class="docutils literal notranslate"><span class="pre">ST_UNION</span></code></dt><dd><p>Union variable.</p>
+</dd>
+<dt><code class="docutils literal notranslate"><span class="pre">ST_CMBLK</span></code></dt><dd><p>Common block.</p>
+</dd>
+<dt><code class="docutils literal notranslate"><span class="pre">ST_NML</span></code></dt><dd><p>Namelist.</p>
+</dd>
+<dt><code class="docutils literal notranslate"><span class="pre">ST_ENTRY</span></code></dt><dd><p>Entry point to current subprogram unit.  i.e. name specified on
+<code class="docutils literal notranslate"><span class="pre">SUBROUTINE</span></code>,
+<code class="docutils literal notranslate"><span class="pre">FUNCTION</span></code>,
+<code class="docutils literal notranslate"><span class="pre">BLOCKDATA</span></code>,
+<code class="docutils literal notranslate"><span class="pre">PROGRAM</span></code>,
+or
+<code class="docutils literal notranslate"><span class="pre">ENTRY</span></code>
+statement.</p>
+</dd>
+<dt><code class="docutils literal notranslate"><span class="pre">ST_PROC</span></code></dt><dd><p>External subprogram referenced by current subprogram.</p>
+</dd>
+<dt><code class="docutils literal notranslate"><span class="pre">ST_STFUNC</span></code></dt><dd><p>Statement function.</p>
+</dd>
+<dt><code class="docutils literal notranslate"><span class="pre">ST_PARAM</span></code></dt><dd><p>Constant symbol defined in a
+<code class="docutils literal notranslate"><span class="pre">PARAMETER</span></code>
+statement.</p>
+</dd>
+<dt><code class="docutils literal notranslate"><span class="pre">ST_INTRIN</span></code></dt><dd><p>Intrinsic function.</p>
+</dd>
+<dt><code class="docutils literal notranslate"><span class="pre">ST_GENERIC</span></code></dt><dd><p>Generic function name.</p>
+</dd>
+<dt><code class="docutils literal notranslate"><span class="pre">ST_PD</span></code></dt><dd><p>Predeclared subroutine name.</p>
+</dd>
+<dt><code class="docutils literal notranslate"><span class="pre">ST_TYPEDEF</span></code></dt><dd><p>Fortran 90 derived type template name.</p>
+</dd>
+<dt><code class="docutils literal notranslate"><span class="pre">ST_PLIST</span></code></dt><dd><p>Parameter list.</p>
+</dd>
+<dt><code class="docutils literal notranslate"><span class="pre">ST_BLOCK</span></code></dt><dd><p>Lexical block.</p>
+</dd>
+<dt><code class="docutils literal notranslate"><span class="pre">ST_BASE</span></code></dt><dd><p>Symbol whose name is used as the base address for a set of static variables.</p>
+</dd>
+<dt><code class="docutils literal notranslate"><span class="pre">ST_DPNAME</span></code></dt><dd><p>name sptr for deep copy directives</p>
+</dd>
+<dt><code class="docutils literal notranslate"><span class="pre">SC</span></code></dt><dd><p>Storage class of a variable.
+Indicates storage class/psect containing this variable.
+The following values are allowed:</p>
+<dl class="simple">
+<dt><code class="docutils literal notranslate"><span class="pre">SC_NONE</span></code></dt><dd><p>No storage class yet defined.  This is used internally until the
+storage class of a symbol is determined.</p>
+</dd>
+<dt><code class="docutils literal notranslate"><span class="pre">SC_LOCAL</span></code></dt><dd><p>local variables not initialized.</p>
+</dd>
+<dt><code class="docutils literal notranslate"><span class="pre">SC_STATIC</span></code></dt><dd><p>local variables which are initialized or saved.</p>
+</dd>
+<dt><code class="docutils literal notranslate"><span class="pre">SC_DUMMY</span></code></dt><dd><p>variables which are dummy arguments</p>
+</dd>
+<dt><code class="docutils literal notranslate"><span class="pre">SC_CMBLK</span></code></dt><dd><p>common block variables</p>
+</dd>
+<dt><code class="docutils literal notranslate"><span class="pre">SC_EXTERN</span></code></dt><dd><p>external subprograms</p>
+</dd>
+<dt><code class="docutils literal notranslate"><span class="pre">SC_BASED</span></code></dt><dd><p>pointer-based variables</p>
+</dd>
+<dt><code class="docutils literal notranslate"><span class="pre">SC_PRIVATE</span></code></dt><dd><p>variables declared within a parallel region.</p>
+</dd>
+<dt><code class="docutils literal notranslate"><span class="pre">b3</span></code></dt><dd><p>Always an unsigned 8-bit field.</p>
+</dd>
+<dt><code class="docutils literal notranslate"><span class="pre">b4</span></code></dt><dd><p>Always an unsigned 8-bit field.</p>
+</dd>
+<dt><code class="docutils literal notranslate"><span class="pre">DTYPE</span></code></dt><dd><p>Data type of symbol.
+Relative pointer into the data type area to a record or list of records
+which define the type of symbol.
+See section ???.</p>
+</dd>
+<dt><code class="docutils literal notranslate"><span class="pre">HASHLK</span></code></dt><dd><p>Hash link.  This field is used to link together those symbols
+which hash to the same value, and is used only by the
+symbol look-up routines.</p>
+</dd>
+<dt><code class="docutils literal notranslate"><span class="pre">SYMLK</span></code></dt><dd><p>Field used to create a list of symbols.</p>
+</dd>
+<dt><code class="docutils literal notranslate"><span class="pre">SCOPE</span></code></dt><dd><p>Symbol scope.</p>
+</dd>
+<dt><code class="docutils literal notranslate"><span class="pre">NMPTR</span></code></dt><dd><p>Name pointer.  Relative pointer into the symbol name storage
+to the null terminated character string for the symbol name.</p>
+</dd>
+<dt><code class="docutils literal notranslate"><span class="pre">flags</span></code></dt><dd><p>Flags per symbol (named f1 through f32).</p>
+</dd>
+<dt><code class="docutils literal notranslate"><span class="pre">flags2</span></code></dt><dd><p>Flags per symbol (named f33 through f64).</p>
+</dd>
+<dt><code class="docutils literal notranslate"><span class="pre">flags3</span></code></dt><dd><p>Flags per symbol (named f65 through f96).</p>
+</dd>
+<dt><code class="docutils literal notranslate"><span class="pre">flags4</span></code></dt><dd><p>Flags per symbol (named f97 through f128).</p>
+</dd>
+</dl>
+</dd>
+</dl>
+</dd>
+</dl>
+<p><strong>NOTE</strong>
+.fi
+A symbol is entered in the symbol table initially by the scanner.  Its
+stype is set to
+<code class="docutils literal notranslate"><span class="pre">ST_UNKNOWN.</span></code>
+The semantic analysis phase will change the
+stype field as it interprets the source code.  The stype field will change
+to
+<code class="docutils literal notranslate"><span class="pre">ST_IDENT</span></code>
+when a type declaration is analyzed.  The stype field is not
+immediately set to
+<code class="docutils literal notranslate"><span class="pre">ST_VAR</span></code>
+on a type declaration because the type
+declaration alone is not enough information to conclude that the intended
+use of the identifier is as a variable.  For example,</p>
+<div class="highlight-none notranslate"><div class="highlight"><pre><span></span>INTEGER\*2 IMIN
+</pre></div>
+</div>
+<p>.fi
+In this example the source line could be reaffirming the declaration of
+an intrinsic or could actually be defining a local variable called
+<code class="docutils literal notranslate"><span class="pre">IMIN.</span></code>
+It will not be known until the first reference to
+<code class="docutils literal notranslate"><span class="pre">IMIN</span></code>
+is analyzed.  At this time the stype of
+<code class="docutils literal notranslate"><span class="pre">IMIN</span></code>
+is either confirmed as an intrinsic use or as a variable use.  This
+would not be a problem if the declaration of
+<code class="docutils literal notranslate"><span class="pre">IMIN</span></code>
+was an array or if
+<code class="docutils literal notranslate"><span class="pre">IMIN</span></code>
+was in common or an equivalence.  These cases clearly set the stype of
+<code class="docutils literal notranslate"><span class="pre">IMIN</span></code>
+to ST_VAR, overriding its intrinsic properties.</p>
+</section>
+<section id="fields-by-symbol-type">
+<h3>Fields by Symbol Type<a class="headerlink" href="#fields-by-symbol-type" title="Permalink to this heading">¶</a></h3>
+<section id="st-unknown">
+<h4>ST_UNKNOWN<a class="headerlink" href="#st-unknown" title="Permalink to this heading">¶</a></h4>
+<p><em>OC_NONE</em> unknown</p>
+<p>Symbol entered by the scanner but not yet resolved.</p>
+<p><em>Other Fields</em></p>
+</section>
+<section id="st-label">
+<h4>ST_LABEL<a class="headerlink" href="#st-label" title="Permalink to this heading">¶</a></h4>
+<p><em>OC_OTHER</em> label</p>
+<p><em>Flags</em></p>
+<dl class="simple">
+<dt><code class="docutils literal notranslate"><span class="pre">DEFD</span></code></dt><dd><p>Set by the scanner when label definition has been processed.</p>
+</dd>
+<dt><code class="docutils literal notranslate"><span class="pre">CCSYM</span></code></dt><dd><p>Compiler created label.</p>
+</dd>
+<dt><code class="docutils literal notranslate"><span class="pre">VOL</span></code></dt><dd><p>Label is volatile and should not be deleted.</p>
+</dd>
+<dt><code class="docutils literal notranslate"><span class="pre">BEGINSCOPE</span></code></dt><dd><p>Set for a label that marks the beginning of a lexical scope for symbols.</p>
+</dd>
+<dt><code class="docutils literal notranslate"><span class="pre">ENDSCOPE</span></code></dt><dd><p>Set for a label that marks the beginning of a lexical scope for symbols.</p>
+</dd>
+<dt><code class="docutils literal notranslate"><span class="pre">SWIGNORE</span></code></dt><dd><p>Set for a label that is part of switch statement and it is replaced by optimizer.</p>
+</dd>
+<dt><code class="docutils literal notranslate"><span class="pre">RESTRICTED</span></code></dt><dd><p>Set for restricted use of module.</p>
+</dd>
+</dl>
+<p><em>Flags2</em></p>
+<p><em>Other Fields</em></p>
+<dl class="simple">
+<dt><code class="docutils literal notranslate"><span class="pre">RFCNT</span></code></dt><dd><p>Number of references of this label.
+This includes references in</p>
+</dd>
+<dt><code class="docutils literal notranslate"><span class="pre">RFCNTDEV</span></code></dt><dd><p>Number of references of this label for openmp device code.
+<code class="docutils literal notranslate"><span class="pre">ASSIGN</span></code>
+and assigned
+<code class="docutils literal notranslate"><span class="pre">GOTO</span></code>
+statements, and references of FORMAT statement labels.</p>
+</dd>
+<dt><code class="docutils literal notranslate"><span class="pre">SYMLK</span></code></dt><dd><p>For
+labels which are referenced, the Semantic Analyzer links together these labels
+using this field.
+The head of the list is pointed to by
+<code class="docutils literal notranslate"><span class="pre">sem.flabels</span></code>
+and the list is terminated by
+<code class="docutils literal notranslate"><span class="pre">0</span></code>.
+For variable format expressions,
+the Semantic Analyzer links together these compiler created labels
+using this field.
+The head of the list is pointed to by
+<code class="docutils literal notranslate"><span class="pre">sem.vf_expr.labels</span></code>
+and the list is terminated by
+<code class="docutils literal notranslate"><span class="pre">0</span></code>.</p>
+</dd>
+<dt><code class="docutils literal notranslate"><span class="pre">ADDRESS</span></code></dt><dd><p>Byte address relative to beginning of code psect.
+Set by Code Scheduler.
+For the label of a variable format expression,
+the Semantic Analyzer uses this field as a pointer to an area in
+dynamic storage containing the ILMs for the expression;
+the field is cleared at the end of semantic processing.</p>
+</dd>
+<dt><code class="docutils literal notranslate"><span class="pre">ILIBLK</span></code></dt><dd><p>Number of the ILI block which defines this label.
+This may be zero for labels with BEGINSCOPE/ENDSCOPE set.
+For the label of a variable format expression,
+the Semantic Analyzer uses this field as the index of
+the ILMs for the expression;
+the field is cleared at the end of semantic processing.</p>
+</dd>
+<dt><code class="docutils literal notranslate"><span class="pre">FMTPT</span></code></dt><dd><p>Zero if this label is not on a
+<code class="docutils literal notranslate"><span class="pre">FORMAT</span></code>
+statement, else is a symbol table pointer to compiler created array containing
+the encoded form of the
+<code class="docutils literal notranslate"><span class="pre">FORMAT</span></code>
+statement.</p>
+</dd>
+</dl>
+</section>
+<section id="st-stag-st-typedef">
+<h4>ST_STAG, ST_TYPEDEF<a class="headerlink" href="#st-stag-st-typedef" title="Permalink to this heading">¶</a></h4>
+<p><em>OC_STAG</em> struct tag</p>
+<p>Structure template name.</p>
+<p><em>Flags</em></p>
+<dl class="simple">
+<dt><code class="docutils literal notranslate"><span class="pre">CLASS</span></code></dt><dd><p>This is set when an object is polymorphic.</p>
+</dd>
+<dt><code class="docutils literal notranslate"><span class="pre">UNLPOLY</span></code></dt><dd><p>This is set when object is unlimited polymorphic</p>
+</dd>
+<dt><code class="docutils literal notranslate"><span class="pre">VARDSC</span></code></dt><dd><p>This is set when the descriptor associated with this object is for a scalar.</p>
+</dd>
+<dt><code class="docutils literal notranslate"><span class="pre">ISOCTYPE</span></code></dt><dd><p>This is set when the type is iso_c_binding type.</p>
+</dd>
+<dt><code class="docutils literal notranslate"><span class="pre">DCLD</span></code></dt><dd><p>Set if
+<code class="docutils literal notranslate"><span class="pre">STRUCTURE-ENDSTRUCTURE</span></code>
+statement block has defined this structure tag.
+The
+<code class="docutils literal notranslate"><span class="pre">STRUCTURE</span></code>
+statement effects the creation of the tag.  When the matching
+<code class="docutils literal notranslate"><span class="pre">ENDSTRUCTURE</span></code>
+statement is seen, the tag’s
+<code class="docutils literal notranslate"><span class="pre">DCLD</span></code>
+is set.
+If a
+<code class="docutils literal notranslate"><span class="pre">RECORD</span></code>
+statement references a symbol without
+<code class="docutils literal notranslate"><span class="pre">DCLD</span></code>
+set, an error is generated and
+<code class="docutils literal notranslate"><span class="pre">DCLD</span></code>
+is set to avoid further error messages on subsequent references to this tag.</p>
+</dd>
+</dl>
+<p><em>Flags2</em></p>
+<p><em>Other Fields</em></p>
+<dl class="simple">
+<dt><code class="docutils literal notranslate"><span class="pre">PARENT</span></code></dt><dd><p>Contains sptr of parent of the type extension</p>
+</dd>
+<dt><code class="docutils literal notranslate"><span class="pre">TYPDEF_INIT</span></code></dt><dd><p>Initialization template (an ST_VAR), if any.</p>
+</dd>
+</dl>
+</section>
+<section id="st-member">
+<h4>ST_MEMBER<a class="headerlink" href="#st-member" title="Permalink to this heading">¶</a></h4>
+<p><em>OC_MEMBERS</em> member</p>
+<p><em>Flags</em></p>
+<p><em>Flags2</em></p>
+<dl class="simple">
+<dt><code class="docutils literal notranslate"><span class="pre">DESCARRAY</span></code></dt><dd><p>Set if this is a descriptor array, managed by the compiler/runtime.</p>
+</dd>
+<dt><code class="docutils literal notranslate"><span class="pre">ALLOCATTR</span></code></dt><dd><p>This flag is set if and only if the symbol was declared
+to have the ALLOCATABLE attribute (unlike the ALLOC flag</p>
+</dd>
+</dl>
+<p><em>Flags3</em></p>
+<dl class="simple">
+<dt><code class="docutils literal notranslate"><span class="pre">F90POINTER</span></code></dt><dd><p>This flag is set if and only if the symbol was declared
+to have the POINTER attribute</p>
+</dd>
+<dt><code class="docutils literal notranslate"><span class="pre">TPALLOC</span></code></dt><dd><p>Set if this component uses a type parameter and this component is implicitly
+allocatable.</p>
+</dd>
+<dt><code class="docutils literal notranslate"><span class="pre">KINDPARM</span></code></dt><dd><p>Set if this component is a kind type parameter</p>
+</dd>
+<dt><code class="docutils literal notranslate"><span class="pre">LENPARM</span></code></dt><dd><p>Set if this component is a length type parameter</p>
+</dd>
+<dt><code class="docutils literal notranslate"><span class="pre">SDSCCONTIG</span></code></dt><dd><p>Set if this is a descriptor array, and the compiler has determined that
+the object for which this is a descriptor is always contiguous.</p>
+</dd>
+<dt><code class="docutils literal notranslate"><span class="pre">FINALIZED</span></code></dt><dd><p>Set if this is an allocatable derived type member that must be finalized.</p>
+</dd>
+<dt><code class="docutils literal notranslate"><span class="pre">CONTIGATTR</span></code></dt><dd><p>This variable was declared with the CONTIGUOUS attribute.</p>
+</dd>
+<dt><code class="docutils literal notranslate"><span class="pre">TLS</span></code></dt><dd><p>This variable is in thread local storage.</p>
+</dd>
+</dl>
+<p><em>Other Fields</em></p>
+<p><em>.SE SYMLK</em>
+Members of each struct or union type are linked together using
+this field.  The end of the list has a value of
+<code class="docutils literal notranslate"><span class="pre">NOSYM</span></code>.</p>
+<dl class="simple">
+<dt><code class="docutils literal notranslate"><span class="pre">ADDRESS</span></code></dt><dd><p>Byte offset from the beginning of the struct (its parent) for this member.
+For a
+<code class="docutils literal notranslate"><span class="pre">UNION</span></code>,
+the compiler creates a ST_MEMBER whose
+<code class="docutils literal notranslate"><span class="pre">DTYPE</span></code>
+field
+will locate a data type record of type
+<code class="docutils literal notranslate"><span class="pre">TY_UNION</span></code>.
+For a
+<code class="docutils literal notranslate"><span class="pre">MAP</span></code>,
+the compiler creates a ST_MEMBER whose
+<code class="docutils literal notranslate"><span class="pre">DTYPE</span></code>
+field
+will locate a data type record of type
+<code class="docutils literal notranslate"><span class="pre">TY_STRUCT</span></code>.
+The members of a
+<code class="docutils literal notranslate"><span class="pre">UNION</span></code>
+are the compiler-created structures representing the
+<code class="docutils literal notranslate"><span class="pre">MAP``s.</span>
+<span class="pre">The</span> <span class="pre">members</span> <span class="pre">of</span> <span class="pre">a</span>
+<span class="pre">``MAP</span></code>
+are the variables which appear in the
+<code class="docutils literal notranslate"><span class="pre">MAP</span></code>
+body.
+Since the offset of the structure representing a
+<code class="docutils literal notranslate"><span class="pre">MAP</span></code>
+is zero,
+the offsets of the members in the map are actually relative
+to the beginning of the
+<code class="docutils literal notranslate"><span class="pre">MAP</span></code>’s
+<code class="docutils literal notranslate"><span class="pre">UNION</span></code>
+(note the first member of each
+<code class="docutils literal notranslate"><span class="pre">MAP</span></code>
+has an offset of zero).</p>
+</dd>
+<dt><code class="docutils literal notranslate"><span class="pre">VARIANT</span></code></dt><dd><p>Field used by the Semantic Analyzer to link together, in reverse order,
+the members of a</p>
+</dd>
+<dt><code class="docutils literal notranslate"><span class="pre">TBPLNK</span></code></dt><dd><p>When this member is a type bound procedure, this field will hold an sptr to
+the binding name.</p>
+</dd>
+<dt><code class="docutils literal notranslate"><span class="pre">VTABLE</span></code></dt><dd><p>When this member is a type bound procedure, this field will hold an sptr to the implementation ST_PROC.</p>
+</dd>
+<dt><code class="docutils literal notranslate"><span class="pre">IFACE</span></code></dt><dd><p>When this member is a type bound procedure, this field will hold the sptr of theinterface-name</p>
+</dd>
+<dt><code class="docutils literal notranslate"><span class="pre">FINAL</span></code></dt><dd><p>If &gt; 0, member is a final subroutine. Value is the rank of the dummy argument
++ 1 (e.g., 1 is for a scalar, 2 is for a single dimensional array, 3 is for
+a double dimensional array, etc.).
+<code class="docutils literal notranslate"><span class="pre">STRUCTURE</span></code>
+which appear at the same naming (scope) level.</p>
+</dd>
+<dt><code class="docutils literal notranslate"><span class="pre">PSMEM</span></code></dt><dd><p>This field exists for compatibility with PGC.
+For PGFTN it normally would point to this symbol
+table entry.</p>
+</dd>
+<dt><code class="docutils literal notranslate"><span class="pre">ETLS</span></code></dt><dd><p>Extended TLS levels</p>
+</dd>
+<dt><code class="docutils literal notranslate"><span class="pre">ASSOC_PTR</span></code></dt><dd><p>When set, this is the sptr of a pointer that is initialized with this symbol.</p>
+</dd>
+<dt><code class="docutils literal notranslate"><span class="pre">PTR_TARGET</span></code></dt><dd><p>When set, this symbol a place holder for a pointer target. This field holds the sptr of the original pointer target.</p>
+</dd>
+</dl>
+</section>
+<section id="st-ident-st-var-st-array-st-struct-st-union">
+<h4>ST_IDENT, ST_VAR, ST_ARRAY, ST_STRUCT, ST_UNION<a class="headerlink" href="#st-ident-st-var-st-array-st-struct-st-union" title="Permalink to this heading">¶</a></h4>
+<p><em>OC_OTHER</em> ident variable array structure union</p>
+<p><em>Flags</em></p>
+<dl class="simple">
+<dt><code class="docutils literal notranslate"><span class="pre">DCLD</span></code></dt><dd><p>Set if the data type of the variable has been explicitly declared.</p>
+</dd>
+<dt><code class="docutils literal notranslate"><span class="pre">DINIT</span></code></dt><dd><p>Set if the variable has been data initialized.</p>
+</dd>
+<dt><code class="docutils literal notranslate"><span class="pre">CCSYM</span></code></dt><dd><p>Indicates that this variable is a compiler created variable.</p>
+</dd>
+<dt><code class="docutils literal notranslate"><span class="pre">SAVE</span></code></dt><dd><p>Set if the variable is referenced in a
+<code class="docutils literal notranslate"><span class="pre">SAVE</span></code>
+statement.
+Overloaded with PURE.</p>
+</dd>
+<dt><code class="docutils literal notranslate"><span class="pre">REF</span></code></dt><dd><p>Set if variable is referenced.  Set by sym_is_refd - for local
+variables, indicates that address has been assigned.</p>
+</dd>
+<dt><code class="docutils literal notranslate"><span class="pre">REREF</span></code></dt><dd><p>Set if we need to “re-reference” variable (call back-end’s sym_is_refd). This
+can occur if we have a type extension with initializations in the parent
+component which require a call to assn_static_off() in back end’s sym_is_refd() function.</p>
+</dd>
+<dt><code class="docutils literal notranslate"><span class="pre">PTR_INITIALIZER</span></code></dt><dd><p>Set when this symbol is used as an initializer for a pointer. Assumes
+ASSOC_PTR and/or PTR_TARGET are also set.</p>
+</dd>
+<dt><code class="docutils literal notranslate"><span class="pre">WEAK</span></code></dt><dd><p>Set if this variable is a weak symbol.</p>
+</dd>
+<dt><code class="docutils literal notranslate"><span class="pre">ADDRTKN</span></code></dt><dd><p>Variable has appeared as a subprogram argument or in a %LOC.
+Set by Expander.</p>
+</dd>
+<dt><code class="docutils literal notranslate"><span class="pre">ASUMSZ</span></code></dt><dd><p>Assumed size array.</p>
+</dd>
+<dt><code class="docutils literal notranslate"><span class="pre">ADJARR</span></code></dt><dd><p>Adjustable array.</p>
+</dd>
+<dt><code class="docutils literal notranslate"><span class="pre">ASSUMRANK</span></code></dt><dd><p>Assumed-rank array.</p>
+</dd>
+<dt><code class="docutils literal notranslate"><span class="pre">ASSUMSHP</span></code></dt><dd><p>Assumed-shape array.</p>
+</dd>
+<dt><code class="docutils literal notranslate"><span class="pre">AFTENT</span></code></dt><dd><p>Set if an adjustable array and its declaration occurs after an
+ENTRY statement.</p>
+</dd>
+<dt><code class="docutils literal notranslate"><span class="pre">COPYPRMS</span></code></dt><dd><p>Set if the variable is a dummy argument and is copied.
+Set by the expander.</p>
+</dd>
+<dt><code class="docutils literal notranslate"><span class="pre">REGARG</span></code></dt><dd><p>Variable is a dummy argument which is passed in a register.
+Set by the expander.</p>
+</dd>
+<dt><code class="docutils literal notranslate"><span class="pre">MEMARG</span></code></dt><dd><p>If the variable is a dummy argument, the actual argument
+is passed in the memory argument area.
+If the variable is a non-dummy array, the array is
+the memory area which is passed to the called routine.
+Set by Expander.
+The flags
+<code class="docutils literal notranslate"><span class="pre">REGARG</span></code>
+and
+<code class="docutils literal notranslate"><span class="pre">MEMARG</span></code>
+are defined when arguments are passed in registers;
+a memory area is needed if there are more arguments than registers.</p>
+</dd>
+<dt><code class="docutils literal notranslate"><span class="pre">HOMED</span></code></dt><dd><p>Set in the expander for register dummies that have had code generated
+to ‘home’ the register to a local memory location.  Space will be allocated
+in sym_is_refd when use is seen by code generator.</p>
+</dd>
+<dt><code class="docutils literal notranslate"><span class="pre">OPTARG</span></code></dt><dd><p>This is a dummy argument that is a Fortran-90 optional argument.</p>
+</dd>
+<dt><code class="docutils literal notranslate"><span class="pre">AUTOBJ</span></code></dt><dd><p>For arrays, this is a Fortran-90 automatically-allocated array.</p>
+</dd>
+<dt><code class="docutils literal notranslate"><span class="pre">UPLEVEL</span></code></dt><dd><p>If this bit is set, the variable or array must be addressed as an offset
+from the containing procedure’s stack frame pointer; this is used for
+Fortran-90 contained procedures.</p>
+</dd>
+<dt><code class="docutils literal notranslate"><span class="pre">POINTER</span></code></dt><dd><p>This variable is actually a Fortran-90 pointer variable.</p>
+</dd>
+<dt><code class="docutils literal notranslate"><span class="pre">VOL</span></code></dt><dd><p>Variable appeared in a
+<code class="docutils literal notranslate"><span class="pre">VOLATILE</span></code>
+statement.</p>
+</dd>
+<dt><code class="docutils literal notranslate"><span class="pre">ALLOC</span></code></dt><dd><p>Variable (an array) is allocatable (its shape is
+<em>deferred</em>.
+In the first implementation of allocatable, deferred-shape arrays
+will be restricted to pointer-based objects (<code class="docutils literal notranslate"><span class="pre">SC_BASED</span></code>).</p>
+</dd>
+<dt><code class="docutils literal notranslate"><span class="pre">ASSN</span></code></dt><dd><p>Variable is assigned a value explicitly (detected by Expand) or
+implicitly (namelist I/O item, detected by Semant).
+Valid for only scalar variables (may be set for other types
+of variables, but does not apply).
+For local scalar variables, the
+<code class="docutils literal notranslate"><span class="pre">REDUC</span></code>
+flag is set if it is data initialized and its
+<code class="docutils literal notranslate"><span class="pre">ASSN</span></code>
+flag is not set;
+also, if the local variable and its constant value is entered
+into the
+<code class="docutils literal notranslate"><span class="pre">DVL</span></code>
+table.</p>
+</dd>
+<dt><code class="docutils literal notranslate"><span class="pre">QALN</span></code></dt><dd><p>Quad-align variable.</p>
+</dd>
+<dt><code class="docutils literal notranslate"><span class="pre">DOVAR</span></code></dt><dd><p>when set, the variable (ST_VAR) is a do loop index variable of
+a do loop currently being processed by semant (used only by semant).</p>
+</dd>
+<dt><code class="docutils literal notranslate"><span class="pre">E38</span></code></dt><dd><p>when set, the message <em>symbol not explicitly declared</em> (-dclchk)
+has been issued for symbol.
+Prevents repeating the message for the same symbol;
+overloaded with the
+flag
+<code class="docutils literal notranslate"><span class="pre">EXPST</span></code>.</p>
+</dd>
+<dt><code class="docutils literal notranslate"><span class="pre">INLN</span></code></dt><dd><p>if set, variable was created
+when its containing function was inlined; also, the variable’s
+<code class="docutils literal notranslate"><span class="pre">CCSYM</span></code>
+flag is set.</p>
+</dd>
+<dt><code class="docutils literal notranslate"><span class="pre">GSCOPE</span></code></dt><dd><p>For Fortran-90 subprograms that contain other subprograms, some symbols
+may not be used in the outer subprogram but used in the contained subprograms.
+When optimizing the outer subprogram, these symbols can not be optimized away,
+and must be stored in memory, so the internal subprograms can see them.
+This flag is set for outer-subprogram symbols that are used by the internal
+subprograms.
+This flag has a similar meaning in the C++ compiler.</p>
+</dd>
+<dt><code class="docutils literal notranslate"><span class="pre">UNSAFE</span></code></dt><dd><p>If set, the variable is a dummy argument which does not appear
+in all entries to the subprogram (set by the expander and used by
+the expander/optimizer).
+This flag could be extended to include other cases where it’s not safe
+to allow optimizations to occur for variables.</p>
+</dd>
+<dt><code class="docutils literal notranslate"><span class="pre">NOCONFLICT</span></code></dt><dd><p>References to this pointer-based object do not conflict with references
+to other pointer-based objects.</p>
+</dd>
+<dt><code class="docutils literal notranslate"><span class="pre">THREAD</span></code></dt><dd><p>If set, the variable is a member of a common block and the common block
+is <code class="docutils literal notranslate"><span class="pre">THREADPRIVATE</span></code>; see <code class="docutils literal notranslate"><span class="pre">ST_CMBLK</span></code>.</p>
+</dd>
+</dl>
+<p><em>Flags2</em></p>
+<dl class="simple">
+<dt><code class="docutils literal notranslate"><span class="pre">SDSCS1</span></code></dt><dd><p>This is set in an F90 program for an array that is being used as a
+section descriptor with a non-stride-1 leading dimension;
+in this case, the leftmost subscript must be multiplied by the
+stride in the section descriptor.</p>
+</dd>
+<dt><code class="docutils literal notranslate"><span class="pre">LSCOPE</span></code></dt><dd><p>If set, the local variable is accessed only in the function’s local
+scope; any internal procedure does not access this variable.</p>
+</dd>
+<dt><code class="docutils literal notranslate"><span class="pre">PARAM</span></code></dt><dd><p>If set, this variable was declared as a PARAMETER,
+and its constant value is available as an CONST list via the
+PARAMVAL field.</p>
+</dd>
+<dt><code class="docutils literal notranslate"><span class="pre">PTRSAFE</span></code></dt><dd><p>If set, this variable is pointer safe; for example, a section
+descriptor, regardless of its storage class or addrtkn flag,
+is never the target of a pointer.</p>
+</dd>
+<dt><code class="docutils literal notranslate"><span class="pre">INLNARR</span></code></dt><dd><p>If set, this variable is an inlined dummy array.
+Used in exp_ftn.c</p>
+</dd>
+<dt><code class="docutils literal notranslate"><span class="pre">RESERVED_f45</span></code></dt><dd><p>reserved</p>
+</dd>
+<dt><code class="docutils literal notranslate"><span class="pre">SDSCCONTIG</span></code></dt><dd><p>Set if this is a descriptor array, and the compiler has determined that
+the object for which this is a descriptor is always contiguous.</p>
+</dd>
+<dt><code class="docutils literal notranslate"><span class="pre">DESCARRAY</span></code></dt><dd><p>Set if this is a descriptor array, managed by the compiler/runtime.</p>
+</dd>
+<dt><code class="docutils literal notranslate"><span class="pre">IS_PROC_DESCR</span></code></dt><dd><p>Set if this is a descriptor associated with a procedure dummy argument.</p>
+</dd>
+<dt><code class="docutils literal notranslate"><span class="pre">RESERVED_f50</span></code></dt><dd><p>reserved</p>
+</dd>
+<dt><code class="docutils literal notranslate"><span class="pre">PASSBYVAL</span></code></dt><dd><p>If set, this f90 dummy parameter or subroutine(parameter
+default) is pass by value: cDEC$ ATTRIBUTES VALUE</p>
+</dd>
+<dt><code class="docutils literal notranslate"><span class="pre">PASSBYREF</span></code></dt><dd><p>If set, this f90 dummy parameter or subroutine(parameter
+default) is pass by reference: cDEC$ ATTRIBUTES REFERENCE
+This is required because string paramters may or may not have a
+length, depending on PASSBYREF set on the variable or subroutine</p>
+</dd>
+<dt><code class="docutils literal notranslate"><span class="pre">SCFXD</span></code></dt><dd><p>Storage class has been set by AUTOMATIC or STATIC; it cannot be
+changed by SAVE, -Mrecursive, etc.</p>
+</dd>
+<dt><code class="docutils literal notranslate"><span class="pre">BASEADDR</span></code></dt><dd><p>If set, this is a static variable whose address is relative to a global
+symbol; that global symbol is entered into the symbol table as an
+ST_BASE, with an unhashed name.</p>
+</dd>
+<dt><code class="docutils literal notranslate"><span class="pre">ALLOCATTR</span></code></dt><dd><p>This flag is set if and only if the symbol was declared
+to have the ALLOCATABLE attribute.</p>
+</dd>
+<dt><code class="docutils literal notranslate"><span class="pre">DEVICE</span></code></dt><dd><p>If set, the variable is a CUDA <code class="docutils literal notranslate"><span class="pre">DEVICE</span></code> variable.</p>
+</dd>
+<dt><code class="docutils literal notranslate"><span class="pre">PINNED</span></code></dt><dd><p>If set, the variable is a CUDA <code class="docutils literal notranslate"><span class="pre">PINNED</span></code> variable.</p>
+</dd>
+<dt><code class="docutils literal notranslate"><span class="pre">CFUNC</span></code></dt><dd><p>If set, function/subroutine’s name linkage name follows C conventions
+(i.e., underscore is not appended to name).
+Also set for module variables, functions, common blocks that have
+externally visible C linkage BIND(c)
+For NT, this flag and
+<code class="docutils literal notranslate"><span class="pre">STDCALL</span></code>
+are set for DVF’s
+<code class="docutils literal notranslate"><span class="pre">C</span></code>
+attribute.</p>
+</dd>
+<dt><code class="docutils literal notranslate"><span class="pre">SHARED</span></code></dt><dd><p>If set, the variable is a CUDA <code class="docutils literal notranslate"><span class="pre">SHARED</span></code> variable.</p>
+</dd>
+<dt><code class="docutils literal notranslate"><span class="pre">CONSTANT</span></code></dt><dd><p>If set, the variable is a CUDA <code class="docutils literal notranslate"><span class="pre">CONSTANT</span></code> variable.</p>
+</dd>
+<dt><code class="docutils literal notranslate"><span class="pre">TEXTURE</span></code></dt><dd><p>If set, the variable is a CUDA <code class="docutils literal notranslate"><span class="pre">TEXTURE</span></code> variable.</p>
+</dd>
+<dt><code class="docutils literal notranslate"><span class="pre">INTENTIN</span></code></dt><dd><p>This dummy variable has the fCWINTENT(IN)fP attribute.</p>
+</dd>
+<dt><code class="docutils literal notranslate"><span class="pre">DATACONST</span></code></dt><dd><p>Set if this variable is data-initialized (its <code class="docutils literal notranslate"><span class="pre">DINIT</span></code> flag is
+also set) and can be presented as a  <code class="docutils literal notranslate"><span class="pre">PARAMETER</span></code>.
+The front-end has replaced all of the variable’s uses with its
+dinit value and the backend can elide the dinit.</p>
+</dd>
+<dt><code class="docutils literal notranslate"><span class="pre">DEVICECOPY</span></code></dt><dd><p>This variable is a pointer to a device copy of a host variable.
+This might come from the reflected clause, mirror clause, copy clause, local clause,</p>
+</dd>
+<dt><code class="docutils literal notranslate"><span class="pre">REFLECTED</span></code></dt><dd><p>This variable is a dummy argument which is reflected on the device.</p>
+</dd>
+</dl>
+<p><em>Flags3</em></p>
+<dl class="simple">
+<dt><code class="docutils literal notranslate"><span class="pre">MIRRORED</span></code></dt><dd><p>This variable is mirrored on the device.
+This will typically be set for global (module) symbols.</p>
+</dd>
+<dt><code class="docutils literal notranslate"><span class="pre">F90POINTER</span></code></dt><dd><p>This flag is set if and only if the symbol was declared
+to have the POINTER attribute</p>
+</dd>
+<dt><code class="docutils literal notranslate"><span class="pre">ARG1PTR</span></code></dt><dd><p>This variable (compiler-created temporary) is the first argument
+passed to the special runtime routine that acts like a function,</p>
+</dd>
+<dt><code class="docutils literal notranslate"><span class="pre">LOCLIFETM</span></code></dt><dd><p>This is set when the storage class is optimized to be static,
+but is has the same lifetime as a local.</p>
+</dd>
+<dt><code class="docutils literal notranslate"><span class="pre">TASK</span></code></dt><dd><p>Set if this private variable was declared within the scope of an OMP TASK</p>
+</dd>
+<dt><code class="docutils literal notranslate"><span class="pre">EXPOSED</span></code></dt><dd><p>(Optimizer) Set if any of the uses of a variable are exposed to the
+function entry (esentially a use-before-def if the variable is local).
+Currently, this flag is only intended for scalar variables; eventually, it
+may apply to array/aggregates.</p>
+</dd>
+<dt><code class="docutils literal notranslate"><span class="pre">SECT</span></code></dt><dd><p>Variable was created and initialized in a special section.</p>
+</dd>
+<dt><code class="docutils literal notranslate"><span class="pre">ACCCREATE</span></code></dt><dd><p>This variable has the create flag set for the device.
+This will typically be set for global (module) symbols.</p>
+</dd>
+<dt><code class="docutils literal notranslate"><span class="pre">ACCRESIDENT</span></code></dt><dd><p>This variable has the device_resident flag set for the device.</p>
+</dd>
+<dt><code class="docutils literal notranslate"><span class="pre">CONTIGATTR</span></code></dt><dd><p>This variable was declared with the CONTIGUOUS attribute.</p>
+</dd>
+<dt><code class="docutils literal notranslate"><span class="pre">MANAGED</span></code></dt><dd><p>If set, the variable is a CUDA <code class="docutils literal notranslate"><span class="pre">MANAGED</span></code> variable.</p>
+</dd>
+<dt><code class="docutils literal notranslate"><span class="pre">ACCLINK</span></code></dt><dd><p>This variable has the link flag set for the device.</p>
+</dd>
+<dt><code class="docutils literal notranslate"><span class="pre">ACCCOPYIN</span></code></dt><dd><p>This global variable was in a declare copyin()</p>
+</dd>
+<dt><code class="docutils literal notranslate"><span class="pre">TLS</span></code></dt><dd><p>This variable is allocated in thread local storage</p>
+</dd>
+<dt><code class="docutils literal notranslate"><span class="pre">INTERNREF</span></code></dt><dd><p>Set if the uplevel symbol is referenced internal subroutine.</p>
+</dd>
+<dt><code class="docutils literal notranslate"><span class="pre">ACCINITDATA</span></code></dt><dd><p>This variable is a data initialized variable packed into an array.</p>
+</dd>
+<dt><code class="docutils literal notranslate"><span class="pre">PARREF</span></code></dt><dd><p>Set if variable is shared in parallel region.</p>
+</dd>
+<dt><code class="docutils literal notranslate"><span class="pre">PARREFLOAD</span></code></dt><dd><p>Set if variable is already loaded into struct to be passed to outlined function.</p>
+</dd>
+</dl>
+<p><em>Flags4</em></p>
+<dl class="simple">
+<dt><code class="docutils literal notranslate"><span class="pre">LOCARG</span></code></dt><dd><p>Variable has appeared in a %LOC.</p>
+</dd>
+<dt><code class="docutils literal notranslate"><span class="pre">ALLDEFAULTINIT</span></code></dt><dd><p>default initialization.</p>
+</dd>
+<dt><code class="docutils literal notranslate"><span class="pre">TARGET</span></code></dt><dd><p>Set if variable has the target attribute</p>
+</dd>
+<dt><code class="docutils literal notranslate"><span class="pre">LIBSYM</span></code></dt><dd><p>Indicates that this is a variable symbol from a standard module, such as
+ieee_arithmetic or iso_c_binding, that is resolved from a system library.</p>
+</dd>
+</dl>
+<p><em>Other Fields</em></p>
+<dl>
+<dt><code class="docutils literal notranslate"><span class="pre">SYMLK</span></code></dt><dd><p>For common block variables, this field is used to link together
+all of the elements of the common block (including variables
+added to the common block by
+<code class="docutils literal notranslate"><span class="pre">EQUIVALENCE</span></code>
+statements).
+<code class="docutils literal notranslate"><span class="pre">NOSYM</span></code>
+is used to mark the end of the list.</p>
+</dd>
+<dt><code class="docutils literal notranslate"><span class="pre">SDSC</span></code></dt><dd><p>For Fortran-90 arrays, this is the symbol number of the section descriptor
+containing the actual bounds.</p>
+</dd>
+<dt><code class="docutils literal notranslate"><span class="pre">BASESYM</span></code></dt><dd><p>If BASEADDR is set, BASESYM will host a symbol pointer to an ST_BASE
+symbol with the base address of this symbol.</p>
+</dd>
+<dt><code class="docutils literal notranslate"><span class="pre">ORIGDIM</span></code></dt><dd><p>For arrays, this is the original number of dimensions; this is needed
+for the Fortran-90 arrays that get linearized.
+Overloaded with GNDSC.</p>
+</dd>
+<dt><code class="docutils literal notranslate"><span class="pre">TDLNK</span></code></dt><dd><p>If this array is a type descriptor, then this is used to link this type
+descriptor with the other type descriptors.</p>
+</dd>
+<dt><code class="docutils literal notranslate"><span class="pre">ETLS</span></code></dt><dd><p>Extended TLS levels</p>
+</dd>
+<dt><code class="docutils literal notranslate"><span class="pre">ASSOC_PTR</span></code></dt><dd><p>When set, this is the sptr of a pointer that is initialized with this symbol.</p>
+</dd>
+<dt><code class="docutils literal notranslate"><span class="pre">ORIGDUMMY</span></code></dt><dd><p>When dummy arguments are relocated by the Fortran-90 front end, this
+points from the dummy to the original dummy argument.
+#.SE PTR_TARGET w32
+This field overloads ORIGDUMMY, so it’s commented out for documentation
+purposes. This usage cannot be a dummy argument which is why it can overload
+ORIGDUMMY.
+When set, this symbol is a place holder for a pointer target. This field holds the sptr of the original pointer target.</p>
+<dl>
+<dt><code class="docutils literal notranslate"><span class="pre">PARAMVAL</span> <span class="pre">(w15)</span></code></dt><dd><p>if the PARAM bit is set, this field
+holds a pointer to the saved CONST value list</p>
+</dd>
+<dt><code class="docutils literal notranslate"><span class="pre">TPLNK</span></code></dt><dd><p>For a threadprivate common block or variable, a vector of pointers will be
+created by the front-end and will be subscripted by _mp_lcpu2().
+Each element will contain the address of a thread’s copy of the common block
+or variable.
+The vector will be represented by an <code class="docutils literal notranslate"><span class="pre">ST_ARRAY</span></code> with a storage class
+of <code class="docutils literal notranslate"><span class="pre">SC_EXTERN</span></code> or <code class="docutils literal notranslate"><span class="pre">SC_STATIC</span></code>,
+depending on whether or not the object has global scope.
+The symbols will be linked into a list using the
+<code class="docutils literal notranslate"><span class="pre">TPLNK</span></code>
+field.
+The head of thie list is pointed to by
+<code class="docutils literal notranslate"><span class="pre">gbl.threadprivate</span></code>.</p>
+</dd>
+<dt><code class="docutils literal notranslate"><span class="pre">PAROFFSET</span></code></dt><dd><p>If this var is part of an uplevel structure (for OpenMP) this
+value represents the field’s byte offset into the uplevel structure.</p>
+</dd>
+<dt><code class="docutils literal notranslate"><span class="pre">ADDRESS</span></code></dt><dd><p>Address assigned to the variable.</p>
+<ul class="simple">
+<li><p>For dummy variables,
+this is an integer,
+assigned by the Expander,
+between 1 and n where
+n is the total number of dummy variables appearing in
+<code class="docutils literal notranslate"><span class="pre">SUBROUTINE</span></code>,
+<code class="docutils literal notranslate"><span class="pre">FUNCTION</span></code>,
+or
+<code class="docutils literal notranslate"><span class="pre">ENTRY</span></code>
+statements.</p></li>
+<li><p>For other variables, it is the byte address, beginning at zero,
+relative to the psect containing the variable.
+For common block elements, this value is computed at the end
+of semantic analysis, and for local variables it is
+computed during Assembler initialization for just those
+variables which were found to be referenced by the Code Scheduler.
+(local variables will actually have addresses assigned during Scheduling? ).</p></li>
+<li><p>Those local variables which are determined to be referenced by the
+Code Scheduler are linked into a single list using this field.
+The list head is pointed to by
+<code class="docutils literal notranslate"><span class="pre">gbl.locals</span></code>.</p></li>
+</ul>
+<dl>
+<dt><code class="docutils literal notranslate"><span class="pre">MIDNUM</span></code></dt><dd><p>If the variable belongs to a common block (its storage class is
+<code class="docutils literal notranslate"><span class="pre">SC_CMBLK)</span></code>,
+this field locates its corresponding
+<code class="docutils literal notranslate"><span class="pre">ST_CMBLK</span></code>
+symbol (set by the Semantic Analyzer).
+Depending on the target environment, the Assembler phase may
+replace this field with a target dependent value (e.g., the
+object file MID block index for this common block (Psect)
+computed by Assembler initialization phase).
+For an allocatable common, the
+<code class="docutils literal notranslate"><span class="pre">ALLOC</span></code>
+flag is set.</p>
+<ul class="simple">
+<li><p>If the variable’s storage class is
+<code class="docutils literal notranslate"><span class="pre">SC_BASED</span></code>,
+the variable is a pointer-based object and
+this field locates the symbol table item of the
+variable’s pointer variable.</p></li>
+<li><p>If the variable’s storage class is
+<code class="docutils literal notranslate"><span class="pre">SC_BASED</span></code>
+and its
+<code class="docutils literal notranslate"><span class="pre">ALLOC</span></code>
+flag set, the variable (an array) is allocatable; its
+shape is
+<em>deferred</em>.</p></li>
+<li><p>If the variable is an array and its storage class is
+<code class="docutils literal notranslate"><span class="pre">SC_EXTERN,</span></code>
+the variable may represent a threadprivate common’s vector of pointers.
+If this is the case, the
+<code class="docutils literal notranslate"><span class="pre">MIDNUM</span></code>
+field will be the symbol table entry of the corresponding
+threadprivate common block (see <code class="docutils literal notranslate"><span class="pre">ST_CMBLK</span></code>).
+Also, this variable will be linked (using <code class="docutils literal notranslate"><span class="pre">SYMLK</span></code> into
+the list located by
+<code class="docutils literal notranslate"><span class="pre">gbl.threadprivate</span></code>.</p></li>
+<li><p>If the variable is a dummy variable, this field locates the
+compiler-created temporary used to represent the dummy’s
+address (i.e., the variable that contains the dummy’s address).
+This temporary will have its storage class set to
+<code class="docutils literal notranslate"><span class="pre">SC_DUMMY</span></code>;
+this temporary will have its
+<code class="docutils literal notranslate"><span class="pre">REDUC</span></code>
+flag set.
+For data initialized local scalar variables which are entered into
+the
+<code class="docutils literal notranslate"><span class="pre">DVL</span></code>
+table, their
+<code class="docutils literal notranslate"><span class="pre">REDUC</span></code>
+flags are set (also implies that their
+<code class="docutils literal notranslate"><span class="pre">ASSN</span></code>
+flags are not set.</p></li>
+</ul>
+<dl>
+<dt><code class="docutils literal notranslate"><span class="pre">CLEN</span></code></dt><dd><p>If the variable is a
+<em>passed length</em>
+character argument,
+this field locates a compiler created symbol (SC is
+<code class="docutils literal notranslate"><span class="pre">SC_DUMMY</span></code>)
+which represents its length.
+Set by the expander.</p>
+</dd>
+<dt><code class="docutils literal notranslate"><span class="pre">REVMIDLNK</span></code></dt><dd><p>For a CCSYM that is the MIDNUM of a POINTER type object. This links the CCSYM
+back to the POINTER object. The invariant is ptr == REVMIDLNKG(MIDNUMG(ptr)).</p>
+</dd>
+<dt><code class="docutils literal notranslate"><span class="pre">SOCPTR</span></code></dt><dd><p>Pointer to storage overlap chain (see auxiliary data structures)
+for variables involved in equivalences.</p>
+<ul>
+<li><p>Also, during semantic analysis is used to mark
+currently active DO-control variables.</p>
+<dl class="simple">
+<dt><code class="docutils literal notranslate"><span class="pre">PDALN</span> <span class="pre">(b4)</span></code></dt><dd><p>If the value, v,  of this field is nonzero,
+used to pad and align the object with respect to 2^v bytes.
+For example, if v is 3, the size of the object is
+a multiple of 8 (2^3) bytes and will be aligned
+on an 8-byte boundary.
+This field uses the least signficant 4 bits of b4.</p>
+</dd>
+<dt><code class="docutils literal notranslate"><span class="pre">ENCLFUNC</span></code></dt><dd><p>Symbol table pointer to the enclosing block (scope) for
+this variable.
+Zero for variables with
+<code class="docutils literal notranslate"><span class="pre">SCOPE</span></code>
+equal to 0.</p>
+</dd>
+<dt><code class="docutils literal notranslate"><span class="pre">DEVCOPY</span></code></dt><dd><p>For a variable with the DEVICECOPY flag set, this field will tell which host
+variable or array this variable is a device copy of.
+For a host variable (DEVICECOPY flag not set), this field will give the
+symbol number of the device copy currently being used.</p>
+</dd>
+</dl>
+</li>
+</ul>
+</dd>
+</dl>
+</dd>
+</dl>
+</dd>
+</dl>
+</dd>
+</dl>
+</section>
+<section id="st-cmblk">
+<h4>ST_CMBLK<a class="headerlink" href="#st-cmblk" title="Permalink to this heading">¶</a></h4>
+<p><em>OC_CMBLK</em> common block</p>
+<p><em>Flags</em></p>
+<dl class="simple">
+<dt><code class="docutils literal notranslate"><span class="pre">DINIT</span></code></dt><dd><p>Common block has been data initialized.</p>
+</dd>
+<dt><code class="docutils literal notranslate"><span class="pre">SAVE</span></code></dt><dd><p>Common block referenced in a
+<code class="docutils literal notranslate"><span class="pre">SAVE</span></code>
+statement.</p>
+</dd>
+<dt><code class="docutils literal notranslate"><span class="pre">VOL</span></code></dt><dd><p>Common block appeared in a
+<code class="docutils literal notranslate"><span class="pre">VOLATILE</span></code>
+statement.</p>
+</dd>
+<dt><code class="docutils literal notranslate"><span class="pre">ALLOC</span></code></dt><dd><p>Common block is an
+<code class="docutils literal notranslate"><span class="pre">ALLOCATABLE</span></code>
+common.</p>
+</dd>
+<dt><code class="docutils literal notranslate"><span class="pre">THREAD</span></code></dt><dd><p>If set, common block is <code class="docutils literal notranslate"><span class="pre">THREADPRIVATE</span></code>; see
+<code class="docutils literal notranslate"><span class="pre">MIDNUM</span></code>.</p>
+</dd>
+</dl>
+<p><em>Flags2</em></p>
+<dl class="simple">
+<dt><code class="docutils literal notranslate"><span class="pre">MODCMN</span></code></dt><dd><p>If set, common block is a compiler-created module common block</p>
+</dd>
+<dt><code class="docutils literal notranslate"><span class="pre">STDCALL</span></code></dt><dd><p>Set if this common block has DVF’s
+<code class="docutils literal notranslate"><span class="pre">STDCALL</span></code>
+attribute.</p>
+</dd>
+<dt><code class="docutils literal notranslate"><span class="pre">FROMMOD</span></code></dt><dd><p>Set if the common block was defined in a module.
+Used to inhibit the output of debug information
+for a common block defined in module at a `use’ of the module.</p>
+</dd>
+<dt><code class="docutils literal notranslate"><span class="pre">DEVICECOPY</span></code></dt><dd><p>This variable is a pointer to a device copy of a host variable.
+This might come from the reflected clause, mirror clause, copy clause, local clause,</p>
+</dd>
+<dt><code class="docutils literal notranslate"><span class="pre">MIRRORED</span></code></dt><dd><p>This variable is mirrored on the device.
+This will typically be set for global (module) symbols.</p>
+</dd>
+<dt><code class="docutils literal notranslate"><span class="pre">ACCCREATE</span></code></dt><dd><p>This common block is in a declare create directive.</p>
+</dd>
+<dt><code class="docutils literal notranslate"><span class="pre">ACCRESIDENT</span></code></dt><dd><p>This common block is in a declare device_resident directive.</p>
+</dd>
+<dt><code class="docutils literal notranslate"><span class="pre">ACCLINK</span></code></dt><dd><p>This common block is in a declare link directive.</p>
+</dd>
+<dt><code class="docutils literal notranslate"><span class="pre">ACCCOPYIN</span></code></dt><dd><p>This common block was in a declare copyin()</p>
+</dd>
+</dl>
+<p><em>Flags3</em></p>
+<dl class="simple">
+<dt><code class="docutils literal notranslate"><span class="pre">TLS</span></code></dt><dd><p>This variable is allocated in thread local storage</p>
+</dd>
+</dl>
+<p><em>Other Fields</em></p>
+<dl class="simple">
+<dt><code class="docutils literal notranslate"><span class="pre">SYMLK</span></code></dt><dd><p>Field is used to link together all common blocks.
+List head is pointed to by
+<code class="docutils literal notranslate"><span class="pre">gbl.cmblks</span></code>
+and
+<code class="docutils literal notranslate"><span class="pre">NOSYM</span></code>
+marks the end of the list.</p>
+</dd>
+<dt><code class="docutils literal notranslate"><span class="pre">NMPTR</span></code></dt><dd><p>For blank common, this points to the compiler created name, “_BLNK_”.</p>
+</dd>
+<dt><code class="docutils literal notranslate"><span class="pre">SIZE</span></code></dt><dd><p>Size in bytes of common block.
+Computed at the end of semantic processing and possibly
+updated by equivalence processing.</p>
+</dd>
+<dt><code class="docutils literal notranslate"><span class="pre">MIDNUM</span></code></dt><dd><p>For a threadprivate common block, a vector of pointers will be created
+by the front-end and will be subscripted by _mp_lcpu2().
+Each element will contain the address of a thread’s copy of the common block.
+The vector will be represented by an <code class="docutils literal notranslate"><span class="pre">ST_ARRAY</span></code> with storage
+class <code class="docutils literal notranslate"><span class="pre">SC_EXTERN</span></code>.
+The
+<code class="docutils literal notranslate"><span class="pre">MIDNUM</span></code>
+field of the threadprivate common block will be set to the symbol table
+entry of the corresponding <code class="docutils literal notranslate"><span class="pre">ST_ARRAY</span></code>, and vice versa.</p>
+</dd>
+<dt><code class="docutils literal notranslate"><span class="pre">CMEMF</span></code></dt><dd><p>Pointer to first element of linked list of common block members.
+A value of zero indicates that the common block has not yet been defined.</p>
+</dd>
+<dt><code class="docutils literal notranslate"><span class="pre">CMEML</span></code></dt><dd><p>Pointer to last element of linked list of common block members.</p>
+</dd>
+<dt><code class="docutils literal notranslate"><span class="pre">ALTNAME</span></code></dt><dd><p>Set if the common block has DVF’s</p>
+</dd>
+<dt><code class="docutils literal notranslate"><span class="pre">ETLS</span></code></dt><dd><p>Extended TLS levels</p>
+</dd>
+<dt><code class="docutils literal notranslate"><span class="pre">THPRVTOPT</span></code></dt><dd><p>Store an address of threadprivate after calling kmpc_threadprivate_cached.
+<code class="docutils literal notranslate"><span class="pre">ALIAS</span></code>
+attribute.
+If set, this field is a
+symbol table pointer to character constant representing
+the alternate name.</p>
+</dd>
+<dt><code class="docutils literal notranslate"><span class="pre">DEVCOPY</span></code></dt><dd><p>For a common block with the DEVICECOPY flag set, this field will tell which host
+variable or array this variable is a device copy of.
+For a host variable (DEVICECOPY flag not set), this field will give the
+symbol number of the device copy currently being used.</p>
+</dd>
+</dl>
+</section>
+<section id="st-nml">
+<h4>ST_NML<a class="headerlink" href="#st-nml" title="Permalink to this heading">¶</a></h4>
+<p><em>OC_OTHER</em> namelist</p>
+<p><em>Flags</em></p>
+<dl class="simple">
+<dt><code class="docutils literal notranslate"><span class="pre">REF</span></code></dt><dd><p>The namelist group has been referenced in a
+<code class="docutils literal notranslate"><span class="pre">READ</span></code>
+or
+<code class="docutils literal notranslate"><span class="pre">WRITE</span></code>
+statement.</p>
+</dd>
+</dl>
+<p><em>Flags2</em></p>
+<p><em>Other Fields</em></p>
+<dl class="simple">
+<dt><code class="docutils literal notranslate"><span class="pre">SYMLK</span></code></dt><dd><p>Field is used to link together all namelist groups.
+List head is pointed to by
+<code class="docutils literal notranslate"><span class="pre">sem.nml</span></code>
+and
+<code class="docutils literal notranslate"><span class="pre">NOSYM</span></code>
+marks the end of the list.</p>
+</dd>
+<dt><code class="docutils literal notranslate"><span class="pre">ADDRESS</span></code></dt><dd><p>Locates the
+<code class="docutils literal notranslate"><span class="pre">ST_PLIST</span></code>
+symbol which represents the namelist descriptor for this namelist
+group; if the namelist I/O using this group name occurs,
+the plist will be data initialized.</p>
+</dd>
+<dt><code class="docutils literal notranslate"><span class="pre">CMEMF</span></code></dt><dd><p>Relative pointer into the namelist auxiliary data structure to
+the first element of the linked list of entities belonging to this
+name list group.</p>
+</dd>
+<dt><code class="docutils literal notranslate"><span class="pre">CMEML</span></code></dt><dd><p>Relative pointer into the namelist auxiliary data structure to
+the last element of the linked list of entities belonging to this
+name list group.</p>
+</dd>
+</dl>
+</section>
+<section id="st-entry">
+<h4>ST_ENTRY<a class="headerlink" href="#st-entry" title="Permalink to this heading">¶</a></h4>
+<p><em>OC_OTHER</em> entry</p>
+<p><em>Flags</em></p>
+<dl class="simple">
+<dt><code class="docutils literal notranslate"><span class="pre">DCLD</span></code></dt><dd><p>Set if currently processing a function subprogram and the
+data type of this entry has been explicitly declared.</p>
+</dd>
+<dt><code class="docutils literal notranslate"><span class="pre">COPYPRMS</span></code></dt><dd><p>Set if parameter list was copied for this entry.</p>
+</dd>
+<dt><code class="docutils literal notranslate"><span class="pre">ADJARR</span></code></dt><dd><p>Set if entry has adjustable array argument(s).</p>
+</dd>
+<dt><code class="docutils literal notranslate"><span class="pre">AFTENT</span></code></dt><dd><p>Set if entry has adjustable array arguments which are declared after
+an ENTRY statement. This flag is always set for an entry which appeared
+in an ENTRY statement (and it has adjustable array arguments).</p>
+</dd>
+<dt><code class="docutils literal notranslate"><span class="pre">MSCALL</span></code></dt><dd><p>Set if this ST_ENTRY is defined to use the MS (stdcall) calling
+sequence.
+This flag also applies to ST_PROCs and any variable which is a pointer to
+a function.
+This flag also applies to ST_MEMBERs that are type bound procedures.</p>
+</dd>
+</dl>
+<p><em>Flags2</em></p>
+<dl class="simple">
+<dt><code class="docutils literal notranslate"><span class="pre">CREF</span></code></dt><dd><p>Set if this procedure is defined to use the MS cref calling sequence.</p>
+</dd>
+<dt><code class="docutils literal notranslate"><span class="pre">NOMIXEDSTRLEN</span></code></dt><dd><p>Set if the character length arguments are to be passed after all of the
+the other arguments (i.e., unix-style). If this flag is set, then
+either
+<code class="docutils literal notranslate"><span class="pre">MSCALL</span></code>
+or
+<code class="docutils literal notranslate"><span class="pre">CREF</span></code>
+is also set.</p>
+</dd>
+<dt><code class="docutils literal notranslate"><span class="pre">STDCALL</span></code></dt><dd><p>Set if this ST_ENTRY has DVF’s
+<code class="docutils literal notranslate"><span class="pre">STDCALL</span></code>
+or
+<code class="docutils literal notranslate"><span class="pre">C</span></code>
+attribute.
+If this flag is set, then arguments are passed by value.
+<code class="docutils literal notranslate"><span class="pre">MSCALL</span></code>
+or
+C
+will also be set.</p>
+</dd>
+<dt><code class="docutils literal notranslate"><span class="pre">DECORATE</span></code></dt><dd><p>Set if this ST_ENTRY has DVF’s
+<code class="docutils literal notranslate"><span class="pre">DECORATE</span></code>
+attribute.</p>
+</dd>
+<dt><code class="docutils literal notranslate"><span class="pre">CONTAINED</span></code></dt><dd><p>If this bit is set, the entry point is for a contained subprogram.</p>
+</dd>
+<dt><code class="docutils literal notranslate"><span class="pre">UNIFIED</span></code></dt><dd><p>If this is set, the name for this entry point has been mangled as
+a unified binary name, and should be used directly.</p>
+</dd>
+<dt><code class="docutils literal notranslate"><span class="pre">SDSCSAFE</span></code></dt><dd><p>Calls to this routine do not modify any section descriptors,
+either passed as arguments or for globals.</p>
+</dd>
+<dt><code class="docutils literal notranslate"><span class="pre">AVX</span></code></dt><dd><p>Set if the function is known to be AVX-compiled (i.e., do not generate
+a vzeroupper before and after its call).</p>
+</dd>
+</dl>
+<p><em>Flags3</em></p>
+<p><em>Flags4</em></p>
+<dl>
+<dt><code class="docutils literal notranslate"><span class="pre">ARET</span></code></dt><dd><p>Subroutine contains alternate return arguments</p>
+</dd>
+<dt><code class="docutils literal notranslate"><span class="pre">DEVCOMP</span></code></dt><dd><p>Set if this routine was compiled with the -acc or -ta flag, meaning the
+compiler was device-aware.</p>
+</dd>
+<dt><code class="docutils literal notranslate"><span class="pre">OMPACCRT</span></code></dt><dd><p>Set if the symbol is created for libomptarget runtime.</p>
+</dd>
+<dt><code class="docutils literal notranslate"><span class="pre">OMPACCSTRUCT</span></code></dt><dd><p>Set if the symbol is openmp offload entry struct and createad for libomptarget runtime.</p>
+</dd>
+<dt><code class="docutils literal notranslate"><span class="pre">OMPACCFUNCDEV</span></code></dt><dd><p>Set if the symbol is device function of openmp accelerator model</p>
+</dd>
+<dt><code class="docutils literal notranslate"><span class="pre">OMPACCFUNCKERNEL</span></code></dt><dd><p>Set if the symbol is device kernel of openmp accelerator model</p>
+</dd>
+<dt><code class="docutils literal notranslate"><span class="pre">OMPACCDEVSYM</span></code></dt><dd><p>Set if the symbol is used in target region.</p>
+</dd>
+<dt><code class="docutils literal notranslate"><span class="pre">OMPACCSHMEM</span></code></dt><dd><p>Set if the symbol is scrathpad memory aka. shared memory</p>
+</dd>
+<dt><code class="docutils literal notranslate"><span class="pre">TEXTSTARTUP</span></code></dt><dd><p>Set as text startup item</p>
+</dd>
+<dt><code class="docutils literal notranslate"><span class="pre">CONSTRUCTOR</span></code></dt><dd><p>Set as constructor</p>
+</dd>
+<dt><code class="docutils literal notranslate"><span class="pre">IS_INTERFACE</span></code></dt><dd><p>Set if the symbol is a Fortran interface</p>
+</dd>
+<dt><code class="docutils literal notranslate"><span class="pre">OMPTEAMPRIVATE</span></code></dt><dd><p>Team private symbol</p>
+</dd>
+<dt><code class="docutils literal notranslate"><span class="pre">BITVECTOR</span></code></dt><dd><p>LLVM bitvector symbol</p>
+</dd>
+<dt><code class="docutils literal notranslate"><span class="pre">ELEMENTAL</span></code></dt><dd><p>Set if this is an elemental subprogram.</p>
+</dd>
+<dt><code class="docutils literal notranslate"><span class="pre">RECUR</span></code></dt><dd><p>Set if this is a recursive subprogram.</p>
+<dl class="simple">
+<dt><code class="docutils literal notranslate"><span class="pre">PRIORITY</span></code></dt><dd><p>If CONSTRUCTORG() or DESTRUCTORG() is true, then this has
+the value 0-65535 for the priority value.
+A value of -1 means that the priority was not set.</p>
+</dd>
+<dt><code class="docutils literal notranslate"><span class="pre">HAS_OPT_ARGS</span></code></dt><dd><p>Set if this entry has optional arguments.</p>
+</dd>
+</dl>
+</dd>
+</dl>
+<p><em>Other Fields</em></p>
+<dl>
+<dt><code class="docutils literal notranslate"><span class="pre">SYMLK</span></code></dt><dd><p>Used to link together all entry symbols as their definitions
+are processed.  List head pointed to by
+<code class="docutils literal notranslate"><span class="pre">gbl.entries</span></code>.
+The main entry is always the first in the list (also located
+by <code class="docutils literal notranslate"><span class="pre">gbl.currsub</span></code>; the
+order of the remaining entries is undefined.
+<code class="docutils literal notranslate"><span class="pre">NOSYM</span></code>
+is used to mark the end of the list.  The list is
+empty if the current subprogram is a block data.</p>
+</dd>
+<dt><code class="docutils literal notranslate"><span class="pre">ARGSIZE</span></code></dt><dd><p>For the x86, number of bytes on the stack used to pass arguments
+to the subprogram; this field is set by the expander.
+This field is only used when the symbol’s MSCALL flag is set.</p>
+</dd>
+<dt><code class="docutils literal notranslate"><span class="pre">BEGADJ</span></code></dt><dd><p>During semant, this field is the label of the
+entry’s adjustable array code.</p>
+<dl class="simple">
+<dt><code class="docutils literal notranslate"><span class="pre">RETADJ</span> <span class="pre">(ADDRESS)</span></code></dt><dd><p>During semant, this field is the label where
+entry’s adjustable array code returns.</p>
+</dd>
+<dt><code class="docutils literal notranslate"><span class="pre">ADDRESS</span></code></dt><dd><p>Byte address relative to program code space of this entry
+point, computed by Code Scheduler.</p>
+</dd>
+<dt><code class="docutils literal notranslate"><span class="pre">MIDNUM</span></code></dt><dd><p>For the targets which an object file is generated, this field is the
+index into the
+<code class="docutils literal notranslate"><span class="pre">MID</span></code>
+block for this entry, computed by the Assembler initialization phase.
+During Expand, this field is assigned an integer value (zero based)
+denoting the order in which an entry is processed; this value is used
+to index a table which contains information for all of the entries
+(such as target-specific information of an entry’s arguments).</p>
+</dd>
+<dt><code class="docutils literal notranslate"><span class="pre">DPDSC</span></code></dt><dd><p>Pointer to the dummy parameter descriptor for this entry (see
+auxiliary data structures described below).</p>
+</dd>
+<dt><code class="docutils literal notranslate"><span class="pre">PARAMCT</span></code></dt><dd><p>Number of dummy parameters for this entry point.
+This count also includes any implicit arguments required for the entry.
+containing the initialization values for this variable.</p>
+</dd>
+<dt><code class="docutils literal notranslate"><span class="pre">FUNCLINE</span></code></dt><dd><p>Source line number of first line of function definition (used for LSD block
+entry for this function).</p>
+</dd>
+<dt><code class="docutils literal notranslate"><span class="pre">BIHNUM</span></code></dt><dd><p>The
+<code class="docutils literal notranslate"><span class="pre">BIH</span></code>
+index
+of the prologue/entry block for this entry.
+Used only by the Expander and Optimizer.</p>
+</dd>
+<dt><code class="docutils literal notranslate"><span class="pre">FVAL</span></code></dt><dd><p>Prior to the cross reference phase, this field locates the compiler
+created symbol which represents the return value if this entry is
+a function.  Depending on the type and target, this symbol will
+either have storage class local or dummy.</p>
+</dd>
+<dt><code class="docutils literal notranslate"><span class="pre">INMODULE</span></code></dt><dd><p>For pgf90, this points to a ST_PROC symbol that represents the module,
+and in fact has the name of the module.
+This module is used to create the actual name of the module subprogram.
+This is also set for subprograms contained in module subprograms.</p>
+</dd>
+<dt><code class="docutils literal notranslate"><span class="pre">ALTNAME</span></code></dt><dd><p>Set if the ST_ENTRY has DVF’s
+<code class="docutils literal notranslate"><span class="pre">ALIAS</span></code>
+attribute.
+If set, this field is a
+symbol table pointer to character constant representing
+the alternate name.</p>
+</dd>
+<dt><code class="docutils literal notranslate"><span class="pre">ACCROUT</span></code></dt><dd><p>Holds the index to the ACC ROUTINE data structure with information about
+this procedure.</p>
+</dd>
+<dt><code class="docutils literal notranslate"><span class="pre">OUTLINED</span></code></dt><dd><p>Store st_block sptr for outlined function.</p>
+</dd>
+<dt><code class="docutils literal notranslate"><span class="pre">NUMSECT</span></code></dt><dd><p>Store number of section’s for outlined function for omp sections - use in backend only.</p>
+</dd>
+<dt><code class="docutils literal notranslate"><span class="pre">TASKDUP</span></code></dt><dd><p>Store taskdup routine sptr for outlined taskloop routine.</p>
+</dd>
+</dl>
+</dd>
+</dl>
+</section>
+<section id="st-proc">
+<h4>ST_PROC<a class="headerlink" href="#st-proc" title="Permalink to this heading">¶</a></h4>
+<p><em>OC_OTHER</em> subroutine</p>
+<p><em>Flags</em></p>
+<dl class="simple">
+<dt><code class="docutils literal notranslate"><span class="pre">DCLD</span></code></dt><dd><p>Data type of this (function) subprogram has been explicitly declared.</p>
+</dd>
+<dt><code class="docutils literal notranslate"><span class="pre">CCSYM</span></code></dt><dd><p>Set for compiler created functions (support routines) except for those
+which are created for the procedural forms of the intrinsics.</p>
+</dd>
+<dt><code class="docutils literal notranslate"><span class="pre">PURE</span></code></dt><dd><p>If set, the subrogram doesn’t have any side-effects (overloaded with SAVE)</p>
+</dd>
+<dt><code class="docutils literal notranslate"><span class="pre">FUNC</span></code></dt><dd><p>This external is a function subprogram.
+This flag is used for semantic error checking,
+object file LSD blocks (potentially), and the
+Cross Reference Listing.</p>
+</dd>
+<dt><code class="docutils literal notranslate"><span class="pre">REDUC</span></code></dt><dd><p>This external has no common block side-effects?</p>
+</dd>
+<dt><code class="docutils literal notranslate"><span class="pre">CSTRUCTRET</span></code></dt><dd><p>The first arg is a hidden argument that is the address of the structure return area.</p>
+</dd>
+<dt><code class="docutils literal notranslate"><span class="pre">CFUNC</span></code></dt><dd><p>If set, function/subroutine’s name linkage name follows C conventions
+(i.e., underscore is not appended to name).
+Also set for module variables, functions, common blocks that have
+externally visible C linkage BIND(c)
+For NT, this flag and
+<code class="docutils literal notranslate"><span class="pre">STDCALL</span></code>
+are set for DVF’s
+<code class="docutils literal notranslate"><span class="pre">C</span></code>
+attribute.</p>
+</dd>
+<dt><code class="docutils literal notranslate"><span class="pre">UPLEVEL</span></code></dt><dd><p>If this bit is set, the function/subroutine is a dummy procedure
+argument which must be addressed as an offset
+from the containing procedure’s stack frame pointer; this is used for
+Fortran-90 contained procedures.</p>
+</dd>
+<dt><code class="docutils literal notranslate"><span class="pre">NOPAD</span></code></dt><dd><p>If set, the CG does not pad the stack when generating code to call
+the function.  Certain
+<code class="docutils literal notranslate"><span class="pre">mp</span></code>
+run-time functions, such as
+<code class="docutils literal notranslate"><span class="pre">_mp_ncpus()</span></code>,
+assume that the run-time has created a data structure
+at the bottom of the stack.
+(This flag is overloaded with DINIT).</p>
+</dd>
+<dt><code class="docutils literal notranslate"><span class="pre">TYPD</span></code></dt><dd><p>If set,
+<code class="docutils literal notranslate"><span class="pre">NEEDMOD</span></code>
+will also be set and indicates that the procedure represents a
+<code class="docutils literal notranslate"><span class="pre">MODULE</span></code>
+and that the module contains dinits; a hard reference to the
+module’s global name will be generated so that the module’s
+object must appear on the link.
+Overloaded with the
+flags
+<code class="docutils literal notranslate"><span class="pre">EXPST</span></code>
+and
+<code class="docutils literal notranslate"><span class="pre">E38</span></code>.</p>
+</dd>
+</dl>
+<p><em>Flags2</em></p>
+<dl class="simple">
+<dt><code class="docutils literal notranslate"><span class="pre">CREF</span></code></dt><dd><p>Set if this procedure is defined to use the MS cref calling sequence.</p>
+</dd>
+<dt><code class="docutils literal notranslate"><span class="pre">NOMIXEDSTRLEN</span></code></dt><dd><p>Set if the character length arguments are to be passed after all of the
+the other arguments (i.e., unix-style). If this flag is set, then
+either
+<code class="docutils literal notranslate"><span class="pre">MSCALL</span></code>
+or
+<code class="docutils literal notranslate"><span class="pre">CREF</span></code>
+is also set.</p>
+</dd>
+<dt><code class="docutils literal notranslate"><span class="pre">STDCALL</span></code></dt><dd><p>Set if this ST_PROC has DVF’s
+<code class="docutils literal notranslate"><span class="pre">STDCALL</span></code>
+or
+<code class="docutils literal notranslate"><span class="pre">C</span></code>
+attribute.
+If this flag is set, then arguments are passed by value.
+<code class="docutils literal notranslate"><span class="pre">MSCALL</span></code>
+or
+C
+will also be set.</p>
+</dd>
+<dt><code class="docutils literal notranslate"><span class="pre">DECORATE</span></code></dt><dd><p>Set if this ST_PROC has DVF’s
+<code class="docutils literal notranslate"><span class="pre">DECORATE</span></code>
+attribute.</p>
+</dd>
+<dt><code class="docutils literal notranslate"><span class="pre">NOPIC</span></code></dt><dd><p>Set if it’s known that this function is not position independent.
+The function will not be referenced through the PLT (procedure linkage table).</p>
+</dd>
+<dt><code class="docutils literal notranslate"><span class="pre">NEEDMOD</span></code></dt><dd><p>If set, this function represents the blockdata which is generated for
+the module.
+On certain systems,
+an external reference may need to be generated so
+that if it lives in a library, the blockdata is linked into the
+executable.</p>
+</dd>
+<dt><code class="docutils literal notranslate"><span class="pre">CONTAINED</span></code></dt><dd><p>If this bit is set, this is a contained subprogram.</p>
+</dd>
+<dt><code class="docutils literal notranslate"><span class="pre">CNCALL</span></code></dt><dd><p>Concurrent call; the function is parallel-safe.</p>
+</dd>
+<dt><code class="docutils literal notranslate"><span class="pre">XMMSAFE</span></code></dt><dd><p>If set, the function does not alter any xmm registers.</p>
+</dd>
+<dt><code class="docutils literal notranslate"><span class="pre">SDSCSAFE</span></code></dt><dd><p>Calls to this routine do not modify any section descriptors,
+either passed as arguments or for globals.</p>
+</dd>
+<dt><code class="docutils literal notranslate"><span class="pre">TASKFN</span></code></dt><dd><p>If set, this function represents an OpenMP task.</p>
+</dd>
+<dt><code class="docutils literal notranslate"><span class="pre">ISTASKDUP</span></code></dt><dd><p>If set, this function is a task dup routine for OpenMP taskloop.</p>
+</dd>
+<dt><code class="docutils literal notranslate"><span class="pre">ARG1PTR</span></code></dt><dd><p>Set if this is a special runtime routine that acts like a function,
+but which writes to its first argument, where the first argument
+is passed by address.</p>
+</dd>
+<dt><code class="docutils literal notranslate"><span class="pre">FWDREF</span></code></dt><dd><p>Set if this is a forward reference from a type bound procedure declaration
+to a module procedure defined in the same module.</p>
+</dd>
+<dt><code class="docutils literal notranslate"><span class="pre">LIBM</span></code></dt><dd><p>Set if this is a function from the standard libm library.</p>
+</dd>
+<dt><code class="docutils literal notranslate"><span class="pre">LIBC</span></code></dt><dd><p>Set if this is a function from the standard libc library.</p>
+</dd>
+<dt><code class="docutils literal notranslate"><span class="pre">CALLS_SYNCTHD</span></code></dt><dd><p>Set if this is a function from the standard libc library.</p>
+</dd>
+<dt><code class="docutils literal notranslate"><span class="pre">ACCCREATE</span></code></dt><dd><p>This common block has the create flag set for the device.</p>
+</dd>
+<dt><code class="docutils literal notranslate"><span class="pre">ACCRESIDENT</span></code></dt><dd><p>This common block has the device_resident flag set for the device.</p>
+</dd>
+<dt><code class="docutils literal notranslate"><span class="pre">CUDAMODULE</span></code></dt><dd><p>Set if this routine is declared in a CUDA module, so the compiler knows
+that there is a device version of this routine.</p>
+</dd>
+</dl>
+<p><em>Flags3</em></p>
+<p><em>Flags4</em></p>
+<dl>
+<dt><code class="docutils literal notranslate"><span class="pre">ARET</span></code></dt><dd><p>Subroutine contains alternate return arguments</p>
+</dd>
+<dt><code class="docutils literal notranslate"><span class="pre">VARARG</span></code></dt><dd><p>The function has a variable number of arguments (aka varargs/variadic)</p>
+</dd>
+<dt><code class="docutils literal notranslate"><span class="pre">INVOBJINC</span></code></dt><dd><p>The INVOBJ field has been incremented to reflect the shift
+in dummy argument positions caused by the conversion of a function
+into a subroutine whose first argument is the original result.</p>
+</dd>
+<dt><code class="docutils literal notranslate"><span class="pre">DEVCOMP</span></code></dt><dd><p>Set if this routine was compiled with the -acc or -ta flag, meaning the
+compiler was device-aware.</p>
+</dd>
+<dt><code class="docutils literal notranslate"><span class="pre">HAS_OPT_ARGS</span></code></dt><dd><p>Set if this procedure has optional arguments.</p>
+</dd>
+<dt><code class="docutils literal notranslate"><span class="pre">LIBSYM</span></code></dt><dd><p>Indicates that this is a routine symbol from a standard module, such as
+ieee_arithmetic or iso_c_binding, that is resolved from a system library.</p>
+</dd>
+<dt><code class="docutils literal notranslate"><span class="pre">IS_PROC_PTR_IFACE</span></code></dt><dd><p>Indicates that this symbol is used as an interface with a procedure pointer. IS_INTERFACE should also be set in this case.</p>
+</dd>
+<dt><code class="docutils literal notranslate"><span class="pre">PTR_INITIALIZER</span></code></dt><dd><p>Set when this symbol is used as an initializer for a pointer. Assumes
+ASSOC_PTR and/or PTR_TARGET are also set.
+<em>Other Fields</em></p>
+<dl class="simple">
+<dt><code class="docutils literal notranslate"><span class="pre">SYMLK</span></code></dt><dd><p>used to link together referenced externals, i.e. those that are
+referenced in an
+<code class="docutils literal notranslate"><span class="pre">EXTERNAL</span></code>
+statement, or which are determined to be referenced by the Code Scheduler.
+List head is pointed to by
+<code class="docutils literal notranslate"><span class="pre">gbl.externs</span></code>.
+The end of the list is denoted by
+<code class="docutils literal notranslate"><span class="pre">NOSYM</span></code>.
+#.SE SDSC
+When ST_PROC symbol is a dummy argument, SDSC is set to its descriptor
+argument. (SDSC needs to be commented out here since it overloads ARGSIZE
+but does not conflict with it in practice).</p>
+</dd>
+<dt><code class="docutils literal notranslate"><span class="pre">ARGSIZE</span></code></dt><dd><p>For the x86, number of bytes on the stack used to pass arguments
+to the subprogram; this field is set by the expander.
+This field is only used when the symbol’s MSCALL flag is set.</p>
+</dd>
+<dt><code class="docutils literal notranslate"><span class="pre">ADDRESS</span></code></dt><dd><p>Byte address relative to program code space of this entry
+point, computed by Code Scheduler.</p>
+</dd>
+<dt><code class="docutils literal notranslate"><span class="pre">MIDNUM</span></code></dt><dd><p>index of this external in the Object File
+<code class="docutils literal notranslate"><span class="pre">MID</span></code>
+block.  Computed by Assembler initialization phase.</p>
+</dd>
+<dt><code class="docutils literal notranslate"><span class="pre">INMODULE</span></code></dt><dd><p>For pgf90, this points to a ST_PROC symbol that represents the
+module containing this subprogram, and which has the name of the module.
+This name is used to create the actual name of the module subprogram.</p>
+</dd>
+<dt><code class="docutils literal notranslate"><span class="pre">INVOBJ</span></code></dt><dd><p>When this is a type bound procedure, this will hold the argument # of the pass pobject.</p>
+</dd>
+<dt><code class="docutils literal notranslate"><span class="pre">VTOFF</span></code></dt><dd><p>This is used to hold the type bound procedure’s offset into the virtual function table.</p>
+</dd>
+<dt><code class="docutils literal notranslate"><span class="pre">ALTNAME</span></code></dt><dd><p>Set if the ST_PROC has DVF’s
+<code class="docutils literal notranslate"><span class="pre">ALIAS</span></code>
+attribute.
+If set, this field is a
+symbol table pointer to character constant representing
+the alternate name.</p>
+</dd>
+<dt><code class="docutils literal notranslate"><span class="pre">ACCROUT</span></code></dt><dd><p>Holds the index to the ACC ROUTINE data structure with information about
+this procedure.</p>
+</dd>
+<dt><code class="docutils literal notranslate"><span class="pre">ASSOC_PTR</span></code></dt><dd><p>When set, this is the sptr of a pointer that is initialized with this symbol.</p>
+</dd>
+<dt><code class="docutils literal notranslate"><span class="pre">PTR_TARGET</span></code></dt><dd><p>When set, this symbol a place holder for a pointer target. This field holds the sptr of the original pointer target.</p>
+</dd>
+</dl>
+</dd>
+</dl>
+</section>
+<section id="st-const">
+<h4>ST_CONST<a class="headerlink" href="#st-const" title="Permalink to this heading">¶</a></h4>
+<p><em>OC_OTHER</em> constant</p>
+<p>Note that constants of the partial word data types (c
+<code class="docutils literal notranslate"><span class="pre">DT_BINT</span></code>,
+<code class="docutils literal notranslate"><span class="pre">DT_SLOG</span></code>,
+etc.) are not allowed;
+the corresponding full-word data type (c
+<code class="docutils literal notranslate"><span class="pre">DT_INT</span></code>,
+<code class="docutils literal notranslate"><span class="pre">DT_LOG</span></code>)
+is always used.</p>
+<p><em>Flags</em></p>
+<dl class="simple">
+<dt><code class="docutils literal notranslate"><span class="pre">HOLL</span></code></dt><dd><p>If set, the character constant is also used as a Hollerith
+constant.</p>
+</dd>
+</dl>
+<p><em>Flags2</em></p>
+<p><em>Other Fields</em></p>
+<dl>
+<dt><code class="docutils literal notranslate"><span class="pre">SYMLK</span></code></dt><dd><p>Used to link together all referenced constants (i.e., those which
+will be allocated memory).
+List head is pointed to by
+<code class="docutils literal notranslate"><span class="pre">gbl.consts</span></code>.
+The end of the list is denoted by
+<code class="docutils literal notranslate"><span class="pre">NOSYM</span></code>.</p>
+</dd>
+<dt><code class="docutils literal notranslate"><span class="pre">ADDRESS</span></code></dt><dd><p>Relative byte address computed by Assembler initialization.</p>
+</dd>
+<dt><code class="docutils literal notranslate"><span class="pre">CONVAL1</span></code></dt><dd><p>Constant value, depends on dtype of constant:</p>
+<blockquote>
+<div><dl class="simple">
+<dt><code class="docutils literal notranslate"><span class="pre">TY_INT</span></code></dt><dd><p>undefined.</p>
+</dd>
+<dt><code class="docutils literal notranslate"><span class="pre">TY_REAL</span></code></dt><dd><p>undefined.</p>
+</dd>
+<dt><code class="docutils literal notranslate"><span class="pre">TY_DBLE</span></code></dt><dd><p>First 32-bit word of d.p. constant in
+SC format.</p>
+</dd>
+<dt><code class="docutils literal notranslate"><span class="pre">TY_CMPLX</span></code></dt><dd><p>32-bit floating point value of real part.</p>
+</dd>
+<dt><code class="docutils literal notranslate"><span class="pre">TY_DCMPLX</span></code></dt><dd><p>symbol table pointer to double precision constant for real part.</p>
+</dd>
+<dt><code class="docutils literal notranslate"><span class="pre">TY_QCMPLX</span></code></dt><dd><p>symbol table pointer to quad precision constant for real part.</p>
+</dd>
+<dt><code class="docutils literal notranslate"><span class="pre">TY_LOG</span></code></dt><dd><p>undefined.</p>
+</dd>
+<dt><code class="docutils literal notranslate"><span class="pre">TY_CHAR</span></code></dt><dd><p>relative, integer pointer to character text in symbol name storage area.</p>
+</dd>
+<dt><code class="docutils literal notranslate"><span class="pre">TY_NCHAR</span></code></dt><dd><p>relative, integer pointer to character text (EUC format) in symbol name storage area.</p>
+</dd>
+<dt><code class="docutils literal notranslate"><span class="pre">TY_PTR</span></code></dt><dd><p>symbol table pointer to array or variable symbol.  May be zero.</p>
+</dd>
+<dt><code class="docutils literal notranslate"><span class="pre">TY_DWORD</span></code></dt><dd><p>Left 32-bits (most significant) of the 64-bit value</p>
+</dd>
+<dt><code class="docutils literal notranslate"><span class="pre">TY_INT8</span></code></dt><dd><p>Left 32-bits (most significant) of the 64-bit value</p>
+</dd>
+<dt><code class="docutils literal notranslate"><span class="pre">TY_LOG8</span></code></dt><dd><p>0</p>
+</dd>
+<dt><code class="docutils literal notranslate"><span class="pre">TY_128</span></code></dt><dd><p>First (leftmost) 32-bit word of the 128-bit value.</p>
+</dd>
+</dl>
+</div></blockquote>
+<dl class="simple">
+<dt>Vector</dt><dd><p>Relative pointer to the VCON auxiliary area which contains the
+values of constant’s vector elements.
+The number of elements in the vector constant is stored in
+the constant’s <code class="docutils literal notranslate"><span class="pre">TY_VECT</span></code> data type record.</p>
+</dd>
+</dl>
+</dd>
+<dt><code class="docutils literal notranslate"><span class="pre">CONVAL2</span></code></dt><dd><p>Second constant value:</p>
+<blockquote>
+<div><dl class="simple">
+<dt><code class="docutils literal notranslate"><span class="pre">TY_INT</span></code></dt><dd><p>32-bit integer value.</p>
+</dd>
+<dt><code class="docutils literal notranslate"><span class="pre">TY_REAL</span></code></dt><dd><p>32-bit floating point value.</p>
+</dd>
+<dt><code class="docutils literal notranslate"><span class="pre">TY_DBLE</span></code></dt><dd><p>Second 32-bit word of double precision constant.</p>
+</dd>
+<dt><code class="docutils literal notranslate"><span class="pre">TY_CMPLX</span></code></dt><dd><p>32-bit floating point value of imaginary part.</p>
+</dd>
+<dt><code class="docutils literal notranslate"><span class="pre">TY_DCMPLX</span></code></dt><dd><p>symbol table pointer to double precision constant for imaginary part.</p>
+</dd>
+<dt><code class="docutils literal notranslate"><span class="pre">TY_QCMPLX</span></code></dt><dd><p>symbol table pointer to quad precision constant for imaginary part.</p>
+</dd>
+<dt><code class="docutils literal notranslate"><span class="pre">TY_LOG</span></code></dt><dd><p>1 for TRUE, and 0 for FALSE.</p>
+</dd>
+<dt><code class="docutils literal notranslate"><span class="pre">TY_CHAR</span></code></dt><dd><p>undefined</p>
+</dd>
+<dt><code class="docutils literal notranslate"><span class="pre">TY_NCHAR</span></code></dt><dd><p>undefined</p>
+</dd>
+<dt><code class="docutils literal notranslate"><span class="pre">TY_PTR</span></code></dt><dd><p>(signed) integer offset value.</p>
+</dd>
+<dt><code class="docutils literal notranslate"><span class="pre">TY_DWORD</span></code></dt><dd><p>Right 32-bits (least significant) of the 64-bit value</p>
+</dd>
+<dt><code class="docutils literal notranslate"><span class="pre">TY_INT8</span></code></dt><dd><p>Right 32-bits (least significant) of the 64-bit value</p>
+</dd>
+<dt><code class="docutils literal notranslate"><span class="pre">TY_LOG8</span></code></dt><dd><p>1 for TRUE, and 0 for FALSE.</p>
+</dd>
+<dt><code class="docutils literal notranslate"><span class="pre">TY_128</span></code></dt><dd><p>Second 32-bit word of the 128-bit value.</p>
+</dd>
+</dl>
+</div></blockquote>
+<dl>
+<dt><code class="docutils literal notranslate"><span class="pre">CONVAL3</span></code></dt><dd><p>Third constant value:</p>
+<blockquote>
+<div><dl class="simple">
+<dt><code class="docutils literal notranslate"><span class="pre">TY_128</span></code></dt><dd><p>Third 32-bit word of 128-bit value.</p>
+</dd>
+<dt>Otherwise</dt><dd><p>Undefined</p>
+</dd>
+</dl>
+</div></blockquote>
+<dl>
+<dt><code class="docutils literal notranslate"><span class="pre">CONVAL4</span></code></dt><dd><p>Fourth constant value:</p>
+<blockquote>
+<div><dl class="simple">
+<dt><code class="docutils literal notranslate"><span class="pre">TY_128</span></code></dt><dd><p>Fourth 32-bit word of 128-bit value.</p>
+</dd>
+<dt>Otherwise</dt><dd><p>Undefined</p>
+</dd>
+</dl>
+</div></blockquote>
+</dd>
+</dl>
+</dd>
+</dl>
+</dd>
+</dl>
+</section>
+<section id="st-stfunc">
+<h4>ST_STFUNC<a class="headerlink" href="#st-stfunc" title="Permalink to this heading">¶</a></h4>
+<p><em>OC_OTHER</em> statement function</p>
+<p><em>Flags</em></p>
+<dl class="simple">
+<dt><code class="docutils literal notranslate"><span class="pre">DCLD</span></code></dt><dd><p>Data type of this statement function has been explicitly declared.</p>
+</dd>
+</dl>
+<p><em>Flags2</em></p>
+<p><em>Other Fields</em></p>
+<dl class="simple">
+<dt><code class="docutils literal notranslate"><span class="pre">SFDSC</span></code></dt><dd><p>pointer to statement function descriptor. Set and used only by
+the semantic analyzer.</p>
+</dd>
+<dt><code class="docutils literal notranslate"><span class="pre">EXCVLEN</span></code></dt><dd><p>If dtype of this statement function is
+<code class="docutils literal notranslate"><span class="pre">DT_CHAR</span></code>
+or
+<code class="docutils literal notranslate"><span class="pre">DT_NCHAR</span></code>,
+this is the character length of the expression on the right hand
+side of the statement function definition.</p>
+</dd>
+<dt><code class="docutils literal notranslate"><span class="pre">PARAMCT</span></code></dt><dd><p>Number of dummy parameters for this statement function.</p>
+</dd>
+</dl>
+</section>
+<section id="st-param">
+<h4>ST_PARAM<a class="headerlink" href="#st-param" title="Permalink to this heading">¶</a></h4>
+<p><em>OC_OTHER</em> parameter</p>
+<p><em>Flags</em></p>
+<dl class="simple">
+<dt><code class="docutils literal notranslate"><span class="pre">REF</span></code></dt><dd><p>This constant parameter is referenced.
+Set by Scanner and used only for the -debug ref option.</p>
+</dd>
+</dl>
+<p><em>Flags2</em></p>
+<p><em>Other Fields</em></p>
+<dl class="simple">
+<dt><code class="docutils literal notranslate"><span class="pre">CONVAL1</span></code></dt><dd><p>Symbol table pointer to a
+<code class="docutils literal notranslate"><span class="pre">ST_CONST</span></code>
+entry, except when dtype equals
+<code class="docutils literal notranslate"><span class="pre">DT_INT</span></code>,
+<code class="docutils literal notranslate"><span class="pre">DT_WORD</span></code>,
+<code class="docutils literal notranslate"><span class="pre">DT_REAL</span></code>,
+or
+<code class="docutils literal notranslate"><span class="pre">DT_LOG</span></code>,
+in which case is the actual 32-bit constant value.</p>
+</dd>
+</dl>
+</section>
+<section id="st-intrin">
+<h4>ST_INTRIN<a class="headerlink" href="#st-intrin" title="Permalink to this heading">¶</a></h4>
+<p><em>OC_OTHER</em> intrinsic</p>
+<p><em>Flags</em></p>
+<dl class="simple">
+<dt><code class="docutils literal notranslate"><span class="pre">DCLD</span></code></dt><dd><p>Data type of this intrinsic has been explicitly declared.</p>
+</dd>
+<dt><code class="docutils literal notranslate"><span class="pre">EXPST</span></code></dt><dd><p>Stype of this intrinsic has been frozen.
+Set when a symbol is declared in an
+<code class="docutils literal notranslate"><span class="pre">INTRINSIC</span></code>
+statement, or is used as an intrinsic.
+Overloaded with the flag
+<code class="docutils literal notranslate"><span class="pre">E38</span></code>
+for variables.</p>
+</dd>
+</dl>
+<p><em>Flags2</em></p>
+<p><em>Other Fields</em></p>
+<dl class="simple">
+<dt><code class="docutils literal notranslate"><span class="pre">DTYPE</span></code></dt><dd><p>Has a value of <code class="docutils literal notranslate"><span class="pre">DT_NONE</span></code> if intrinsic did not occur in a type
+declaration.  If it did occur in a type declaration this field contains the
+data type value specified in the type declaration statement.  This data
+type will be used if it happens that the symbol for this intrinsic is used
+as a Fortran variable, array, or external function instead of an intrinsic.</p>
+</dd>
+<dt><code class="docutils literal notranslate"><span class="pre">ARGTYP</span></code></dt><dd><p>Data type of arguments to this intrinsic.
+Used by Semantic Analyzer to do type checking on
+intrinsic arguments.
+Two special values are allowed,
+<code class="docutils literal notranslate"><span class="pre">DT_NUMERIC</span></code>
+and
+<code class="docutils literal notranslate"><span class="pre">DT_ANY</span></code>.
+<code class="docutils literal notranslate"><span class="pre">DT_NUMERIC</span></code>
+means the arguments can be either
+<code class="docutils literal notranslate"><span class="pre">DT_INT</span></code>,
+<code class="docutils literal notranslate"><span class="pre">DT_REAL</span></code>,
+<code class="docutils literal notranslate"><span class="pre">DT_DBLE</span></code>,
+<code class="docutils literal notranslate"><span class="pre">DT_CMPLX</span></code>,
+or
+<code class="docutils literal notranslate"><span class="pre">DT_DCMPLX</span></code>.
+<code class="docutils literal notranslate"><span class="pre">DT_WORD</span></code>
+means the argument must be one of the 32-bit data types,
+<code class="docutils literal notranslate"><span class="pre">DT_INT</span></code>,
+<code class="docutils literal notranslate"><span class="pre">DT_REAL</span></code>,
+or
+<code class="docutils literal notranslate"><span class="pre">DT_LOG</span></code>.
+<code class="docutils literal notranslate"><span class="pre">DT_ANY</span></code>
+means any data type is allowed.</p>
+</dd>
+<dt><code class="docutils literal notranslate"><span class="pre">INTTYP</span></code></dt><dd><p>Data type of the result returned by this intrinsic.  The <code class="docutils literal notranslate"><span class="pre">DTYPE</span></code>
+field won’t necessarily be the same as the <code class="docutils literal notranslate"><span class="pre">INTTYP</span></code>
+field.  The <code class="docutils literal notranslate"><span class="pre">DTYPE</span></code>
+field will change if the intrinsic name occurs in a type declaration
+statement.  The <code class="docutils literal notranslate"><span class="pre">DTYPE</span></code> and <code class="docutils literal notranslate"><span class="pre">INTTYP</span></code> fields are kept
+separate because an intrinsic name can occur in a type declaration
+statement and must not have any effect on the intrinsic unless later it
+is determined that the intrinsic name loses its intrinsic properties
+and becomes a normal user symbol.</p>
+</dd>
+<dt><code class="docutils literal notranslate"><span class="pre">PNMPTR</span></code></dt><dd><p>Pointer (relative) into the symbol names area to the null terminated
+text string for the name of the standard entry external subprogram
+for this intrinsic.
+Zero if there is no such external (i.e. this intrinsic may not
+be passed as a subprogram argument).</p>
+</dd>
+<dt><code class="docutils literal notranslate"><span class="pre">PARAMCT</span></code></dt><dd><p>Number of arguments for this intrinsic.
+A value of 11 is used to mark the 2 intrinsics which convert
+to complex and double complex, which take either 1 or 2 arguments.
+A value of 12 or 13 marks the max and min intrinsics, which
+take two or more arguments.  13 marks the max/min intrinsics
+for which a type conversion must be performed.</p>
+</dd>
+<dt><code class="docutils literal notranslate"><span class="pre">ILM</span></code></dt><dd><p>ILM opcode number for this intrinsic.
+Equals zero if this is a type conversion intrinsic.</p>
+</dd>
+<dt><code class="docutils literal notranslate"><span class="pre">ARRAYF</span></code></dt><dd><p>ILM opcode number for this intrinsic when argument is an array.</p>
+</dd>
+</dl>
+</section>
+<section id="st-generic">
+<h4>ST_GENERIC<a class="headerlink" href="#st-generic" title="Permalink to this heading">¶</a></h4>
+<p><em>OC_OTHER</em> generic</p>
+<p><em>Flags</em></p>
+<dl class="simple">
+<dt><code class="docutils literal notranslate"><span class="pre">DCLD</span></code></dt><dd><p>Set if a data type is declared for this symbol.</p>
+</dd>
+<dt><code class="docutils literal notranslate"><span class="pre">EXPST</span></code></dt><dd><p>Stype of this symbol is frozen at
+<code class="docutils literal notranslate"><span class="pre">ST_GENERIC.</span></code>
+Set when generic name is declared in an
+<code class="docutils literal notranslate"><span class="pre">INTRINSIC</span></code>
+statement or when it is used as a generic name.</p>
+</dd>
+</dl>
+<p><em>Flags2</em></p>
+<p><em>Other Fields</em></p>
+<dl class="simple">
+<dt><code class="docutils literal notranslate"><span class="pre">DTYPE</span></code></dt><dd><p>Has a value of <code class="docutils literal notranslate"><span class="pre">DT_NONE</span></code> if generic did not occur in a type
+declaration.  If it did occur in a type declaration this field contains the
+data type value specified in the type declaration statement.  This data
+type will be used if it happens that the symbol for this intrinsic is used
+as a Fortran variable, array, or external function instead of an generic.</p>
+</dd>
+<dt><code class="docutils literal notranslate"><span class="pre">GINT</span></code></dt><dd><p>Symbol table pointer to intrinsic for integer arguments.
+Zero if there is no such intrinsic.</p>
+</dd>
+<dt><code class="docutils literal notranslate"><span class="pre">GREAL</span></code></dt><dd><p>Pointer to real intrinsic.</p>
+</dd>
+<dt><code class="docutils literal notranslate"><span class="pre">GDBLE</span></code></dt><dd><p>Pointer to double precision intrinsic.</p>
+</dd>
+<dt><code class="docutils literal notranslate"><span class="pre">GCMPLX</span></code></dt><dd><p>Pointer to complex intrinsic.</p>
+</dd>
+<dt><code class="docutils literal notranslate"><span class="pre">GDCMPLX</span></code></dt><dd><p>Pointer to double complex intrinsic.</p>
+</dd>
+<dt><code class="docutils literal notranslate"><span class="pre">GSAME</span></code></dt><dd><p>Pointer to the intrinsic with the same name as this
+generic.</p>
+</dd>
+<dt><code class="docutils literal notranslate"><span class="pre">GSINT</span></code></dt><dd><p>Pointer to short integer intrinsic.</p>
+</dd>
+<dt><code class="docutils literal notranslate"><span class="pre">GINT8</span></code></dt><dd><p>Pointer to 64-bit integer intrinsic.</p>
+</dd>
+<dt><code class="docutils literal notranslate"><span class="pre">GNDSC</span></code></dt><dd><p>For a user-defined generic,
+this field locates a list of symbols
+which maps the generic to its overloaded functions.
+This symbol list is represented by a list of <code class="docutils literal notranslate"><span class="pre">SYMI</span></code> items
+(see auxiliary data structures described below).</p>
+</dd>
+<dt><code class="docutils literal notranslate"><span class="pre">GNCNT</span></code></dt><dd><p>Number of overloaded functions for the user-defined generic.</p>
+</dd>
+</dl>
+</section>
+<section id="st-pd">
+<h4>ST_PD<a class="headerlink" href="#st-pd" title="Permalink to this heading">¶</a></h4>
+<p><em>OC_OTHER</em> predeclared</p>
+<p><em>Flags</em></p>
+<p><em>Flags2</em></p>
+<p><em>Other Fields</em></p>
+<dl class="simple">
+<dt><code class="docutils literal notranslate"><span class="pre">DTYPE</span></code></dt><dd><p>Has a value of <code class="docutils literal notranslate"><span class="pre">DT_NONE</span></code> if predeclared did not occur in a type
+declaration.  If it did occur in a type declaration this field contains the
+data type value specified in the type declaration statement.  This data
+type will be used if it happens that the symbol for this intrinsic is used
+as a Fortran variable, array, or external function instead of an predeclared.</p>
+</dd>
+<dt><code class="docutils literal notranslate"><span class="pre">PDNUM</span></code></dt><dd><p>Predeclared symbol number corresponding to value of
+<code class="docutils literal notranslate"><span class="pre">PD_xxx</span></code>
+macro in <code class="docutils literal notranslate"><span class="pre">pd.h</span></code> include file.
+Used for special casing code generation
+for these symbols.</p>
+</dd>
+</dl>
+</section>
+<section id="st-plist">
+<h4>ST_PLIST<a class="headerlink" href="#st-plist" title="Permalink to this heading">¶</a></h4>
+<p><em>OC_NONE</em> plist</p>
+<p>Parameter list -
+Aused for compiler-created one dimension arrays (i.e. format lists).</p>
+<p><em>Flags</em></p>
+<dl class="simple">
+<dt><code class="docutils literal notranslate"><span class="pre">DINIT</span></code></dt><dd><p>Set if the variable has been data initialized.</p>
+</dd>
+<dt><code class="docutils literal notranslate"><span class="pre">CCSYM</span></code></dt><dd><p>Indicates that this variable is a compiler created variable.</p>
+</dd>
+<dt><code class="docutils literal notranslate"><span class="pre">REF</span></code></dt><dd><p>Set if this variable is referenced.</p>
+</dd>
+<dt><code class="docutils literal notranslate"><span class="pre">BASEADDR</span></code></dt><dd><p>If set, this is a static variable whose address is relative to a global
+symbol; that global symbol is entered into the symbol table as an
+ST_BASE, with an unhashed name.</p>
+</dd>
+</dl>
+<p><em>Flags2</em></p>
+<dl class="simple">
+<dt><code class="docutils literal notranslate"><span class="pre">LOCLIFETM</span></code></dt><dd><p>This is set when the storage class is optimized to be static,
+but is has the same lifetime as a local.</p>
+</dd>
+</dl>
+<p><em>Flags3</em></p>
+<dl class="simple">
+<dt><code class="docutils literal notranslate"><span class="pre">TLS</span></code></dt><dd><p>This variable is allocated in thread local storage</p>
+</dd>
+</dl>
+<p><em>Other Fields</em></p>
+<dl class="simple">
+<dt><code class="docutils literal notranslate"><span class="pre">DTYPE</span></code></dt><dd><p>Data type indicating size of each parameter list entry (i.e. when used for
+format lists, each entry is 32 bits wide - <code class="docutils literal notranslate"><span class="pre">DT_INT</span></code>).</p>
+</dd>
+<dt><code class="docutils literal notranslate"><span class="pre">SYMLK</span></code></dt><dd><p>Used to link plists into the local data area.</p>
+</dd>
+<dt><code class="docutils literal notranslate"><span class="pre">ADDRESS</span></code></dt><dd><p>Address assigned to the parameter list.</p>
+</dd>
+<dt><code class="docutils literal notranslate"><span class="pre">BASESYM</span></code></dt><dd><p>If BASEADDR is set, BASESYM will host a symbol pointer to an ST_BASE
+symbol with the base address of this symbol.</p>
+</dd>
+<dt><code class="docutils literal notranslate"><span class="pre">PLLEN</span></code></dt><dd><p>Number of entries in the parameter lists.</p>
+</dd>
+<dt><code class="docutils literal notranslate"><span class="pre">SWEL</span></code></dt><dd><p>If this plist is used to describe the
+<code class="docutils literal notranslate"><span class="pre">COMPUTED</span> <span class="pre">GOTO</span></code>
+list, this field is
+is the index into the
+<code class="docutils literal notranslate"><span class="pre">swel</span></code>
+area (base is located by
+<code class="docutils literal notranslate"><span class="pre">switch_base</span></code>)
+representing where the its list of labels and values begins.
+This field is only used by the expander and optimizer when
+processing the
+<code class="docutils literal notranslate"><span class="pre">JMPM</span></code>
+ILI .</p>
+</dd>
+<dt><code class="docutils literal notranslate"><span class="pre">DEFLAB</span></code></dt><dd><p>If this plist is used to describe the
+<code class="docutils literal notranslate"><span class="pre">COMPUTED</span> <span class="pre">GOTO</span></code>
+list,
+this field is is the default label for the
+<code class="docutils literal notranslate"><span class="pre">COMPUTED</span> <span class="pre">GOTO</span></code>.
+This field is only used by the expander and optimizer when
+processing the
+<code class="docutils literal notranslate"><span class="pre">JMPM</span></code>
+ILI .</p>
+</dd>
+<dt><code class="docutils literal notranslate"><span class="pre">ETLS</span></code></dt><dd><p>Extended TLS levels</p>
+</dd>
+</dl>
+</section>
+<section id="st-block">
+<h4>ST_BLOCK<a class="headerlink" href="#st-block" title="Permalink to this heading">¶</a></h4>
+<p><em>OC_NONE</em> block</p>
+<p>A symbol is created for each lexical block.</p>
+<p><em>Flags</em></p>
+<p><em>Flags2</em></p>
+<p><em>Other Fields</em></p>
+<dl class="simple">
+<dt><code class="docutils literal notranslate"><span class="pre">ADDRESS</span></code></dt><dd><p>Unused (???).</p>
+</dd>
+<dt><code class="docutils literal notranslate"><span class="pre">STARTLINE</span></code></dt><dd><p>Start line number of block.</p>
+</dd>
+<dt><code class="docutils literal notranslate"><span class="pre">ENDLINE</span></code></dt><dd><p>End line number of block.</p>
+</dd>
+<dt><code class="docutils literal notranslate"><span class="pre">STARTLAB</span></code></dt><dd><p>Start label of block.</p>
+</dd>
+<dt><code class="docutils literal notranslate"><span class="pre">AUTOBJ</span></code></dt><dd><p>Links together automatic data objects local to the function.</p>
+</dd>
+<dt><code class="docutils literal notranslate"><span class="pre">ENDLAB</span></code></dt><dd><p>End label of block.</p>
+</dd>
+<dt><code class="docutils literal notranslate"><span class="pre">BEGINSCOPELAB</span></code></dt><dd><p>For a lexical block, if nonzero, this is a link to a label symbol with the BEGINSCOPE flag set.</p>
+</dd>
+<dt><code class="docutils literal notranslate"><span class="pre">ENDSCOPELAB</span></code></dt><dd><p>For a lexical block, if nonzero, this is a link to a label symbol with the ENDSCOPE flag set.</p>
+</dd>
+<dt><code class="docutils literal notranslate"><span class="pre">FIHSCOPE</span></code></dt><dd><p>If nonzero, this is a link to the FIH table; for source that is included or inlined,
+the FIH table contains information about the file from which the source was included
+or inlined.</p>
+</dd>
+<dt><code class="docutils literal notranslate"><span class="pre">ENCLFUNC</span></code></dt><dd><p>Pointer to block or function enclosing this block.</p>
+</dd>
+<dt><code class="docutils literal notranslate"><span class="pre">PARSYMSCT</span></code></dt><dd><p>Count number of contigious items in the AUX parsyms field.</p>
+</dd>
+<dt><code class="docutils literal notranslate"><span class="pre">PARSYMS</span></code></dt><dd><p>Starting index into the AUX parsyms field.</p>
+</dd>
+<dt><code class="docutils literal notranslate"><span class="pre">PARUPLEVEL</span></code></dt><dd><p>Store uplevel sptr for openmp outlined function.</p>
+</dd>
+<dt><code class="docutils literal notranslate"><span class="pre">PARENCLFUNC</span></code></dt><dd><p>If set to outlined function, this block represents an OpenMP scope sptr.</p>
+</dd>
+</dl>
+</section>
+<section id="st-base">
+<h4>ST_BASE<a class="headerlink" href="#st-base" title="Permalink to this heading">¶</a></h4>
+<p><em>OC_NONE</em> base</p>
+<p>Symbol whose name is used as the base address for a set of static variables.
+This is used when inlining a subprogram that has static variables;
+instead of .BSS1 or .STATICS1 as the base name, the compiler creates
+a unique global name and uses that in the original subprogram as well as
+all places where the function is inlined.</p>
+<p><em>Flags</em></p>
+<p><em>Other Fields</em></p>
+</section>
+<section id="st-dpname">
+<h4>ST_DPNAME<a class="headerlink" href="#st-dpname" title="Permalink to this heading">¶</a></h4>
+<p><em>OC_OTHER</em> deep copy name</p>
+<p>Flags</p>
+<dl class="simple">
+<dt><code class="docutils literal notranslate"><span class="pre">USED</span></code></dt><dd><p>Set if this name is referenced.</p>
+</dd>
+</dl>
+</section>
+</section>
+</section>
+<section id="auxiliary-data-structures">
+<h2>Auxiliary Data Structures<a class="headerlink" href="#auxiliary-data-structures" title="Permalink to this heading">¶</a></h2>
+<section id="data-type-lists">
+<h3>Data Type Lists<a class="headerlink" href="#data-type-lists" title="Permalink to this heading">¶</a></h3>
+<p>The data types of symbols (c
+<code class="docutils literal notranslate"><span class="pre">DTYPE</span></code>
+field) and expressions are
+represented by an integer which is used as a relative pointer
+into the data type area.
+This area is a contiguous block in dynamic storage, consisting
+of a series of variable length records.
+Basic data types such as
+“integer”
+are represented by
+a unique, single word record in this area.
+Others, such as structure types,
+are represented by a multi-word record.
+Complex data types
+are represented by linked lists of records.</p>
+<p>The first word of each record defines the type of record.
+The allowed values of this first word are covered by the
+following macros:</p>
+<dl class="simple">
+<dt><code class="docutils literal notranslate"><span class="pre">TY_NONE</span></code> <code class="docutils literal notranslate"><span class="pre">none</span></code></dt><dd><p>— no type assigned</p>
+</dd>
+<dt><code class="docutils literal notranslate"><span class="pre">TY_WORD</span></code> <code class="docutils literal notranslate"><span class="pre">word</span></code> INT BASIC SCALAR VEC WORD</dt><dd><p>— 32-bit value whose interpretation depends on context.
+Used only for intrinsic symbols within Semantic Analyzer.</p>
+</dd>
+<dt><code class="docutils literal notranslate"><span class="pre">TY_DWORD</span></code> <code class="docutils literal notranslate"><span class="pre">dword</span></code> INT BASIC SCALAR VEC DWORD</dt><dd><p>— 64-bit value whose interpretation depends on context.
+Internal to the PGFTN compiler.</p>
+</dd>
+<dt><code class="docutils literal notranslate"><span class="pre">TY_HOLL</span></code> <code class="docutils literal notranslate"><span class="pre">hollerith</span></code> BASIC SCALAR</dt><dd><p>(semantic stack only)</p>
+</dd>
+</dl>
+<p><code class="docutils literal notranslate"><span class="pre">TY_BINT</span></code> <code class="docutils literal notranslate"><span class="pre">byte</span></code> INT BASIC SCALAR VEC WORD</p>
+<p><code class="docutils literal notranslate"><span class="pre">TY_SINT</span></code> <code class="docutils literal notranslate"><span class="pre">integer\*2</span></code> INT BASIC SCALAR VEC WORD</p>
+<dl class="simple">
+<dt><code class="docutils literal notranslate"><span class="pre">TY_INT</span></code> <code class="docutils literal notranslate"><span class="pre">integer</span></code> INT BASIC SCALAR VEC WORD</dt><dd><p>or
+<code class="docutils literal notranslate"><span class="pre">integer\*4</span></code>.</p>
+</dd>
+</dl>
+<p><code class="docutils literal notranslate"><span class="pre">TY_INT8</span></code> <code class="docutils literal notranslate"><span class="pre">integer\*8</span></code> INT BASIC SCALAR VEC DWORD</p>
+<p><code class="docutils literal notranslate"><span class="pre">TY_HALF</span></code> <code class="docutils literal notranslate"><span class="pre">real\*2</span></code> REAL BASIC SCALAR VEC WORD</p>
+<p><code class="docutils literal notranslate"><span class="pre">TY_REAL</span></code> <code class="docutils literal notranslate"><span class="pre">real</span></code> REAL BASIC SCALAR VEC WORD</p>
+<p><code class="docutils literal notranslate"><span class="pre">TY_DBLE</span></code> <code class="docutils literal notranslate"><span class="pre">double</span> <span class="pre">precision</span></code> REAL BASIC SCALAR VEC DWORD</p>
+<p><code class="docutils literal notranslate"><span class="pre">TY_QUAD</span></code> <code class="docutils literal notranslate"><span class="pre">real\*16</span></code> REAL BASIC SCALAR VEC</p>
+<p><code class="docutils literal notranslate"><span class="pre">TY_HCMPLX</span></code> <code class="docutils literal notranslate"><span class="pre">half</span> <span class="pre">complex</span></code> CMPLX BASIC SCALAR VEC WORD</p>
+<dl class="simple">
+<dt><code class="docutils literal notranslate"><span class="pre">TY_CMPLX</span></code> <code class="docutils literal notranslate"><span class="pre">complex</span></code> CMPLX BASIC SCALAR VEC DWORD</dt><dd><p>(2 x 32-bit).</p>
+</dd>
+<dt><code class="docutils literal notranslate"><span class="pre">TY_DCMPLX</span></code> <code class="docutils literal notranslate"><span class="pre">double</span> <span class="pre">complex</span></code> CMPLX BASIC SCALAR VEC</dt><dd><p>(2 x 64-bit).</p>
+</dd>
+<dt><code class="docutils literal notranslate"><span class="pre">TY_QCMPLX</span></code> <code class="docutils literal notranslate"><span class="pre">quad</span> <span class="pre">complex</span></code> CMPLX BASIC SCALAR VEC</dt><dd><p>(2 x 128-bit).</p>
+</dd>
+</dl>
+<p><code class="docutils literal notranslate"><span class="pre">TY_BLOG</span></code> <code class="docutils literal notranslate"><span class="pre">logical\*1</span></code> LOG BASIC SCALAR VEC WORD INT</p>
+<p><code class="docutils literal notranslate"><span class="pre">TY_SLOG</span></code> <code class="docutils literal notranslate"><span class="pre">logical\*2</span></code> LOG BASIC SCALAR VEC WORD INT</p>
+<dl class="simple">
+<dt><code class="docutils literal notranslate"><span class="pre">TY_LOG</span></code> <code class="docutils literal notranslate"><span class="pre">logical</span></code> LOG BASIC SCALAR VEC WORD INT</dt><dd><p>or
+<code class="docutils literal notranslate"><span class="pre">logical\*4</span></code>.</p>
+</dd>
+</dl>
+<p><code class="docutils literal notranslate"><span class="pre">TY_LOG8</span></code> <code class="docutils literal notranslate"><span class="pre">logical\*8</span></code> LOG BASIC SCALAR VEC DWORD INT</p>
+<p><code class="docutils literal notranslate"><span class="pre">TY_128</span></code> <code class="docutils literal notranslate"><span class="pre">128-bit</span></code> BASIC SCALAR VEC INT</p>
+<p><code class="docutils literal notranslate"><span class="pre">TY_CHAR</span></code> <code class="docutils literal notranslate"><span class="pre">character</span></code> BASIC SCALAR</p>
+<dl class="simple">
+<dt><code class="docutils literal notranslate"><span class="pre">TY_NCHAR</span></code> <code class="docutils literal notranslate"><span class="pre">ncharacter</span></code> BASIC SCALAR</dt><dd><p>— kanji character string).</p>
+</dd>
+<dt><code class="docutils literal notranslate"><span class="pre">TY_PTR</span></code> <code class="docutils literal notranslate"><span class="pre">pointer</span></code> BASIC SCALAR</dt><dd><p>— Pointer to … (internal)</p>
+</dd>
+<dt><code class="docutils literal notranslate"><span class="pre">TY_ARRAY</span></code> <code class="docutils literal notranslate"><span class="pre">array</span></code></dt><dd><p>— Array of …</p>
+</dd>
+<dt><code class="docutils literal notranslate"><span class="pre">TY_STRUCT</span></code> <code class="docutils literal notranslate"><span class="pre">structure</span></code></dt><dd><p>— Struct x.</p>
+</dd>
+<dt><code class="docutils literal notranslate"><span class="pre">TY_UNION</span></code> <code class="docutils literal notranslate"><span class="pre">union</span></code></dt><dd><p>— UNION statement).</p>
+</dd>
+</dl>
+<p><code class="docutils literal notranslate"><span class="pre">TY_NUMERIC</span></code> <code class="docutils literal notranslate"><span class="pre">numeric</span></code></p>
+<p><code class="docutils literal notranslate"><span class="pre">TY_256</span></code> <code class="docutils literal notranslate"><span class="pre">256-bit</span></code> BASIC SCALAR VEC INT</p>
+<p><code class="docutils literal notranslate"><span class="pre">TY_512</span></code> <code class="docutils literal notranslate"><span class="pre">512-bit</span></code> BASIC SCALAR VEC INT</p>
+<p><code class="docutils literal notranslate"><span class="pre">TY_INT128</span></code> <code class="docutils literal notranslate"><span class="pre">integer\*16</span></code> BASIC SCALAR VEC INT</p>
+<p><code class="docutils literal notranslate"><span class="pre">TY_LOG128</span></code> <code class="docutils literal notranslate"><span class="pre">logical\*16</span></code> LOG BASIC SCALAR VEC INT</p>
+<p><code class="docutils literal notranslate"><span class="pre">TY_FLOAT128</span></code> <code class="docutils literal notranslate"><span class="pre">real\*16</span></code> REAL BASIC SCALAR VEC</p>
+<p><code class="docutils literal notranslate"><span class="pre">TY_CMPLX128</span></code> <code class="docutils literal notranslate"><span class="pre">complex\*32</span></code> CMPLX BASIC SCALAR VEC</p>
+<p><code class="docutils literal notranslate"><span class="pre">TY_UBINT</span></code> <code class="docutils literal notranslate"><span class="pre">ubyte</span></code> INT BASIC SCALAR VEC WORD UNSIGNED</p>
+<p><code class="docutils literal notranslate"><span class="pre">TY_USINT</span></code> <code class="docutils literal notranslate"><span class="pre">uinteger\*2</span></code> INT BASIC SCALAR VEC WORD UNSIGNED</p>
+<p><code class="docutils literal notranslate"><span class="pre">TY_UINT</span></code> <code class="docutils literal notranslate"><span class="pre">uinteger</span></code> INT BASIC SCALAR VEC WORD UNSIGNED</p>
+<p><code class="docutils literal notranslate"><span class="pre">TY_UINT8</span></code> <code class="docutils literal notranslate"><span class="pre">uinteger\*8</span></code> INT BASIC SCALAR VEC DWORD UNSIGNED</p>
+<p><code class="docutils literal notranslate"><span class="pre">TY_UINT128</span></code> <code class="docutils literal notranslate"><span class="pre">uinteger\*16</span></code> BASIC SCALAR VEC INT UNSIGNED</p>
+<p><code class="docutils literal notranslate"><span class="pre">TY_ANY</span></code> <code class="docutils literal notranslate"><span class="pre">any</span></code></p>
+<p><code class="docutils literal notranslate"><span class="pre">TY_PROC</span></code> <code class="docutils literal notranslate"><span class="pre">procedure</span></code></p>
+<dl class="simple">
+<dt><code class="docutils literal notranslate"><span class="pre">TY_VECT</span></code> <code class="docutils literal notranslate"><span class="pre">vect</span></code> VECT</dt><dd><p>— vectn of …</p>
+</dd>
+<dt><code class="docutils literal notranslate"><span class="pre">TY_PFUNC</span></code> <code class="docutils literal notranslate"><span class="pre">proto</span> <span class="pre">func</span></code></dt><dd><p>— prototype function returning …</p>
+</dd>
+<dt><code class="docutils literal notranslate"><span class="pre">TY_PARAM</span></code> <code class="docutils literal notranslate"><span class="pre">param</span></code></dt><dd><p>— function param list (not a type)</p>
+</dd>
+</dl>
+<p>Records of type
+<code class="docutils literal notranslate"><span class="pre">TY_WORD</span></code>
+through
+<code class="docutils literal notranslate"><span class="pre">TY_LOG</span></code>
+consist of a single word.
+The format of other record types are as follows:
+.DT TY_CHAR</p>
+<dl class="simple">
+<dt><code class="docutils literal notranslate"><span class="pre">len</span></code></dt><dd><p>length of character data in bytes. A length value of 0
+indicates that the symbol is an assumed size.
+.DT TY_NCHAR</p>
+</dd>
+<dt><code class="docutils literal notranslate"><span class="pre">len</span></code></dt><dd><p>Number of characters in the string. A length value of 0
+indicates that the symbol is an assumed size dummy argument.
+.DT TY_PTR</p>
+</dd>
+<dt><code class="docutils literal notranslate"><span class="pre">dtype</span></code></dt><dd><p>relative pointer to a record in the dtype area.
+.DT TY_ARRAY</p>
+</dd>
+<dt><code class="docutils literal notranslate"><span class="pre">dtype</span></code></dt><dd><p>relative pointer to a record in the dtype area.</p>
+</dd>
+<dt><code class="docutils literal notranslate"><span class="pre">desc</span></code></dt><dd><p>relative pointer to the array bounds descriptor
+describing this array.
+.DT TY_STRUCT TY_UNION</p>
+</dd>
+<dt><code class="docutils literal notranslate"><span class="pre">sptr</span></code></dt><dd><p>symbol table pointer to the first member of this struct or union type.</p>
+</dd>
+<dt><code class="docutils literal notranslate"><span class="pre">size</span></code></dt><dd><p>size in bytes of this struct or union type.  32-bit quantity.</p>
+</dd>
+<dt><code class="docutils literal notranslate"><span class="pre">tag</span></code></dt><dd><p>symbol table pointer to struct or union tag.  0 if none was specified.</p>
+</dd>
+<dt><code class="docutils literal notranslate"><span class="pre">align</span></code></dt><dd><p>alignment required for this struct or union.
+0 — byte, 1 — halfword, 3 — word, or 7 — double word.</p>
+</dd>
+<dt><code class="docutils literal notranslate"><span class="pre">ict</span></code></dt><dd><p>initializer constant tree pointer.
+.DT TY_PROC</p>
+</dd>
+<dt><code class="docutils literal notranslate"><span class="pre">dtype</span></code></dt><dd><p>relative pointer to a record in the dtype area; return type of the
+procedure.</p>
+</dd>
+<dt><code class="docutils literal notranslate"><span class="pre">interface</span></code></dt><dd><p>symbol table pointer to the interface, a SUBROUTINE or FUNCTION; could
+be zero.</p>
+</dd>
+<dt><code class="docutils literal notranslate"><span class="pre">paramct</span></code></dt><dd><p>Number of dummy parameters for this procedure.</p>
+</dd>
+<dt><code class="docutils literal notranslate"><span class="pre">dpdsc</span></code></dt><dd><p>Pointer to the dummy parameter descriptor for this procedure.</p>
+</dd>
+<dt><code class="docutils literal notranslate"><span class="pre">fval</span></code></dt><dd><p>symbol table pointer to the FVAL if FUNCTION; could be zero.
+.DT TY_PFUNC</p>
+</dd>
+<dt><code class="docutils literal notranslate"><span class="pre">dtype</span></code></dt><dd><p>relative pointer to record in dtype area
+representing type returned by function.</p>
+</dd>
+<dt><code class="docutils literal notranslate"><span class="pre">params</span></code></dt><dd><p>relative pointer to parameter list (see below).
+.DT TY_PARAM</p>
+</dd>
+</dl>
+<p>Parameter list for functions.
+The parameter list is a list of four word records in the dtype
+area.</p>
+<dl class="simple">
+<dt><code class="docutils literal notranslate"><span class="pre">dtype</span></code></dt><dd><p>data type of the parameter or zero if not known.</p>
+</dd>
+<dt><code class="docutils literal notranslate"><span class="pre">sptr</span></code></dt><dd><p>The third word is a symbol table pointer to a
+dummy argument or zero if none.</p>
+</dd>
+<dt><code class="docutils literal notranslate"><span class="pre">next</span></code></dt><dd><p>relative pointer to the
+four-word record for the next dummy parameter.
+.DT E</p>
+</dd>
+</dl>
+<p>When the Symbol Table is initialized, the data type
+area is allocated and a number of predefined
+types are added to it.
+These types can be referenced via the following macros:</p>
+<p><code class="docutils literal notranslate"><span class="pre">DT_NONE</span></code> <code class="docutils literal notranslate"><span class="pre">none</span></code> TY_NONE</p>
+<dl class="simple">
+<dt><code class="docutils literal notranslate"><span class="pre">DT_WORD</span></code> <code class="docutils literal notranslate"><span class="pre">word</span></code> TY_WORD</dt><dd><p>32-bit value whose interpretation depends
+on context.  Used only for intrinsic
+symbols within Semantic Analyzer.</p>
+</dd>
+<dt><code class="docutils literal notranslate"><span class="pre">DT_DWORD</span></code> <code class="docutils literal notranslate"><span class="pre">dword</span></code> TY_DWORD</dt><dd><p>64-bit value whose interpretation depends
+on context.  Internal to the PGFTN compiler.</p>
+</dd>
+</dl>
+<p><code class="docutils literal notranslate"><span class="pre">DT_HOLL</span></code> <code class="docutils literal notranslate"><span class="pre">hollerith</span></code> TY_HOLL</p>
+<p><code class="docutils literal notranslate"><span class="pre">DT_BINT</span></code> <code class="docutils literal notranslate"><span class="pre">byte</span></code> TY_BINT</p>
+<p><code class="docutils literal notranslate"><span class="pre">DT_SINT</span></code> <code class="docutils literal notranslate"><span class="pre">integer\*2</span></code> TY_SINT</p>
+<p><code class="docutils literal notranslate"><span class="pre">DT_INT</span></code> <code class="docutils literal notranslate"><span class="pre">integer</span></code> TY_INT</p>
+<p><code class="docutils literal notranslate"><span class="pre">DT_INT8</span></code> <code class="docutils literal notranslate"><span class="pre">integer\*8</span></code> TY_INT8</p>
+<p><code class="docutils literal notranslate"><span class="pre">DT_HALF</span></code> <code class="docutils literal notranslate"><span class="pre">real\*2</span></code> TY_HALF</p>
+<p><code class="docutils literal notranslate"><span class="pre">DT_REAL</span></code> <code class="docutils literal notranslate"><span class="pre">real</span></code> TY_REAL</p>
+<p><code class="docutils literal notranslate"><span class="pre">DT_DBLE</span></code> <code class="docutils literal notranslate"><span class="pre">real\*8</span></code> TY_DBLE</p>
+<p><code class="docutils literal notranslate"><span class="pre">DT_QUAD</span></code> <code class="docutils literal notranslate"><span class="pre">real\*16</span></code> TY_QUAD</p>
+<p><code class="docutils literal notranslate"><span class="pre">DT_HCMPLX</span></code> <code class="docutils literal notranslate"><span class="pre">half</span> <span class="pre">complex</span></code> TY_HCMPLX</p>
+<p><code class="docutils literal notranslate"><span class="pre">DT_CMPLX</span></code> <code class="docutils literal notranslate"><span class="pre">complex</span></code> TY_CMPLX</p>
+<p><code class="docutils literal notranslate"><span class="pre">DT_DCMPLX</span></code> <code class="docutils literal notranslate"><span class="pre">double</span> <span class="pre">complex</span></code> TY_DCMPLX</p>
+<p><code class="docutils literal notranslate"><span class="pre">DT_QCMPLX</span></code> <code class="docutils literal notranslate"><span class="pre">quad</span> <span class="pre">complex</span></code> TY_QCMPLX</p>
+<p><code class="docutils literal notranslate"><span class="pre">DT_BLOG</span></code> <code class="docutils literal notranslate"><span class="pre">logical\*1</span></code> TY_BLOG</p>
+<p><code class="docutils literal notranslate"><span class="pre">DT_SLOG</span></code> <code class="docutils literal notranslate"><span class="pre">logical\*2</span></code> TY_SLOG</p>
+<p><code class="docutils literal notranslate"><span class="pre">DT_LOG</span></code> <code class="docutils literal notranslate"><span class="pre">logical</span></code> TY_LOG</p>
+<p><code class="docutils literal notranslate"><span class="pre">DT_LOG8</span></code> <code class="docutils literal notranslate"><span class="pre">logical\*8</span></code> TY_LOG8</p>
+<p><code class="docutils literal notranslate"><span class="pre">DT_128</span></code> <code class="docutils literal notranslate"><span class="pre">128-bit</span></code> TY_128</p>
+<p><code class="docutils literal notranslate"><span class="pre">DT_ADDR</span></code> <code class="docutils literal notranslate"><span class="pre">address</span></code> TY_PTR DT_ANY</p>
+<dl class="simple">
+<dt><code class="docutils literal notranslate"><span class="pre">DT_CHAR</span></code> <code class="docutils literal notranslate"><span class="pre">character\*1</span></code> TY_CHAR 1</dt><dd><p>One byte character string.</p>
+</dd>
+<dt><code class="docutils literal notranslate"><span class="pre">DT_NCHAR</span></code> <code class="docutils literal notranslate"><span class="pre">ncharacter\*1</span></code> TY_NCHAR 1</dt><dd><p>One character kanji string.</p>
+</dd>
+<dt><code class="docutils literal notranslate"><span class="pre">DT_ANY</span></code> <code class="docutils literal notranslate"><span class="pre">any</span></code> TY_ANY</dt><dd><p>Any type (for intrinsics).</p>
+</dd>
+<dt><code class="docutils literal notranslate"><span class="pre">DT_NUMERIC</span></code> <code class="docutils literal notranslate"><span class="pre">numeric</span></code> TY_NUMERIC</dt><dd><p>Any numeric type (for intrinsics).</p>
+</dd>
+<dt><code class="docutils literal notranslate"><span class="pre">DT_ASSNCHAR</span></code> `` `` TY_NCHAR 0</dt><dd><p>Assumed size kanji string dummy argument.</p>
+</dd>
+<dt><code class="docutils literal notranslate"><span class="pre">DT_ASSCHAR</span></code> <code class="docutils literal notranslate"><span class="pre">assumed-size</span> <span class="pre">char</span></code> TY_CHAR 0</dt><dd><p>Assumed size character.</p>
+</dd>
+</dl>
+<p><code class="docutils literal notranslate"><span class="pre">DT_128F</span></code> <code class="docutils literal notranslate"><span class="pre">__m128</span></code> TY_128</p>
+<p><code class="docutils literal notranslate"><span class="pre">DT_128D</span></code> <code class="docutils literal notranslate"><span class="pre">__m128d</span></code> TY_128</p>
+<p><code class="docutils literal notranslate"><span class="pre">DT_128I</span></code> <code class="docutils literal notranslate"><span class="pre">__m128i</span></code> TY_128</p>
+<p><code class="docutils literal notranslate"><span class="pre">DT_256</span></code> <code class="docutils literal notranslate"><span class="pre">256-bit</span></code> TY_256</p>
+<p><code class="docutils literal notranslate"><span class="pre">DT_256F</span></code> <code class="docutils literal notranslate"><span class="pre">__m256</span></code> TY_256</p>
+<p><code class="docutils literal notranslate"><span class="pre">DT_256D</span></code> <code class="docutils literal notranslate"><span class="pre">__m256d</span></code> TY_256</p>
+<p><code class="docutils literal notranslate"><span class="pre">DT_256I</span></code> <code class="docutils literal notranslate"><span class="pre">__m256i</span></code> TY_256</p>
+<p><code class="docutils literal notranslate"><span class="pre">DT_512</span></code> <code class="docutils literal notranslate"><span class="pre">512-bit</span></code> TY_512</p>
+<p><code class="docutils literal notranslate"><span class="pre">DT_512F</span></code> <code class="docutils literal notranslate"><span class="pre">__m512</span></code> TY_512</p>
+<p><code class="docutils literal notranslate"><span class="pre">DT_512D</span></code> <code class="docutils literal notranslate"><span class="pre">__m512d</span></code> TY_512</p>
+<p><code class="docutils literal notranslate"><span class="pre">DT_512I</span></code> <code class="docutils literal notranslate"><span class="pre">__m512i</span></code> TY_512</p>
+<p><code class="docutils literal notranslate"><span class="pre">DT_INT128</span></code> <code class="docutils literal notranslate"><span class="pre">integer\*128</span></code> TY_INT128</p>
+<p><code class="docutils literal notranslate"><span class="pre">DT_LOG128</span></code> <code class="docutils literal notranslate"><span class="pre">logical\*128</span></code> TY_LOG128</p>
+<p><code class="docutils literal notranslate"><span class="pre">DT_FLOAT128</span></code> <code class="docutils literal notranslate"><span class="pre">real\*16</span></code> TY_FLOAT128</p>
+<p><code class="docutils literal notranslate"><span class="pre">DT_CMPLX128</span></code> <code class="docutils literal notranslate"><span class="pre">complex\*32</span></code> TY_CMPLX128</p>
+<p><code class="docutils literal notranslate"><span class="pre">DT_UBINT</span></code> <code class="docutils literal notranslate"><span class="pre">ubyte</span></code> TY_UBINT</p>
+<p><code class="docutils literal notranslate"><span class="pre">DT_USINT</span></code> <code class="docutils literal notranslate"><span class="pre">uinteger\*2</span></code> TY_USINT</p>
+<p><code class="docutils literal notranslate"><span class="pre">DT_UINT</span></code> <code class="docutils literal notranslate"><span class="pre">uinteger</span></code> TY_UINT</p>
+<p><code class="docutils literal notranslate"><span class="pre">DT_UINT8</span></code> <code class="docutils literal notranslate"><span class="pre">uinteger\*8</span></code> TY_UINT8</p>
+<p><code class="docutils literal notranslate"><span class="pre">DT_UINT128</span></code> <code class="docutils literal notranslate"><span class="pre">uinteger\*128</span></code> TY_INT128</p>
+<dl>
+<dt><code class="docutils literal notranslate"><span class="pre">DT_DEFERNCHAR</span></code> `` `` TY_NCHAR 0</dt><dd><p>Deferred-length kanji character.</p>
+</dd>
+<dt><code class="docutils literal notranslate"><span class="pre">DT_DEFERCHAR</span></code> <code class="docutils literal notranslate"><span class="pre">deferred-length</span>&#160; <span class="pre">char</span></code> TY_CHAR 0</dt><dd><p>Deferred-length character.</p>
+<p>.rr Sx.rr II.rr PS.rm OC.rm SF.rm ST.rm Sc.rm SM.rm SI.rm FL.rm SE.rm TY.rm DT.rm DE.rm PD</p>
+</dd>
+</dl>
+</section>
+<section id="array-bounds-descriptors">
+<h3>Array Bounds Descriptors<a class="headerlink" href="#array-bounds-descriptors" title="Permalink to this heading">¶</a></h3>
+<p>An array bounds descriptor is created for each array when the
+declaration for the array is processed by the Semantic
+Analyzer.
+The descriptors specify the upper and lower bounds of the array,
+and other information derived from the bounds which the Expander
+uses to generate code for array references.
+The descriptor is pointed to by the desc field of the array dtype record.</p>
+<p>Except for
+<code class="docutils literal notranslate"><span class="pre">NUMDIM</span></code>
+and
+<code class="docutils literal notranslate"><span class="pre">SCHECK,</span></code>
+the fields of the descriptor
+are symbol table pointers which point to an integer constant if
+the particular value is known at compile time, or
+point to a compiler created variable if the array is an
+adjustable array and the particular value is known only at
+run time.</p>
+<p>When the Semantic Analyzer processes an adjustable array declaration,
+it writes out the ILM’s necessary to assign the correct values to
+the compiler created variables referenced in the descriptor.</p>
+<p>Descriptors can be shared between two arrays with identical
+bounds.  The Semantic Analyzer currently shares descriptors
+for arrays with constant bounds.</p>
+<p>The form of a array bounds descriptor is as follows:</p>
+<table class="docutils align-default">
+<tbody>
+<tr class="row-odd"><td><p>NUMDIM</p></td>
+<td><p>SCHECK</p></td>
+<td><p>ZBASE</p></td>
+</tr>
+<tr class="row-even"><td colspan="3"><p>ILMP</p></td>
+</tr>
+<tr class="row-odd"><td><p>MLPYR(1)</p></td>
+<td><p>LWBD(1)</p></td>
+<td><p>UPBD(1)</p></td>
+</tr>
+<tr class="row-even"><td><p>…</p></td>
+<td><p>…</p></td>
+<td><p>…</p></td>
+</tr>
+<tr class="row-odd"><td><p>MLPYR(DIM)</p></td>
+<td><p>LWBD(DIM)</p></td>
+<td><p>UPBD(DIM)</p></td>
+</tr>
+<tr class="row-even"><td><p>NUMELM</p></td>
+<td><ul class="simple">
+<li></li>
+</ul>
+</td>
+<td><ul class="simple">
+<li></li>
+</ul>
+</td>
+</tr>
+</tbody>
+</table>
+<dl>
+<dt><code class="docutils literal notranslate"><span class="pre">NUMDIM:</span></code></dt><dd><p>Number of dimensions of the array.
+Integer constant in the range 1 to 7.</p>
+</dd>
+<dt><code class="docutils literal notranslate"><span class="pre">ILMP:</span></code></dt><dd><p>Pointer to the ILMs which have been saved in a
+<code class="docutils literal notranslate"><span class="pre">getitem</span></code>
+area if the array is an adjustable array (used only by the  semantic analyzer).</p>
+</dd>
+<dt><code class="docutils literal notranslate"><span class="pre">LWBD(i):</span></code></dt><dd><p>Lower bound for the ith dimension of the array.
+If a lower bound is non-constant, a compiler created
+variable whic contains the value is set.</p>
+</dd>
+<dt><code class="docutils literal notranslate"><span class="pre">UPBD(i):</span></code></dt><dd><p>Upper bound for the ith dimension of the array.
+This value is zero for the last dimension of an assumed size array.
+As with the lower bounds, this field is needed for adjustable
+arrays.</p>
+</dd>
+<dt><code class="docutils literal notranslate"><span class="pre">MLPYR(i):</span></code></dt><dd><p>Multiplier for the ith dimension of the array.
+The multiplier is computed as follows:</p>
+<ul>
+<li><div class="highlight-none notranslate"><div class="highlight"><pre><span></span>For i == 1,  MLPYR(i) == 1
+
+For i &gt; 1,   MLPYR(i) = MLPYR(i-1) \*
+                          (UPBD(i-1)-LWBD(i-1)+1)
+</pre></div>
+</div>
+</li>
+</ul>
+<dl>
+<dt><code class="docutils literal notranslate"><span class="pre">SCHECK:</span></code></dt><dd><p>Symbol table pointer to an array containing subscript
+checking descriptor for runtime checks.</p>
+</dd>
+<dt><code class="docutils literal notranslate"><span class="pre">ZBASE:</span></code></dt><dd><p>Zero base offset.
+The value of
+<code class="docutils literal notranslate"><span class="pre">ZBASE</span></code>
+is defined by the following expression:</p>
+<div class="highlight-none notranslate"><div class="highlight"><pre><span></span>LWBD(1)\*MLPYR(1) + ... + LWBD(NUMDIM) \* MLPYR(NUMDIM)
+</pre></div>
+</div>
+<dl class="simple">
+<dt>NUMELM:</dt><dd><p>Number of elements in the array.
+Note that this value may be computed as the multiplier for
+dimension
+<code class="docutils literal notranslate"><span class="pre">NUMDIM+1.</span></code>
+For an assumed size array, this value is zero.</p>
+</dd>
+</dl>
+</dd>
+</dl>
+</dd>
+</dl>
+<p>For example, the offset of an array element of the form:</p>
+<div class="highlight-none notranslate"><div class="highlight"><pre><span></span>a(SUB(1), SUB(2), ..., SUB(NUMDIM))
+</pre></div>
+</div>
+<p>is the summation of the terms:</p>
+<div class="highlight-none notranslate"><div class="highlight"><pre><span></span>(SUB(i) - LWBD(i)) \* MLPYR(i)
+        for i = 1, ... NUMDIM.
+</pre></div>
+</div>
+<p>or :</p>
+<div class="highlight-none notranslate"><div class="highlight"><pre><span></span>(SUB(i) \* MLPYR(i) for i = 1, ... NUMDIM.) - ZBASE
+</pre></div>
+</div>
+</section>
+<section id="storage-overlap-chains">
+<h3>Storage Overlap Chains<a class="headerlink" href="#storage-overlap-chains" title="Permalink to this heading">¶</a></h3>
+<p>Storage overlap chains are created during equivalence processing
+by the Semantic Analyzer, and specify for each variable or array
+involved in an equivalence which other variables or arrays overlap
+it in storage.</p>
+<p>Storage overlap chains are pointed to by the
+<code class="docutils literal notranslate"><span class="pre">SOCPTR</span></code>
+field of variables and arrays.</p>
+<p>The chains are used by the Expander and Optimizer to ensure
+that the generated code is correct.</p>
+<p>The easiest implementation of
+<code class="docutils literal notranslate"><span class="pre">SOC's</span></code>
+is as linked lists.</p>
+</section>
+<section id="namelist-group-lists">
+<h3>Namelist Group Lists<a class="headerlink" href="#namelist-group-lists" title="Permalink to this heading">¶</a></h3>
+<p>Namelist group lists are created by the Semantic Analyzer when
+processing the
+<code class="docutils literal notranslate"><span class="pre">NAMELIST</span></code>
+statement.  Each item in the list consists of the following fields:</p>
+<dl class="simple">
+<dt>sptr:</dt><dd><p>relative pointer into the symtab table area of the variable
+or array representing the item which belongs
+to the namelist group.</p>
+</dd>
+<dt>next:</dt><dd><p>relative pointer into the namelist area of the next item of
+the list. A value of
+<code class="docutils literal notranslate"><span class="pre">0</span></code>
+marks the end of the list.</p>
+</dd>
+<dt>lineno:</dt><dd><p>line number of the
+<code class="docutils literal notranslate"><span class="pre">NAMELIST</span></code>
+statement containing the item.</p>
+</dd>
+</dl>
+<p>The
+<code class="docutils literal notranslate"><span class="pre">CMEMF</span></code>
+field of a namelist symbol (stype
+<code class="docutils literal notranslate"><span class="pre">ST_NML</span></code>
+locates the beginning of its group
+list; the
+<code class="docutils literal notranslate"><span class="pre">CMEML</span></code>
+locates the end of its group list.</p>
+<p>Each namelist group is processed at the end of the Semantic Analyzer.
+If namelist I/O occurred for a group, its associated
+<code class="docutils literal notranslate"><span class="pre">ST_PLIST</span></code>
+(located by the field
+<code class="docutils literal notranslate"><span class="pre">ADDRESS</span></code>)
+must be data initialized with the group’s namelist descriptor.
+This descriptor is passed to the I/O library and controls the
+namelist editing.</p>
+<p>The namelist group descriptor is described by the following structure:</p>
+<div class="highlight-none notranslate"><div class="highlight"><pre><span></span>struct nml {
+    char        group[32];
+    int         ndesc;
+    struct desc desc[];
+};
+</pre></div>
+</div>
+<p>The fields in the
+<code class="docutils literal notranslate"><span class="pre">nml</span></code>
+structure have the following meanings:</p>
+<dl class="simple">
+<dt><code class="docutils literal notranslate"><span class="pre">group</span></code></dt><dd><p>Name of the group.  This is a null-terminated character string.</p>
+</dd>
+<dt><code class="docutils literal notranslate"><span class="pre">ndesc</span></code></dt><dd><p>Number of descriptors.  There is one descriptor for each item
+in the group.</p>
+</dd>
+<dt><code class="docutils literal notranslate"><span class="pre">desc</span></code></dt><dd><p>Array of descriptors.  This is a variable length array with
+<code class="docutils literal notranslate"><span class="pre">ndesc</span></code>
+elements.</p>
+</dd>
+</dl>
+<p>The item descriptor is described by the following structure:</p>
+<div class="highlight-none notranslate"><div class="highlight"><pre><span></span>struct desc {
+    char  sym[32];
+    char \*addr;
+    int   type;
+    int   len;
+    int   ndims;
+    int   dims[];
+};
+</pre></div>
+</div>
+<p>The fields in the
+<code class="docutils literal notranslate"><span class="pre">desc</span></code>
+structure have the following meanings:</p>
+<dl class="simple">
+<dt><code class="docutils literal notranslate"><span class="pre">sym</span></code></dt><dd><p>Name of this item.  This is a null-terminated character string.</p>
+</dd>
+<dt><code class="docutils literal notranslate"><span class="pre">addr</span></code></dt><dd><p>Address of this item.
+Note that dummy arguments may not appear in a <code class="docutils literal notranslate"><span class="pre">NAMELIST</span></code> statement.</p>
+</dd>
+<dt><code class="docutils literal notranslate"><span class="pre">type</span></code></dt><dd><p>Type of this item.  The legal types are the same as those in the description
+of
+<code class="docutils literal notranslate"><span class="pre">fio$unf_read</span></code>.</p>
+</dd>
+<dt><code class="docutils literal notranslate"><span class="pre">len</span></code></dt><dd><p>Length of the item if it is a <code class="docutils literal notranslate"><span class="pre">CHARACTER</span></code> variable; length of the
+array element if it is a <code class="docutils literal notranslate"><span class="pre">CHARACTER</span></code> array;
+otherwise, it’s
+<code class="docutils literal notranslate"><span class="pre">0</span></code>.
+For type <code class="docutils literal notranslate"><span class="pre">NCHARACTER</span></code>, is number of <code class="docutils literal notranslate"><span class="pre">w_char</span></code> data items.</p>
+</dd>
+<dt><code class="docutils literal notranslate"><span class="pre">ndims</span></code></dt><dd><p>Number of dimensions of this item.  Zero if the item is not an array.</p>
+</dd>
+<dt><code class="docutils literal notranslate"><span class="pre">dims</span></code></dt><dd><p>Dimension information.  If
+<code class="docutils literal notranslate"><span class="pre">ndims</span></code>
+is 0, then this information does not appear;
+otherwise, it contains 2*c
+<code class="docutils literal notranslate"><span class="pre">ndims</span></code>
+words of information.
+For
+<code class="docutils literal notranslate"><span class="pre">1\(&lt;=i\(&lt;=ndims</span></code>,
+<code class="docutils literal notranslate"><span class="pre">dims[2\*(i-1)]</span></code>
+is the lower bound for dimension
+<code class="docutils literal notranslate"><span class="pre">i</span></code>,
+and
+<code class="docutils literal notranslate"><span class="pre">dims[2\*(i-1)+1]</span></code>
+is the upper bound for dimension
+<code class="docutils literal notranslate"><span class="pre">i</span></code>.</p>
+</dd>
+</dl>
+</section>
+<section id="dummy-parameter-descriptors">
+<h3>Dummy Parameter Descriptors<a class="headerlink" href="#dummy-parameter-descriptors" title="Permalink to this heading">¶</a></h3>
+<p>A dummy parameter descriptor is built for each entry point in a program
+unit.  The DPDSC field of the entry point’s symbol table entry points to the
+dummy parameter descriptor.  The dummy parameter descriptor is simply a list
+of symbol table pointers, one for each dummy parameter.  If the entry
+happens to be a character function then there is an additional symbol table
+pointer at the end of the dummy parameter descriptor for the return value of
+the function.</p>
+</section>
+<section id="symbol-list-items">
+<h3>Symbol List Items<a class="headerlink" href="#symbol-list-items" title="Permalink to this heading">¶</a></h3>
+<p>For certain situations, it’s necessary to create a list of symbols, such
+as to represent the list of overloaded subprograms for user-defined
+generics and operators.
+A symbol list item (<code class="docutils literal notranslate"><span class="pre">SYMI</span></code> represents each item in the list and
+has two fields:</p>
+<dl class="simple">
+<dt>sptr:</dt><dd><p>relative pointer into the symtab area.</p>
+</dd>
+<dt>next:</dt><dd><p>relative pointer into the <code class="docutils literal notranslate"><span class="pre">SYMI</span></code> area locating the next item
+in the list.
+This field is zero for the last item in the list.</p>
+</dd>
+</dl>
+<p>Macros used to access the fields of a symbol list item are:</p>
+<p><code class="docutils literal notranslate"><span class="pre">SYMI_SPTR(i)</span></code></p>
+<p><code class="docutils literal notranslate"><span class="pre">SYMI_NEXT(i)</span></code></p>
+</section>
+<section id="data-initialized-value-tables">
+<h3>Data-initialized Value Tables<a class="headerlink" href="#data-initialized-value-tables" title="Permalink to this heading">¶</a></h3>
+<p>Certain data-initialized variables and their values are entered into
+a table which can be used by the optimizer
+to replace loads of the variables with their respective constant values.
+To be a candidate for this type of replacement, the variable must be
+a scalar variable and must be local.  Also, the variable cannot have
+been assigned a value in the subprogram via an assignment (including
+<code class="docutils literal notranslate"><span class="pre">DO</span></code>
+index statements), cannot appear as an argument to the
+<code class="docutils literal notranslate"><span class="pre">LOC</span></code>
+intrinsic, and cannot be an actual argument (including I/O statements).
+The <code class="docutils literal notranslate"><span class="pre">ASSN</span></code> and/or <code class="docutils literal notranslate"><span class="pre">ADDRTKN</span></code>
+flags of the variable are set if any of these restrictions
+are not met. Also, the variable cannot be equivalenced (<code class="docutils literal notranslate"><span class="pre">SOCPTR</span></code>
+field is non-zero).</p>
+<p>At the time the data initializaton is processed, it can be determined
+if a variable can be added to the table based on its type (i.e., scalar
+versus other), storage class.
+During Expand, assignments of variables, if in the table, are ruled out
+(<code class="docutils literal notranslate"><span class="pre">ASSN</span></code> flag is set).</p>
+<p>Each (<code class="docutils literal notranslate"><span class="pre">DVL</span></code>) entry of the table has the form:</p>
+<div class="highlight-none notranslate"><div class="highlight"><pre><span></span>struct {
+    int   sptr;
+    INT   conval;
+}
+
+where,
+    sptr   - the symbol table pointer of the variable
+    conval - the constant value (either a value or a symbol table
+             pointer, depending on the type -- see chapter on
+             dinit processing).
+</pre></div>
+</div>
+</section>
+<section id="vcon-table">
+<h3>VCON Table<a class="headerlink" href="#vcon-table" title="Permalink to this heading">¶</a></h3>
+<p>The values of a vector constant are stored in the auxilary
+vcon table beginning at the relative pointer stored in the
+constant’s <code class="docutils literal notranslate"><span class="pre">CONVAL1</span></code> field.
+This field is the index
+into the
+<code class="docutils literal notranslate"><span class="pre">vcon</span></code>
+area (located by
+<code class="docutils literal notranslate"><span class="pre">aux.vcon_base</span></code>)
+representing where the beginning of the constant’s element values
+in sequential order.
+Each entry in the vcon table is a 32-bit value whose meaning
+is dependent on the element data type of the vector; an entry
+can be accessed by the macro, <code class="docutils literal notranslate"><span class="pre">VCON_CONVAL(i)</span></code>:</p>
+<blockquote>
+<div><dl class="simple">
+<dt><code class="docutils literal notranslate"><span class="pre">DT_INT8</span></code></dt><dd><p>sptr to <code class="docutils literal notranslate"><span class="pre">ST_CONST</span></code> entry of type
+<code class="docutils literal notranslate"><span class="pre">DT_INT8</span></code>
+representing the
+64-bit integer
+value of the vector element</p>
+</dd>
+<dt><code class="docutils literal notranslate"><span class="pre">DT_FLOAT</span></code></dt><dd><p>SC single precision representation
+of the vector element</p>
+</dd>
+<dt><code class="docutils literal notranslate"><span class="pre">DT_DBLE</span></code></dt><dd><p>sptr to <code class="docutils literal notranslate"><span class="pre">ST_CONST</span></code> entry of type
+<code class="docutils literal notranslate"><span class="pre">DT_DBLE</span></code>
+representing the
+double precision
+value of the vector element</p>
+</dd>
+<dt>Remaining Integer Types</dt><dd><p>32-bit integer value
+representing the value of the vector element
+The values of integer types smaller than <code class="docutils literal notranslate"><span class="pre">int</span></code>,
+such as
+<code class="docutils literal notranslate"><span class="pre">char</span></code> and `` short``,
+have been cast to the 32-bit value.</p>
+</dd>
+</dl>
+</div></blockquote>
+</section>
+</section>
+<section id="program-units">
+<h2>Program Units<a class="headerlink" href="#program-units" title="Permalink to this heading">¶</a></h2>
+<p>The following routines make up the C module file, ‘symtab.c’.
+In addition to being used by PGFTN itself, this module is
+used by the utility program SYMINI which sets up entries
+for the intrinsics and generics.</p>
+<div class="highlight-none notranslate"><div class="highlight"><pre><span></span>void sym_init(symini)
+</pre></div>
+</div>
+<p>Initialize symbol table:
+allocate dynamic storage space, initialize implicit data type
+arrays, initialize intrinsic and generic entries of symbol table,
+and add entries for predefined constants.
+The argument is a flag which indicates whether syminit is being called
+from the utility program SYMINI, in which case the symbol table is
+initialized to be completely empty (this flag is also used at compiler
+startup).</p>
+<div class="highlight-none notranslate"><div class="highlight"><pre><span></span>int getsym(name, length)
+</pre></div>
+</div>
+<p>Enter symbol with indicated name into symbol table,
+initialize the new entry, and return pointer to it.
+New symbols are initialized to a type of
+<code class="docutils literal notranslate"><span class="pre">ST_UNKNOWN.</span></code>
+If there is already a symbol with this name, return pointer
+to it instead.  The overloading class of the symbol is determined
+by the semantic analyzer using the semsym.c routines.</p>
+<div class="highlight-none notranslate"><div class="highlight"><pre><span></span>int getcon(value, dtype)
+</pre></div>
+</div>
+<p>Enter constant (symbol with stype ==
+<code class="docutils literal notranslate"><span class="pre">ST_CONST)</span></code>
+of given
+dtype and value into the symbol table and return pointer to it.
+If an entry for the constant already exists, return pointer to it
+instead.</p>
+<div class="highlight-none notranslate"><div class="highlight"><pre><span></span>int getstring(value, length)
+</pre></div>
+</div>
+<p>Enter character string constant into the symbol table and return
+pointer to it.
+If the string is already in the table, return pointer to existing
+entry instead.</p>
+<div class="highlight-none notranslate"><div class="highlight"><pre><span></span>int putsname(name, length)
+</pre></div>
+</div>
+<p>Enter string of characters of indicated length into the
+symbol names area and return pointer (relative to
+name area base) to it.</p>
+<div class="highlight-none notranslate"><div class="highlight"><pre><span></span>void newimplicit(firstc, lastc, dtype)
+</pre></div>
+</div>
+<p>Change the current settings for implicit data types and
+variable lengths for characters from firstc to lastc.</p>
+<div class="highlight-none notranslate"><div class="highlight"><pre><span></span>void setimplicit(sptr)
+</pre></div>
+</div>
+<p>Assign to the indicated symbol table entry, the current
+implicit dtype, depending on the first character of its name.</p>
+<div class="highlight-none notranslate"><div class="highlight"><pre><span></span>int getsname(sptr, ptr)
+</pre></div>
+</div>
+<p>Move name of symbol into the character buffer pointed to by ptr.
+For constant symbols, a printable representation of the constant
+value suitable for the Object Code Listing is created.</p>
+<div class="highlight-none notranslate"><div class="highlight"><pre><span></span>int getsname2(sptr, ptr)
+</pre></div>
+</div>
+<p>This function gets called from mk_impsym() on WIN64 target only.
+Move name of symbol into the character buffer pointed to by ptr.
+It first gives a priority to alternate name.  If it has alternate
+name, return getsname.  Then check if this has trailing underbar
+or it is CFUNCG, if so returns SYMNAME, otherwise returns getsname.</p>
+<div class="highlight-none notranslate"><div class="highlight"><pre><span></span>void symdmp(file, full)
+</pre></div>
+</div>
+<p>For compiler debugging purposes, dump the symbol table in
+readable form to the indicated file.
+If full == 1, include the predefined symbols (intrinsics, generics,
+and certain constants) in the dump, otherwise begin the dump
+with the first user symbol.</p>
+<p>The following routines, in module semsym.c, are used to resolve
+symbols according to overloading class:</p>
+<div class="highlight-none notranslate"><div class="highlight"><pre><span></span>int declref(sptr, stype, def)
+</pre></div>
+</div>
+<div class="highlight-none notranslate"><div class="highlight"><pre><span></span>int refsym(sptr, oclass)
+</pre></div>
+</div>
+<p>Return a pointer to symbol with the same name as sptr and overloading class
+oclass.</p>
+<p>The following routines, in module dtypeutil.c, are used
+to allocate dtype area records and perform certain
+operations upon data types:</p>
+<div class="highlight-none notranslate"><div class="highlight"><pre><span></span>int get_type(n, v1, v2)
+</pre></div>
+</div>
+<p>Allocate a data type record of n words and assign the
+values v1 (record id) and v2 to the first two elements.</p>
+<div class="highlight-none notranslate"><div class="highlight"><pre><span></span>void getdtype(dtype, ptr)
+int dtype;
+char \*ptr;
+</pre></div>
+</div>
+<div class="highlight-none notranslate"><div class="highlight"><pre><span></span>LOGICAL eq_dtype(d1, d2)
+</pre></div>
+</div>
+<p>Return
+<code class="docutils literal notranslate"><span class="pre">TRUE</span></code>
+if the two data types are equivalent, else
+<code class="docutils literal notranslate"><span class="pre">FALSE.</span></code>
+This may involve traversing two data type lists in parallel.
+Arrays and pointers are considered equivalent.</p>
+<div class="highlight-none notranslate"><div class="highlight"><pre><span></span>INT size_of( dtype )
+</pre></div>
+</div>
+<p>Return the size in bytes of the indicated data type.</p>
+<div class="highlight-none notranslate"><div class="highlight"><pre><span></span>int alignment( dtype )
+</pre></div>
+</div>
+<p>Return the alignment requirement of the indicated data type.
+0 for byte, 1 for halfword, or 3 for word alignment.</p>
+<div class="highlight-none notranslate"><div class="highlight"><pre><span></span>void dmp_dtype()
+</pre></div>
+</div>
+<p>Dump dtype area to debug file for compiler debugging purposes.</p>
+</section>
+<section id="symini-utility-program">
+<h2>SYMINI Utility Program<a class="headerlink" href="#symini-utility-program" title="Permalink to this heading">¶</a></h2>
+<section id="id3">
+<h3>Overview<a class="headerlink" href="#id3" title="Permalink to this heading">¶</a></h3>
+<p>SYMINI is a utility program which reads the intrinsic/generic
+definition file and writes a file of C code defining and
+initializing the data structure for the initial symbol table,
+which consists of predefined intrinsic functions and generic
+names only.</p>
+<p>This utility is built using PGFTN source files (most importantly
+the symbol table access module) to guarantee that the
+table it constructs is of the correct format.  The utility resides
+in the <code class="docutils literal notranslate"><span class="pre">symtab.c</span></code> file using conditional assembly.  To compile it,
+one must define the macro name <code class="docutils literal notranslate"><span class="pre">SYMINI</span></code>, e.g.,</p>
+<div class="highlight-none notranslate"><div class="highlight"><pre><span></span>cc -c -DSYMINI symini.c
+</pre></div>
+</div>
+<p>The command line to invoke symini is of the form:</p>
+<div class="highlight-none notranslate"><div class="highlight"><pre><span></span>symini [-d] symini.n ilmtp.n -o syminidf.h pd.h [syminidf.dmp]
+</pre></div>
+</div>
+<table class="docutils align-default">
+<tbody>
+<tr class="row-odd"><td><p>IMPORTANT</p></td>
+</tr>
+<tr class="row-even"><td><p>SYMINI must be run whenever an intrinsic or generic is modified,
+when a change is made to the symbol table format,
+or when a change to the ILM Definition File changes
+ILM numbers.</p></td>
+</tr>
+</tbody>
+</table>
+</section>
+<section id="inputs">
+<h3>Inputs<a class="headerlink" href="#inputs" title="Permalink to this heading">¶</a></h3>
+<p>SYMINI reads two input files:</p>
+<ol class="arabic">
+<li><p>The Intrinsic, Generic, and Predeclared
+Definition File is in nroff format and
+is used for Appendix III of this document.
+It consists of an intrinsic definition line for each intrinsic
+function supported by PGFTN, followed by a generic definition line
+for each generic name, followed by a predeclared definition line for
+each predeclared symbol.</p>
+<ul>
+<li><p>Intrinsic definition lines have the format:</p>
+<div class="line-block">
+<div class="line-block">
+<div class="line">.IN name paramct atype dtype {ilm | “tc”} {pname | “-”} {arrayf}</div>
+<div class="line"><br /></div>
+</div>
+<div class="line">name    Name of the intrinsic function.  If an intrinsic</div>
+<div class="line-block">
+<div class="line">name conflicts with a generic name, a “.” is</div>
+<div class="line">appended to the intrinsic name.</div>
+<div class="line"><br /></div>
+</div>
+<div class="line">paramct Number of parameters required by the intrinsic. A value</div>
+<div class="line-block">
+<div class="line">of 11 is used to mark the two intrinsics that convert</div>
+<div class="line">to complex and double complex data types.  A value of 12</div>
+<div class="line">or 13 marks the <code class="docutils literal notranslate"><span class="pre">MAX</span></code> and <code class="docutils literal notranslate"><span class="pre">MIN</span></code> intrinsics,</div>
+<div class="line">which take two or more arguments.  The value 13 marks the</div>
+<div class="line"><code class="docutils literal notranslate"><span class="pre">MAX</span></code> or <code class="docutils literal notranslate"><span class="pre">MIN</span></code> intrinsics that require a</div>
+<div class="line">data type conversion.</div>
+<div class="line"><br /></div>
+</div>
+<div class="line">atype   Data type of the intrinsic arguments.</div>
+<div class="line-block">
+<div class="line-block">
+<div class="line">One of the following letters is used to</div>
+<div class="line">specifiy the type:</div>
+<div class="line"><br /></div>
+<div class="line">W   - word (any 32-bit data type allowed).</div>
+<div class="line">I   - integer.</div>
+</div>
+<div class="line">SI  - integer*2.</div>
+<div class="line-block">
+<div class="line">R   - real.</div>
+<div class="line">D   - double precision.</div>
+<div class="line">C   - complex.</div>
+<div class="line">Z   - double complex.</div>
+<div class="line">L   - logical.</div>
+</div>
+<div class="line">SL  - logical*2.</div>
+<div class="line-block">
+<div class="line">H   - character.</div>
+<div class="line">N   - numeric.</div>
+<div class="line">A   - any.</div>
+<div class="line"><br /></div>
+</div>
+</div>
+<div class="line">dtype   Data type of the intrinsic return value.</div>
+<div class="line-block">
+<div class="line">The values allowed are the same as atype,</div>
+<div class="line">except that N and A are not allowed.</div>
+<div class="line"><br /></div>
+</div>
+<div class="line">ilm     ILM opcode number for this intrinsic.</div>
+<div class="line-block">
+<div class="line">If “tc” is specified instead, this</div>
+<div class="line">intrinsic is a type conversion intrinsic</div>
+<div class="line">and is special cased.</div>
+<div class="line"><br /></div>
+</div>
+<div class="line">pname   Name of the external function (standard</div>
+<div class="line-block">
+<div class="line">entry) used when this intrinsic is passed as</div>
+<div class="line">a subprogram argument.  “-” indicates that</div>
+<div class="line">passing this intrinsic as an argument</div>
+<div class="line">is not allowed.</div>
+<div class="line"><br /></div>
+</div>
+<div class="line">arrayf  ILM opcode number for this intrinsic if</div>
+<div class="line-block">
+<div class="line">an array operand is allowed.  Zero otherwise.</div>
+</div>
+</div>
+<p>Generic definition lines are of the form:</p>
+<div class="line-block">
+<div class="line-block">
+<div class="line">.GN name iname rname dname cname dcname</div>
+<div class="line"><br /></div>
+<div class="line"><br /></div>
+</div>
+<div class="line">name    Name of the generic.</div>
+<div class="line"><br /></div>
+<div class="line">xname   Names of the intrinsic functions for integer,</div>
+<div class="line-block">
+<div class="line">real, double precision, complex, and</div>
+<div class="line">double complex arguments, respectively.</div>
+<div class="line">“-” is specified when there is no such</div>
+<div class="line">intrinsic.</div>
+</div>
+</div>
+<p>Predeclared definition lines are of the form:</p>
+<div class="line-block">
+<div class="line-block">
+<div class="line">.PD name class type</div>
+<div class="line"><br /></div>
+</div>
+<div class="line">name  Name of the symbol</div>
+<div class="line">class “generic”, “specific”, or “subroutine” (unused now)</div>
+<div class="line">type  “reduction”, “array”, “scalar”, “elemental” (unused now)</div>
+</div>
+</li>
+</ul>
+<ol class="arabic simple">
+<li><p>ILM Definition File (see section 12).
+This file is read just to determine the names and
+opcode numbers of the ILM’s.</p></li>
+</ol>
+</li>
+</ol>
+</section>
+<section id="outputs">
+<h3>Outputs<a class="headerlink" href="#outputs" title="Permalink to this heading">¶</a></h3>
+<p>The primary output of SYMINI is the
+Initial Symbol Table Definition File.
+This file contains the C data definitions and initialization
+code for the arrays containing the initial symbol table,
+symbol names area, and hash table.</p>
+<p>SYMINI also puts out the predeclared symbol definition file, containing
+#define names for each predeclared symbol.  These names are of the form:
+<code class="docutils literal notranslate"><span class="pre">PD_xxx</span></code>
+where
+<code class="docutils literal notranslate"><span class="pre">xxx</span></code>
+is the predeclared name (in lower case, e.g.,
+<code class="docutils literal notranslate"><span class="pre">PD_exit).</span></code></p>
+<p>SYMINI also calls the ‘symdmp’ routine to write
+a symbol table dump of the initial symbol table,
+if desired.  The -d switch must immediately follow the program name if
+this is desired.</p>
+</section>
+</section>
+</section>
+
+
+      </div>
+      <div class="bottomnav" role="navigation" aria-label="bottom navigation">
+      
+        <p>
+        «&#160;&#160;<a href="dinit.html">Data Initialization File</a>
+        &#160;&#160;::&#160;&#160;
+        <a class="uplink" href="../index.html">Contents</a>
+        &#160;&#160;::&#160;&#160;
+        <a href="ilmtp.html">Appendix IV - ILM Definitions</a>&#160;&#160;»
+        </p>
+
+      </div>
+
+    <div class="footer" role="contentinfo">
+        &#169; Copyright .
+      Created using <a href="https://www.sphinx-doc.org/">Sphinx</a> 5.3.0.
+    </div>
+  </body>
+</html>

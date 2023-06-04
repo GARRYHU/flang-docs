@@ -1,0 +1,1668 @@
+
+<!DOCTYPE html>
+
+<html lang="en">
+  <head>
+    <meta charset="utf-8" />
+    <meta name="viewport" content="width=device-width, initial-scale=1.0" /><meta name="generator" content="Docutils 0.19: https://docutils.sourceforge.io/" />
+
+    <title>Appendix III - Target Machine &#8212; Flang 1.0 documentation</title>
+    <link rel="stylesheet" type="text/css" href="../_static/pygments.css" />
+    <link rel="stylesheet" type="text/css" href="../_static/haiku.css" />
+    <script data-url_root="../" id="documentation_options" src="../_static/documentation_options.js"></script>
+    <script src="../_static/jquery.js"></script>
+    <script src="../_static/underscore.js"></script>
+    <script src="../_static/_sphinx_javascript_frameworks_compat.js"></script>
+    <script src="../_static/doctools.js"></script>
+    <script src="../_static/sphinx_highlight.js"></script>
+    <link rel="index" title="Index" href="../genindex.html" />
+    <link rel="search" title="Search" href="../search.html" />
+    <link rel="next" title="Error Reporting Utils" href="../flang2/error.html" />
+    <link rel="prev" title="Debugging flang" href="../debugging_flang.html" /> 
+  </head><body>
+      <div class="header" role="banner"><h1 class="heading"><a href="../index.html">
+          <span>Flang 1.0 documentation</span></a></h1>
+        <h2 class="heading"><span>Appendix III - Target Machine</span></h2>
+      </div>
+      <div class="topnav" role="navigation" aria-label="top navigation">
+      
+        <p>
+        «&#160;&#160;<a href="../debugging_flang.html">Debugging flang</a>
+        &#160;&#160;::&#160;&#160;
+        <a class="uplink" href="../index.html">Contents</a>
+        &#160;&#160;::&#160;&#160;
+        <a href="../flang2/error.html">Error Reporting Utils</a>&#160;&#160;»
+        </p>
+
+      </div>
+      <div class="content" role="main">
+        
+        
+  <section id="appendix-iii-target-machine">
+<h1>Appendix III - Target Machine<a class="headerlink" href="#appendix-iii-target-machine" title="Permalink to this heading">¶</a></h1>
+<section id="introduction">
+<h2>Introduction<a class="headerlink" href="#introduction" title="Permalink to this heading">¶</a></h2>
+<p>This appendix defines the idiosyncracies of the target machine
+architecture: presence of divide instructions, byte ordering, size
+requirements of data types, how shifts are
+done, etc.  The target machine characteristics are defined using C macros and
+structures.  These are included by the compiler so that it can test for the
+presence of a characteristic or determine how an action is to be performed on
+the target machine for constant folding.  Those machine characteristics that
+cannot be implemented with C macros are implemented in code.</p>
+<p>There are two classes of macros that can be defined; characteristic macros and
+action macros.  Characteristic macros are used as simple boolean flags that
+indicate the presence or absence of a particular machine capability.  For
+example, there would be a characteristic macro defined for the integer divide
+capability.  If the target machine did not have that capability then a
+characteristic macro would not be defined for that capability.</p>
+<p>Action macros communicate to the compiler a value or how an operation
+is to be performed for constant folding.
+An example of a value is the threshold for breaking blocks.
+An example of an operation is the shift operation.
+The compiler needs to know what code <em>it</em> must execute when constant
+folding a shift operation.</p>
+<p>The following table lists the possible characteristic macros.  Those
+characteristics that are present for this target machine are indicated in
+the activated column.</p>
+<table class="docutils align-default">
+<thead>
+<tr class="row-odd"><th class="head" colspan="3"><p>Characteristic Macros</p></th>
+</tr>
+<tr class="row-even"><th class="head"><p>Macro Name</p></th>
+<th class="head"><p>Description</p></th>
+<th class="head"><p>Activated</p></th>
+</tr>
+</thead>
+<tbody>
+<tr class="row-odd"><td><p>TM_BIG_ENDIAN</p></td>
+<td><p>big endian byte order</p></td>
+<td><p>no</p></td>
+</tr>
+<tr class="row-even"><td><p>TM_UIDIV</p></td>
+<td><p>unsigned integer divide instruction</p></td>
+<td><p>no</p></td>
+</tr>
+<tr class="row-odd"><td><p>TM_IDIV</p></td>
+<td><p>integer divide instruction</p></td>
+<td><p>no</p></td>
+</tr>
+<tr class="row-even"><td><p>TM_UIMOD</p></td>
+<td><p>unsigned integer mod instruction</p></td>
+<td><p>no</p></td>
+</tr>
+<tr class="row-odd"><td><p>TM_IMOD</p></td>
+<td><p>integer mod instruction</p></td>
+<td><p>no</p></td>
+</tr>
+<tr class="row-even"><td><p>TM_IDIV2</p></td>
+<td><p>divide by power of 2 instruction</p></td>
+<td><p>no</p></td>
+</tr>
+<tr class="row-odd"><td><p>TM_FDIV</p></td>
+<td><p>single precision divide instruction</p></td>
+<td><p>no</p></td>
+</tr>
+<tr class="row-even"><td><p>TM_DDIV</p></td>
+<td><p>double precision divide instruction</p></td>
+<td><p>no</p></td>
+</tr>
+<tr class="row-odd"><td><p>TM_FRCP</p></td>
+<td><p>single precision Newton’s reciprocal</p></td>
+<td><p>no</p></td>
+</tr>
+<tr class="row-even"><td><p>TM_DRCP</p></td>
+<td><p>double precision Newton’s reciprocal</p></td>
+<td><p>no</p></td>
+</tr>
+<tr class="row-odd"><td><p>TM_UICMP</p></td>
+<td><p>unsigned integer compare instruction</p></td>
+<td><p>yes</p></td>
+</tr>
+<tr class="row-even"><td><p>TM_SQRT</p></td>
+<td><p>square root instruction</p></td>
+<td><p>no</p></td>
+</tr>
+<tr class="row-odd"><td><p>TM_FIELD_INST</p></td>
+<td><p>bit field support instructions</p></td>
+<td><p>no</p></td>
+</tr>
+<tr class="row-even"><td><p>TM_64BIT</p></td>
+<td><p>64 bit stack, pointer, long</p></td>
+<td><p>yes</p></td>
+</tr>
+<tr class="row-odd"><td><p>TM_LPCNT</p></td>
+<td><p>loop counter instruction</p></td>
+<td><p>yes</p></td>
+</tr>
+<tr class="row-even"><td><p>TM_LPCMP</p></td>
+<td><p>loop compare &amp; branch instructions</p></td>
+<td><p>no</p></td>
+</tr>
+<tr class="row-odd"><td><p>TM_LPSIGN</p></td>
+<td><p>loop counter is a signed quantity</p></td>
+<td><p>yes</p></td>
+</tr>
+<tr class="row-even"><td><p>TM_REVERSE_SHIFT</p></td>
+<td><p>shift of negative reverses direction</p></td>
+<td><p>no</p></td>
+</tr>
+<tr class="row-odd"><td><p>TM_PREFER_SIGNED</p></td>
+<td><p>signed byte/halfwd loads vs. unsigned</p></td>
+<td><p>yes</p></td>
+</tr>
+<tr class="row-even"><td><p>TM_AUTOINC_IR</p></td>
+<td><p>auto increment when addressing ints/pointers</p></td>
+<td><p>no</p></td>
+</tr>
+<tr class="row-odd"><td><p>TM_AUTOINC_FP</p></td>
+<td><p>auto increment when addressing single/double</p></td>
+<td><p>yes</p></td>
+</tr>
+<tr class="row-even"><td><p>TM_FCMPZ</p></td>
+<td><p>single precision compare with zero</p></td>
+<td><p>yes</p></td>
+</tr>
+<tr class="row-odd"><td><p>TM_DCMPZ</p></td>
+<td><p>double precision compare with zero</p></td>
+<td><p>yes</p></td>
+</tr>
+<tr class="row-even"><td><p>TM_QCMPZ</p></td>
+<td><p>quad precision compare with zero</p></td>
+<td><p>yes</p></td>
+</tr>
+<tr class="row-odd"><td><p>TM_FCJMPZ</p></td>
+<td><p>single precision compare with zero and jump</p></td>
+<td><p>yes</p></td>
+</tr>
+<tr class="row-even"><td><p>TM_DCJMPZ</p></td>
+<td><p>double precision compare with zero and jump</p></td>
+<td><p>yes</p></td>
+</tr>
+<tr class="row-odd"><td><p>TM_QCJMPZ</p></td>
+<td><p>quad precision compare with zero and jump</p></td>
+<td><p>yes</p></td>
+</tr>
+<tr class="row-even"><td><p>TM_REAL8</p></td>
+<td><p>default real size is 8</p></td>
+<td><p>no</p></td>
+</tr>
+</tbody>
+</table>
+<p>The list of code macros used by this compiler and machine architecture are:</p>
+<ol class="arabic">
+<li><p>For certain targets, it’s advantageous for both compile
+and execution time to limit the size of the
+<code class="docutils literal notranslate"><span class="pre">ILI</span></code>
+blocks produced by the front-end.
+Block breaking is performed by limiting the number of consecutive
+<code class="docutils literal notranslate"><span class="pre">ILM</span></code>
+blocks which can be used to produce a single
+<code class="docutils literal notranslate"><span class="pre">ILI</span></code>
+block.
+The threshold is simply the number of
+<code class="docutils literal notranslate"><span class="pre">ILM</span></code>
+words seen in the
+<code class="docutils literal notranslate"><span class="pre">ILM</span></code>
+block(s) from which the
+<code class="docutils literal notranslate"><span class="pre">ILI</span></code>
+were generated.
+If block breaking is not needed, this value should be a large
+32-bit integer where the expression value + value/2 does not
+overflow.</p>
+<dl class="simple">
+<dt><code class="docutils literal notranslate"><span class="pre">TM_ILM_THRESH</span></code></dt><dd><p><code class="docutils literal notranslate"><span class="pre">1024</span></code></p>
+</dd>
+</dl>
+</li>
+<li><p>Constant fold shift per target machine; operand which is shifted is a
+signed quantity.</p>
+<dl class="simple">
+<dt><code class="docutils literal notranslate"><span class="pre">LSHIFT(x,y)</span></code></dt><dd><p><code class="docutils literal notranslate"><span class="pre">(</span> <span class="pre">(x)</span> <span class="pre">&lt;&lt;</span> <span class="pre">((y)&amp;31)</span> <span class="pre">)</span></code></p>
+</dd>
+<dt><code class="docutils literal notranslate"><span class="pre">RSHIFT(x,y)</span></code></dt><dd><p><code class="docutils literal notranslate"><span class="pre">(</span> <span class="pre">(x)</span> <span class="pre">&gt;&gt;</span> <span class="pre">((y)&amp;31)</span> <span class="pre">)</span></code></p>
+</dd>
+</dl>
+</li>
+<li><p>Constant fold shift per target machine; operand which is shifted is an
+unsigned quantity.</p>
+<dl class="simple">
+<dt><code class="docutils literal notranslate"><span class="pre">ULSHIFT(x,y)</span></code></dt><dd><p><code class="docutils literal notranslate"><span class="pre">(</span> <span class="pre">(x)</span> <span class="pre">&lt;&lt;</span> <span class="pre">((y)&amp;31)</span> <span class="pre">)</span></code></p>
+</dd>
+<dt><code class="docutils literal notranslate"><span class="pre">URSHIFT(x,y)</span></code></dt><dd><p><code class="docutils literal notranslate"><span class="pre">(</span> <span class="pre">(unsigned</span> <span class="pre">int)(x)</span> <span class="pre">&gt;&gt;</span> <span class="pre">((y)&amp;31)</span> <span class="pre">)</span></code></p>
+</dd>
+</dl>
+</li>
+<li><p>Arithmetic right shift.</p>
+<dl class="simple">
+<dt><code class="docutils literal notranslate"><span class="pre">ARSHIFT(x,y)</span></code></dt><dd><p><code class="docutils literal notranslate"><span class="pre">(</span> <span class="pre">((y)&amp;31)</span> <span class="pre">==</span> <span class="pre">0</span> <span class="pre">?</span> <span class="pre">(x)</span> <span class="pre">:</span></code>
+<code class="docutils literal notranslate"><span class="pre">(</span> <span class="pre">(x)</span> <span class="pre">&amp;</span> <span class="pre">0x80000000</span> <span class="pre">?</span></code>
+<code class="docutils literal notranslate"><span class="pre">(</span> <span class="pre">(unsigned</span> <span class="pre">int)(x)</span> <span class="pre">&gt;&gt;</span> <span class="pre">((y)&amp;31)</span> <span class="pre">)</span> <span class="pre">|</span> <span class="pre">(</span> <span class="pre">((unsigned</span> <span class="pre">int)-1)</span> <span class="pre">&lt;&lt;</span> <span class="pre">(32-((y)&amp;31))</span> <span class="pre">)</span> <span class="pre">:</span></code>
+<code class="docutils literal notranslate"><span class="pre">(x)</span> <span class="pre">&gt;&gt;</span> <span class="pre">((y)&amp;31)</span> <span class="pre">)</span> <span class="pre">)</span></code></p>
+</dd>
+</dl>
+</li>
+<li><p>Test validity of shift amount for this machine.</p>
+<dl class="simple">
+<dt><code class="docutils literal notranslate"><span class="pre">SHIFTOK(x)</span></code></dt><dd><p><code class="docutils literal notranslate"><span class="pre">((x)</span> <span class="pre">&gt;=</span> <span class="pre">0</span> <span class="pre">?</span> <span class="pre">TRUE</span> <span class="pre">:</span> <span class="pre">FALSE)</span></code></p>
+</dd>
+</dl>
+</li>
+<li><p>Correct shift count if it fails SHIFTOK.</p>
+<dl class="simple">
+<dt><code class="docutils literal notranslate"><span class="pre">SHIFT_FIX(x)</span></code></dt><dd><p><code class="docutils literal notranslate"><span class="pre">((x)&amp;31)</span></code></p>
+</dd>
+</dl>
+</li>
+</ol>
+<p>Also, specific to a particular machine architecture is the size and alignment
+requirements of the various data types in the language.  The structure
+<code class="docutils literal notranslate"><span class="pre">dtypeinfo</span></code> is indexed by the data type to determine the size
+and alignment requirements for that data type.</p>
+<p>For code maintenance simplicity, there are
+<code class="docutils literal notranslate"><span class="pre">5</span></code>
+tables, one for each target machine; the actual table used at compile
+time is determined by XBIT values.</p>
+<p>The first table is for machine
+<code class="docutils literal notranslate"><span class="pre">0</span></code>
+which is the default, a x86-64 machine.</p>
+<p>The data types, their sizes, and alignment requirements for this compiler and
+target machine are listed in the following table.</p>
+<table class="docutils align-default">
+<thead>
+<tr class="row-odd"><th class="head" colspan="9"><p>Data Type Information</p></th>
+</tr>
+<tr class="row-even"><th class="head"><p>Data Type</p></th>
+<th class="head"><p>Size</p></th>
+<th class="head"><p>Align</p></th>
+<th class="head"><p>Bits</p></th>
+<th class="head"><p>Scale</p></th>
+<th class="head"><p>Fval</p></th>
+<th class="head"><p>Tname</p></th>
+<th class="head"><p>print name</p></th>
+<th class="head"><p>kind</p></th>
+</tr>
+</thead>
+<tbody>
+<tr class="row-odd"><td><p>TY_WORD</p></td>
+<td><p>4</p></td>
+<td><p>3</p></td>
+<td><p>32</p></td>
+<td><p>0</p></td>
+<td><p>reg0</p></td>
+<td><p>Unsigned Integer</p></td>
+<td></td>
+<td></td>
+</tr>
+<tr class="row-even"><td><p>TY_DWORD</p></td>
+<td><p>8</p></td>
+<td><p>7</p></td>
+<td><p>32</p></td>
+<td><p>0</p></td>
+<td><p>reg3</p></td>
+<td><p>Unsigned Integer</p></td>
+<td></td>
+<td></td>
+</tr>
+<tr class="row-odd"><td><p>TY_BINT</p></td>
+<td><p>1</p></td>
+<td><p>0</p></td>
+<td><p>8</p></td>
+<td><p>0</p></td>
+<td><p>reg0</p></td>
+<td><p>Byte Integer</p></td>
+<td><p>byte</p></td>
+<td><p>1</p></td>
+</tr>
+<tr class="row-even"><td><p>TY_SINT</p></td>
+<td><p>2</p></td>
+<td><p>1</p></td>
+<td><p>16</p></td>
+<td><p>0</p></td>
+<td><p>reg0</p></td>
+<td><p>Short Integer</p></td>
+<td><p>integer*2</p></td>
+<td><p>2</p></td>
+</tr>
+<tr class="row-odd"><td><p>TY_INT</p></td>
+<td><p>4</p></td>
+<td><p>3</p></td>
+<td><p>32</p></td>
+<td><p>0</p></td>
+<td><p>reg0</p></td>
+<td><p>Integer</p></td>
+<td><p>integer</p></td>
+<td><p>4</p></td>
+</tr>
+<tr class="row-even"><td><p>TY_INT8</p></td>
+<td><p>8</p></td>
+<td><p>7</p></td>
+<td><p>64</p></td>
+<td><p>0</p></td>
+<td><p>reg2</p></td>
+<td><p>Integer*8</p></td>
+<td><p>integer*8</p></td>
+<td><p>8</p></td>
+</tr>
+<tr class="row-odd"><td><p>TY_HALF</p></td>
+<td><p>2</p></td>
+<td><p>1</p></td>
+<td><p>16</p></td>
+<td><p>0</p></td>
+<td><p>reg1</p></td>
+<td><p>Floating Point Half</p></td>
+<td><p>real</p></td>
+<td><p>2</p></td>
+</tr>
+<tr class="row-even"><td><p>TY_REAL</p></td>
+<td><p>4</p></td>
+<td><p>3</p></td>
+<td><p>32</p></td>
+<td><p>0</p></td>
+<td><p>reg1</p></td>
+<td><p>Floating Point Real</p></td>
+<td><p>real</p></td>
+<td><p>4</p></td>
+</tr>
+<tr class="row-odd"><td><p>TY_DBLE</p></td>
+<td><p>8</p></td>
+<td><p>7</p></td>
+<td><p>64</p></td>
+<td><p>0</p></td>
+<td><p>reg2</p></td>
+<td><p>Double Precision Real</p></td>
+<td><p>double precision</p></td>
+<td><p>8</p></td>
+</tr>
+<tr class="row-even"><td><p>TY_QUAD</p></td>
+<td><p>16</p></td>
+<td><p>15</p></td>
+<td><p>128</p></td>
+<td><p>0</p></td>
+<td><p>reg2</p></td>
+<td><p>Quad Precision Real</p></td>
+<td><p>real*16</p></td>
+<td><p>16</p></td>
+</tr>
+<tr class="row-odd"><td><p>TY_HCMPLX</p></td>
+<td><p>4</p></td>
+<td><p>1</p></td>
+<td><p>32</p></td>
+<td><p>0</p></td>
+<td><p>reg2</p></td>
+<td><p>Half Complex</p></td>
+<td><p>half complex</p></td>
+<td><p>2</p></td>
+</tr>
+<tr class="row-even"><td><p>TY_CMPLX</p></td>
+<td><p>8</p></td>
+<td><p>3</p></td>
+<td><p>64</p></td>
+<td><p>0</p></td>
+<td><p>reg2</p></td>
+<td><p>Complex</p></td>
+<td><p>complex</p></td>
+<td><p>4</p></td>
+</tr>
+<tr class="row-odd"><td><p>TY_DCMPLX</p></td>
+<td><p>16</p></td>
+<td><p>7</p></td>
+<td><p>128</p></td>
+<td><p>0</p></td>
+<td><p>reg3</p></td>
+<td><p>Double Precision Complex</p></td>
+<td><p>double complex</p></td>
+<td><p>8</p></td>
+</tr>
+<tr class="row-even"><td><p>TY_QCMPLX</p></td>
+<td><p>16</p></td>
+<td><p>7</p></td>
+<td><p>128</p></td>
+<td><p>0</p></td>
+<td><p>reg3</p></td>
+<td><p>Quad Precision Complex</p></td>
+<td><p>complex*32</p></td>
+<td><p>16</p></td>
+</tr>
+<tr class="row-odd"><td><p>TY_BLOG</p></td>
+<td><p>1</p></td>
+<td><p>0</p></td>
+<td><p>8</p></td>
+<td><p>0</p></td>
+<td><p>reg0</p></td>
+<td><p>Byte Logical</p></td>
+<td><p>logical*1</p></td>
+<td><p>1</p></td>
+</tr>
+<tr class="row-even"><td><p>TY_SLOG</p></td>
+<td><p>2</p></td>
+<td><p>1</p></td>
+<td><p>16</p></td>
+<td><p>0</p></td>
+<td><p>reg0</p></td>
+<td><p>Short Logical</p></td>
+<td><p>logical*2</p></td>
+<td><p>2</p></td>
+</tr>
+<tr class="row-odd"><td><p>TY_LOG</p></td>
+<td><p>4</p></td>
+<td><p>3</p></td>
+<td><p>32</p></td>
+<td><p>0</p></td>
+<td><p>reg0</p></td>
+<td><p>Logical</p></td>
+<td><p>logical</p></td>
+<td><p>4</p></td>
+</tr>
+<tr class="row-even"><td><p>TY_LOG8</p></td>
+<td><p>8</p></td>
+<td><p>7</p></td>
+<td><p>64</p></td>
+<td><p>0</p></td>
+<td><p>reg2</p></td>
+<td><p>Logical*8</p></td>
+<td><p>logical*8</p></td>
+<td><p>8</p></td>
+</tr>
+<tr class="row-odd"><td><p>TY_CHAR</p></td>
+<td><p>1</p></td>
+<td><p>0</p></td>
+<td><p>8</p></td>
+<td><p>0</p></td>
+<td><p>mem2</p></td>
+<td><p>Character</p></td>
+<td><p>character</p></td>
+<td><p>1</p></td>
+</tr>
+<tr class="row-even"><td><p>TY_PTR</p></td>
+<td><p>8</p></td>
+<td><p>7</p></td>
+<td><p>64</p></td>
+<td><p>0</p></td>
+<td><p>reg0</p></td>
+<td><p>Address of</p></td>
+<td></td>
+<td></td>
+</tr>
+<tr class="row-odd"><td><p>TY_NCHAR</p></td>
+<td><p>2</p></td>
+<td><p>1</p></td>
+<td><p>16</p></td>
+<td><p>0</p></td>
+<td><p>mem2</p></td>
+<td><p>Kanji Character String</p></td>
+<td><p>ncharacter</p></td>
+<td><p>2</p></td>
+</tr>
+<tr class="row-even"><td><p>TY_128</p></td>
+<td><p>16</p></td>
+<td><p>15</p></td>
+<td><p>128</p></td>
+<td><p>0</p></td>
+<td><p>reg2</p></td>
+<td><p>128-bit</p></td>
+<td><p>128_bit</p></td>
+<td></td>
+</tr>
+<tr class="row-odd"><td><p>TY_256</p></td>
+<td><p>32</p></td>
+<td><p>31</p></td>
+<td><p>256</p></td>
+<td><p>0</p></td>
+<td><p>reg2</p></td>
+<td><p>256-bit</p></td>
+<td><p>256_bit</p></td>
+<td></td>
+</tr>
+<tr class="row-even"><td><p>TY_INT128</p></td>
+<td><p>16</p></td>
+<td><p>15</p></td>
+<td><p>128</p></td>
+<td><p>0</p></td>
+<td><p>reg2</p></td>
+<td><p>Quad Integer</p></td>
+<td><p>integer(16)</p></td>
+<td><p>16</p></td>
+</tr>
+<tr class="row-odd"><td><p>TY_LOG128</p></td>
+<td><p>16</p></td>
+<td><p>15</p></td>
+<td><p>128</p></td>
+<td><p>0</p></td>
+<td><p>reg2</p></td>
+<td><p>Quad Logical</p></td>
+<td><p>logical(16)</p></td>
+<td><p>16</p></td>
+</tr>
+<tr class="row-even"><td><p>TY_FLOAT128</p></td>
+<td><p>16</p></td>
+<td><p>15</p></td>
+<td><p>128</p></td>
+<td><p>0</p></td>
+<td><p>reg2</p></td>
+<td><p>Quad Precision Real</p></td>
+<td><p>real(16)</p></td>
+<td><p>16</p></td>
+</tr>
+<tr class="row-odd"><td><p>TY_CMPLX128</p></td>
+<td><p>32</p></td>
+<td><p>15</p></td>
+<td><p>256</p></td>
+<td><p>0</p></td>
+<td><p>reg3</p></td>
+<td><p>Quad Precision Complex</p></td>
+<td><p>complex(32)</p></td>
+<td><p>16</p></td>
+</tr>
+</tbody>
+</table>
+<p>The second table is for machine
+<code class="docutils literal notranslate"><span class="pre">1</span></code>
+which is a T3E, byte-addressible 8-byte integer/pointer machine.</p>
+<p>The data types, their sizes, and alignment requirements for this compiler and
+target machine are listed in the following table.</p>
+<table class="docutils align-default">
+<thead>
+<tr class="row-odd"><th class="head" colspan="9"><p>Data Type Information</p></th>
+</tr>
+<tr class="row-even"><th class="head"><p>Data Type</p></th>
+<th class="head"><p>Size</p></th>
+<th class="head"><p>Align</p></th>
+<th class="head"><p>Bits</p></th>
+<th class="head"><p>Scale</p></th>
+<th class="head"><p>Fval</p></th>
+<th class="head"><p>Tname</p></th>
+<th class="head"><p>print name</p></th>
+<th class="head"><p>kind</p></th>
+</tr>
+</thead>
+<tbody>
+<tr class="row-odd"><td><p>TY_WORD</p></td>
+<td><p>4</p></td>
+<td><p>3</p></td>
+<td><p>32</p></td>
+<td><p>0</p></td>
+<td><p>reg0</p></td>
+<td><p>Unsigned Integer</p></td>
+<td></td>
+<td></td>
+</tr>
+<tr class="row-even"><td><p>TY_DWORD</p></td>
+<td><p>8</p></td>
+<td><p>7</p></td>
+<td><p>64</p></td>
+<td><p>0</p></td>
+<td><p>reg3</p></td>
+<td><p>Unsigned Integer</p></td>
+<td></td>
+<td></td>
+</tr>
+<tr class="row-odd"><td><p>TY_BINT</p></td>
+<td><p>4</p></td>
+<td><p>3</p></td>
+<td><p>8</p></td>
+<td><p>0</p></td>
+<td><p>reg0</p></td>
+<td><p>Byte Integer</p></td>
+<td><p>integer*1</p></td>
+<td><p>1</p></td>
+</tr>
+<tr class="row-even"><td><p>TY_SINT</p></td>
+<td><p>4</p></td>
+<td><p>3</p></td>
+<td><p>16</p></td>
+<td><p>0</p></td>
+<td><p>reg0</p></td>
+<td><p>Short Integer</p></td>
+<td><p>integer*2</p></td>
+<td><p>2</p></td>
+</tr>
+<tr class="row-odd"><td><p>TY_INT</p></td>
+<td><p>4</p></td>
+<td><p>3</p></td>
+<td><p>32</p></td>
+<td><p>0</p></td>
+<td><p>reg0</p></td>
+<td><p>Integer</p></td>
+<td><p>integer*4</p></td>
+<td><p>4</p></td>
+</tr>
+<tr class="row-even"><td><p>TY_INT8</p></td>
+<td><p>8</p></td>
+<td><p>7</p></td>
+<td><p>64</p></td>
+<td><p>0</p></td>
+<td><p>reg2</p></td>
+<td><p>Integer*8</p></td>
+<td><p>integer*8</p></td>
+<td><p>8</p></td>
+</tr>
+<tr class="row-odd"><td><p>TY_HALF</p></td>
+<td><p>2</p></td>
+<td><p>1</p></td>
+<td><p>16</p></td>
+<td><p>0</p></td>
+<td><p>reg1</p></td>
+<td><p>Floating Point Half</p></td>
+<td><p>real</p></td>
+<td><p>2</p></td>
+</tr>
+<tr class="row-even"><td><p>TY_REAL</p></td>
+<td><p>4</p></td>
+<td><p>3</p></td>
+<td><p>32</p></td>
+<td><p>0</p></td>
+<td><p>reg1</p></td>
+<td><p>Floating Point Real</p></td>
+<td><p>real*4</p></td>
+<td><p>4</p></td>
+</tr>
+<tr class="row-odd"><td><p>TY_DBLE</p></td>
+<td><p>8</p></td>
+<td><p>7</p></td>
+<td><p>64</p></td>
+<td><p>0</p></td>
+<td><p>reg2</p></td>
+<td><p>Double Precision Real</p></td>
+<td><p>real*8</p></td>
+<td><p>8</p></td>
+</tr>
+<tr class="row-even"><td><p>TY_QUAD</p></td>
+<td><p>16</p></td>
+<td><p>15</p></td>
+<td><p>128</p></td>
+<td><p>0</p></td>
+<td><p>reg2</p></td>
+<td><p>Quad Precision Real</p></td>
+<td><p>real*16</p></td>
+<td><p>16</p></td>
+</tr>
+<tr class="row-odd"><td><p>TY_HCMPLX</p></td>
+<td><p>4</p></td>
+<td><p>1</p></td>
+<td><p>32</p></td>
+<td><p>0</p></td>
+<td><p>reg2</p></td>
+<td><p>Half Complex</p></td>
+<td><p>half complex</p></td>
+<td><p>2</p></td>
+</tr>
+<tr class="row-even"><td><p>TY_CMPLX</p></td>
+<td><p>8</p></td>
+<td><p>3</p></td>
+<td><p>64</p></td>
+<td><p>0</p></td>
+<td><p>reg3</p></td>
+<td><p>Complex</p></td>
+<td><p>complex*8</p></td>
+<td><p>4</p></td>
+</tr>
+<tr class="row-odd"><td><p>TY_DCMPLX</p></td>
+<td><p>16</p></td>
+<td><p>7</p></td>
+<td><p>128</p></td>
+<td><p>0</p></td>
+<td><p>reg3</p></td>
+<td><p>Double Precision Complex</p></td>
+<td><p>complex*16</p></td>
+<td><p>8</p></td>
+</tr>
+<tr class="row-even"><td><p>TY_QCMPLX</p></td>
+<td><p>32</p></td>
+<td><p>15</p></td>
+<td><p>256</p></td>
+<td><p>0</p></td>
+<td><p>reg3</p></td>
+<td><p>Quad Precision Complex</p></td>
+<td><p>complex*32</p></td>
+<td><p>16</p></td>
+</tr>
+<tr class="row-odd"><td><p>TY_BLOG</p></td>
+<td><p>4</p></td>
+<td><p>3</p></td>
+<td><p>8</p></td>
+<td><p>0</p></td>
+<td><p>reg0</p></td>
+<td><p>Byte Logical</p></td>
+<td><p>logical*1</p></td>
+<td><p>1</p></td>
+</tr>
+<tr class="row-even"><td><p>TY_SLOG</p></td>
+<td><p>4</p></td>
+<td><p>3</p></td>
+<td><p>16</p></td>
+<td><p>0</p></td>
+<td><p>reg0</p></td>
+<td><p>Short Logical</p></td>
+<td><p>logical*2</p></td>
+<td><p>2</p></td>
+</tr>
+<tr class="row-odd"><td><p>TY_LOG</p></td>
+<td><p>4</p></td>
+<td><p>3</p></td>
+<td><p>32</p></td>
+<td><p>0</p></td>
+<td><p>reg0</p></td>
+<td><p>Logical</p></td>
+<td><p>logical*4</p></td>
+<td><p>4</p></td>
+</tr>
+<tr class="row-even"><td><p>TY_LOG8</p></td>
+<td><p>8</p></td>
+<td><p>7</p></td>
+<td><p>64</p></td>
+<td><p>0</p></td>
+<td><p>reg2</p></td>
+<td><p>Logical*8</p></td>
+<td><p>logical*8</p></td>
+<td><p>8</p></td>
+</tr>
+<tr class="row-odd"><td><p>TY_CHAR</p></td>
+<td><p>1</p></td>
+<td><p>0</p></td>
+<td><p>8</p></td>
+<td><p>0</p></td>
+<td><p>mem2</p></td>
+<td><p>Character</p></td>
+<td><p>character</p></td>
+<td><p>1</p></td>
+</tr>
+<tr class="row-even"><td><p>TY_PTR</p></td>
+<td><p>8</p></td>
+<td><p>7</p></td>
+<td><p>64</p></td>
+<td><p>0</p></td>
+<td><p>reg0</p></td>
+<td><p>Address of</p></td>
+<td></td>
+<td></td>
+</tr>
+<tr class="row-odd"><td><p>TY_NCHAR</p></td>
+<td><p>2</p></td>
+<td><p>1</p></td>
+<td><p>16</p></td>
+<td><p>0</p></td>
+<td><p>mem2</p></td>
+<td><p>Kanji Character String</p></td>
+<td><p>ncharacter</p></td>
+<td><p>2</p></td>
+</tr>
+</tbody>
+</table>
+<p>The third table is for machine
+<code class="docutils literal notranslate"><span class="pre">2</span></code>
+which is a C90, word-addressible 8-byte integer/pointer machine.</p>
+<p>The data types, their sizes, and alignment requirements for this compiler and
+target machine are listed in the following table.</p>
+<table class="docutils align-default">
+<thead>
+<tr class="row-odd"><th class="head" colspan="9"><p>Data Type Information</p></th>
+</tr>
+<tr class="row-even"><th class="head"><p>Data Type</p></th>
+<th class="head"><p>Size</p></th>
+<th class="head"><p>Align</p></th>
+<th class="head"><p>Bits</p></th>
+<th class="head"><p>Scale</p></th>
+<th class="head"><p>Fval</p></th>
+<th class="head"><p>Tname</p></th>
+<th class="head"><p>print name</p></th>
+<th class="head"><p>kind</p></th>
+</tr>
+</thead>
+<tbody>
+<tr class="row-odd"><td><p>TY_WORD</p></td>
+<td><p>8</p></td>
+<td><p>7</p></td>
+<td><p>64</p></td>
+<td><p>0</p></td>
+<td><p>reg0</p></td>
+<td><p>Unsigned Integer</p></td>
+<td></td>
+<td></td>
+</tr>
+<tr class="row-even"><td><p>TY_DWORD</p></td>
+<td><p>8</p></td>
+<td><p>7</p></td>
+<td><p>64</p></td>
+<td><p>0</p></td>
+<td><p>reg3</p></td>
+<td><p>Unsigned Integer</p></td>
+<td></td>
+<td></td>
+</tr>
+<tr class="row-odd"><td><p>TY_BINT</p></td>
+<td><p>8</p></td>
+<td><p>7</p></td>
+<td><p>64</p></td>
+<td><p>0</p></td>
+<td><p>reg0</p></td>
+<td><p>Byte Integer</p></td>
+<td><p>integer</p></td>
+<td><p>8</p></td>
+</tr>
+<tr class="row-even"><td><p>TY_SINT</p></td>
+<td><p>8</p></td>
+<td><p>7</p></td>
+<td><p>64</p></td>
+<td><p>0</p></td>
+<td><p>reg0</p></td>
+<td><p>Short Integer</p></td>
+<td><p>integer</p></td>
+<td><p>8</p></td>
+</tr>
+<tr class="row-odd"><td><p>TY_INT</p></td>
+<td><p>8</p></td>
+<td><p>7</p></td>
+<td><p>64</p></td>
+<td><p>0</p></td>
+<td><p>reg0</p></td>
+<td><p>Integer</p></td>
+<td><p>integer</p></td>
+<td><p>8</p></td>
+</tr>
+<tr class="row-even"><td><p>TY_INT8</p></td>
+<td><p>8</p></td>
+<td><p>7</p></td>
+<td><p>64</p></td>
+<td><p>0</p></td>
+<td><p>reg2</p></td>
+<td><p>Integer*8</p></td>
+<td><p>integer</p></td>
+<td><p>8</p></td>
+</tr>
+<tr class="row-odd"><td><p>TY_HALF</p></td>
+<td><p>2</p></td>
+<td><p>1</p></td>
+<td><p>16</p></td>
+<td><p>0</p></td>
+<td><p>reg1</p></td>
+<td><p>Floating Point Half</p></td>
+<td><p>real</p></td>
+<td><p>2</p></td>
+</tr>
+<tr class="row-even"><td><p>TY_REAL</p></td>
+<td><p>8</p></td>
+<td><p>7</p></td>
+<td><p>64</p></td>
+<td><p>0</p></td>
+<td><p>reg1</p></td>
+<td><p>Floating Point Real</p></td>
+<td><p>real</p></td>
+<td><p>8</p></td>
+</tr>
+<tr class="row-odd"><td><p>TY_DBLE</p></td>
+<td><p>8</p></td>
+<td><p>7</p></td>
+<td><p>64</p></td>
+<td><p>0</p></td>
+<td><p>reg2</p></td>
+<td><p>Double Precision Real</p></td>
+<td><p>real</p></td>
+<td><p>8</p></td>
+</tr>
+<tr class="row-even"><td><p>TY_QUAD</p></td>
+<td><p>16</p></td>
+<td><p>15</p></td>
+<td><p>128</p></td>
+<td><p>0</p></td>
+<td><p>reg2</p></td>
+<td><p>Quad Precision Real</p></td>
+<td><p>real</p></td>
+<td><p>16</p></td>
+</tr>
+<tr class="row-odd"><td><p>TY_HCMPLX</p></td>
+<td><p>4</p></td>
+<td><p>1</p></td>
+<td><p>32</p></td>
+<td><p>0</p></td>
+<td><p>reg2</p></td>
+<td><p>Half Complex</p></td>
+<td><p>half complex</p></td>
+<td><p>2</p></td>
+</tr>
+<tr class="row-even"><td><p>TY_CMPLX</p></td>
+<td><p>16</p></td>
+<td><p>7</p></td>
+<td><p>64</p></td>
+<td><p>0</p></td>
+<td><p>reg3</p></td>
+<td><p>Complex</p></td>
+<td><p>complex</p></td>
+<td><p>8</p></td>
+</tr>
+<tr class="row-odd"><td><p>TY_DCMPLX</p></td>
+<td><p>16</p></td>
+<td><p>7</p></td>
+<td><p>128</p></td>
+<td><p>0</p></td>
+<td><p>reg3</p></td>
+<td><p>Double Precision Complex</p></td>
+<td><p>complex</p></td>
+<td><p>8</p></td>
+</tr>
+<tr class="row-even"><td><p>TY_QCMPLX</p></td>
+<td><p>32</p></td>
+<td><p>15</p></td>
+<td><p>256</p></td>
+<td><p>0</p></td>
+<td><p>reg3</p></td>
+<td><p>Quad Precision Complex</p></td>
+<td><p>double complex</p></td>
+<td><p>16</p></td>
+</tr>
+<tr class="row-odd"><td><p>TY_BLOG</p></td>
+<td><p>8</p></td>
+<td><p>7</p></td>
+<td><p>64</p></td>
+<td><p>0</p></td>
+<td><p>reg0</p></td>
+<td><p>Byte Logical</p></td>
+<td><p>logical</p></td>
+<td><p>1</p></td>
+</tr>
+<tr class="row-even"><td><p>TY_SLOG</p></td>
+<td><p>8</p></td>
+<td><p>7</p></td>
+<td><p>64</p></td>
+<td><p>0</p></td>
+<td><p>reg0</p></td>
+<td><p>Short Logical</p></td>
+<td><p>logical</p></td>
+<td><p>2</p></td>
+</tr>
+<tr class="row-odd"><td><p>TY_LOG</p></td>
+<td><p>8</p></td>
+<td><p>7</p></td>
+<td><p>64</p></td>
+<td><p>0</p></td>
+<td><p>reg0</p></td>
+<td><p>Logical</p></td>
+<td><p>logical</p></td>
+<td><p>4</p></td>
+</tr>
+<tr class="row-even"><td><p>TY_LOG8</p></td>
+<td><p>8</p></td>
+<td><p>7</p></td>
+<td><p>64</p></td>
+<td><p>0</p></td>
+<td><p>reg2</p></td>
+<td><p>Logical*8</p></td>
+<td><p>logical</p></td>
+<td><p>8</p></td>
+</tr>
+<tr class="row-odd"><td><p>TY_CHAR</p></td>
+<td><p>1</p></td>
+<td><p>0</p></td>
+<td><p>8</p></td>
+<td><p>0</p></td>
+<td><p>mem2</p></td>
+<td><p>Character</p></td>
+<td><p>character</p></td>
+<td><p>1</p></td>
+</tr>
+<tr class="row-even"><td><p>TY_PTR</p></td>
+<td><p>8</p></td>
+<td><p>7</p></td>
+<td><p>64</p></td>
+<td><p>0</p></td>
+<td><p>reg0</p></td>
+<td><p>Address of</p></td>
+<td></td>
+<td></td>
+</tr>
+<tr class="row-odd"><td><p>TY_NCHAR</p></td>
+<td><p>8</p></td>
+<td><p>7</p></td>
+<td><p>64</p></td>
+<td><p>0</p></td>
+<td><p>mem2</p></td>
+<td><p>Kanji Character String</p></td>
+<td><p>ncharacter</p></td>
+<td><p>2</p></td>
+</tr>
+</tbody>
+</table>
+<p>The fourth table is for machine
+<code class="docutils literal notranslate"><span class="pre">3</span></code>
+which is a Fortran-90 target with integer kinds (1), (2), (4), and (8),
+real kinds (4), (8), and (16), and complex kinds (4), (8) and (16),
+and with 8-byte pointers, e.g. AArch64.</p>
+<p>The data types, their sizes, and alignment requirements for this compiler and
+target machine are listed in the following table.</p>
+<table class="docutils align-default">
+<thead>
+<tr class="row-odd"><th class="head" colspan="9"><p>Data Type Information</p></th>
+</tr>
+<tr class="row-even"><th class="head"><p>Data Type</p></th>
+<th class="head"><p>Size</p></th>
+<th class="head"><p>Align</p></th>
+<th class="head"><p>Bits</p></th>
+<th class="head"><p>Scale</p></th>
+<th class="head"><p>Fval</p></th>
+<th class="head"><p>Tname</p></th>
+<th class="head"><p>print name</p></th>
+<th class="head"><p>kind</p></th>
+</tr>
+</thead>
+<tbody>
+<tr class="row-odd"><td><p>TY_WORD</p></td>
+<td><p>4</p></td>
+<td><p>3</p></td>
+<td><p>32</p></td>
+<td><p>0</p></td>
+<td><p>reg0</p></td>
+<td><p>Unsigned Integer</p></td>
+<td></td>
+<td></td>
+</tr>
+<tr class="row-even"><td><p>TY_DWORD</p></td>
+<td><p>8</p></td>
+<td><p>7</p></td>
+<td><p>32</p></td>
+<td><p>0</p></td>
+<td><p>reg3</p></td>
+<td><p>Unsigned Integer</p></td>
+<td></td>
+<td></td>
+</tr>
+<tr class="row-odd"><td><p>TY_BINT</p></td>
+<td><p>1</p></td>
+<td><p>0</p></td>
+<td><p>8</p></td>
+<td><p>0</p></td>
+<td><p>reg0</p></td>
+<td><p>Byte Integer</p></td>
+<td><p>integer(1)</p></td>
+<td><p>1</p></td>
+</tr>
+<tr class="row-even"><td><p>TY_SINT</p></td>
+<td><p>2</p></td>
+<td><p>1</p></td>
+<td><p>16</p></td>
+<td><p>0</p></td>
+<td><p>reg0</p></td>
+<td><p>Short Integer</p></td>
+<td><p>integer(2)</p></td>
+<td><p>2</p></td>
+</tr>
+<tr class="row-odd"><td><p>TY_INT</p></td>
+<td><p>4</p></td>
+<td><p>3</p></td>
+<td><p>32</p></td>
+<td><p>0</p></td>
+<td><p>reg0</p></td>
+<td><p>Integer</p></td>
+<td><p>integer</p></td>
+<td><p>4</p></td>
+</tr>
+<tr class="row-even"><td><p>TY_INT8</p></td>
+<td><p>8</p></td>
+<td><p>7</p></td>
+<td><p>64</p></td>
+<td><p>0</p></td>
+<td><p>reg2</p></td>
+<td><p>Integer*8</p></td>
+<td><p>integer(8)</p></td>
+<td><p>8</p></td>
+</tr>
+<tr class="row-odd"><td><p>TY_HALF</p></td>
+<td><p>2</p></td>
+<td><p>1</p></td>
+<td><p>16</p></td>
+<td><p>0</p></td>
+<td><p>reg1</p></td>
+<td><p>Half Precision Real</p></td>
+<td><p>real(2)</p></td>
+<td><p>2</p></td>
+</tr>
+<tr class="row-even"><td><p>TY_REAL</p></td>
+<td><p>4</p></td>
+<td><p>3</p></td>
+<td><p>32</p></td>
+<td><p>0</p></td>
+<td><p>reg1</p></td>
+<td><p>Single Precision Real</p></td>
+<td><p>real</p></td>
+<td><p>4</p></td>
+</tr>
+<tr class="row-odd"><td><p>TY_DBLE</p></td>
+<td><p>8</p></td>
+<td><p>7</p></td>
+<td><p>64</p></td>
+<td><p>0</p></td>
+<td><p>reg2</p></td>
+<td><p>Double Precision Real</p></td>
+<td><p>real(8)</p></td>
+<td><p>8</p></td>
+</tr>
+<tr class="row-even"><td><p>TY_QUAD</p></td>
+<td><p>16</p></td>
+<td><p>15</p></td>
+<td><p>128</p></td>
+<td><p>0</p></td>
+<td><p>reg2</p></td>
+<td><p>Quad Precision Real</p></td>
+<td><p>real(16)</p></td>
+<td><p>16</p></td>
+</tr>
+<tr class="row-odd"><td><p>TY_HCMPLX</p></td>
+<td><p>4</p></td>
+<td><p>1</p></td>
+<td><p>32</p></td>
+<td><p>0</p></td>
+<td><p>reg2</p></td>
+<td><p>Half Precision Complex</p></td>
+<td><p>half complex</p></td>
+<td><p>2</p></td>
+</tr>
+<tr class="row-even"><td><p>TY_CMPLX</p></td>
+<td><p>8</p></td>
+<td><p>3</p></td>
+<td><p>64</p></td>
+<td><p>0</p></td>
+<td><p>reg2</p></td>
+<td><p>Single Precision Complex</p></td>
+<td><p>complex</p></td>
+<td><p>4</p></td>
+</tr>
+<tr class="row-odd"><td><p>TY_DCMPLX</p></td>
+<td><p>16</p></td>
+<td><p>7</p></td>
+<td><p>128</p></td>
+<td><p>0</p></td>
+<td><p>reg3</p></td>
+<td><p>Double Precision Complex</p></td>
+<td><p>complex(8)</p></td>
+<td><p>8</p></td>
+</tr>
+<tr class="row-even"><td><p>TY_QCMPLX</p></td>
+<td><p>32</p></td>
+<td><p>15</p></td>
+<td><p>256</p></td>
+<td><p>0</p></td>
+<td><p>reg3</p></td>
+<td><p>Quad Precision Complex</p></td>
+<td><p>complex(16)</p></td>
+<td><p>16</p></td>
+</tr>
+<tr class="row-odd"><td><p>TY_BLOG</p></td>
+<td><p>1</p></td>
+<td><p>0</p></td>
+<td><p>8</p></td>
+<td><p>0</p></td>
+<td><p>reg0</p></td>
+<td><p>Byte Logical</p></td>
+<td><p>logical(1)</p></td>
+<td><p>1</p></td>
+</tr>
+<tr class="row-even"><td><p>TY_SLOG</p></td>
+<td><p>2</p></td>
+<td><p>1</p></td>
+<td><p>16</p></td>
+<td><p>0</p></td>
+<td><p>reg0</p></td>
+<td><p>Short Logical</p></td>
+<td><p>logical(2)</p></td>
+<td><p>2</p></td>
+</tr>
+<tr class="row-odd"><td><p>TY_LOG</p></td>
+<td><p>4</p></td>
+<td><p>3</p></td>
+<td><p>32</p></td>
+<td><p>0</p></td>
+<td><p>reg0</p></td>
+<td><p>Logical</p></td>
+<td><p>logical</p></td>
+<td><p>4</p></td>
+</tr>
+<tr class="row-even"><td><p>TY_LOG8</p></td>
+<td><p>8</p></td>
+<td><p>7</p></td>
+<td><p>64</p></td>
+<td><p>0</p></td>
+<td><p>reg2</p></td>
+<td><p>Logical*8</p></td>
+<td><p>logical(8)</p></td>
+<td><p>8</p></td>
+</tr>
+<tr class="row-odd"><td><p>TY_CHAR</p></td>
+<td><p>1</p></td>
+<td><p>0</p></td>
+<td><p>8</p></td>
+<td><p>0</p></td>
+<td><p>mem2</p></td>
+<td><p>Character</p></td>
+<td><p>character</p></td>
+<td><p>1</p></td>
+</tr>
+<tr class="row-even"><td><p>TY_PTR</p></td>
+<td><p>8</p></td>
+<td><p>7</p></td>
+<td><p>64</p></td>
+<td><p>0</p></td>
+<td><p>reg0</p></td>
+<td><p>Address of</p></td>
+<td></td>
+<td></td>
+</tr>
+<tr class="row-odd"><td><p>TY_NCHAR</p></td>
+<td><p>2</p></td>
+<td><p>1</p></td>
+<td><p>16</p></td>
+<td><p>0</p></td>
+<td><p>mem2</p></td>
+<td><p>Kanji Character String</p></td>
+<td><p>ncharacter</p></td>
+<td><p>2</p></td>
+</tr>
+</tbody>
+</table>
+<p>The fifth table is for machine
+<code class="docutils literal notranslate"><span class="pre">4</span></code>
+which is a Fortran-90 target which has the following data types:
+logical(4) and (8),
+integer(4) and (8),
+real(4), (8) and (16),
+and complex(4), (8) and (16),
+and with 8-byte pointers, e.g. the NEC SX/4.</p>
+<p>The data types, their sizes, and alignment requirements for this compiler and
+target machine are listed in the following table.</p>
+<table class="docutils align-default">
+<thead>
+<tr class="row-odd"><th class="head" colspan="9"><p>Data Type Information</p></th>
+</tr>
+<tr class="row-even"><th class="head"><p>Data Type</p></th>
+<th class="head"><p>Size</p></th>
+<th class="head"><p>Align</p></th>
+<th class="head"><p>Bits</p></th>
+<th class="head"><p>Scale</p></th>
+<th class="head"><p>Fval</p></th>
+<th class="head"><p>Tname</p></th>
+<th class="head"><p>print name</p></th>
+<th class="head"><p>kind</p></th>
+</tr>
+</thead>
+<tbody>
+<tr class="row-odd"><td><p>TY_WORD</p></td>
+<td><p>4</p></td>
+<td><p>3</p></td>
+<td><p>32</p></td>
+<td><p>0</p></td>
+<td><p>reg0</p></td>
+<td><p>Unsigned Integer</p></td>
+<td></td>
+<td></td>
+</tr>
+<tr class="row-even"><td><p>TY_DWORD</p></td>
+<td><p>8</p></td>
+<td><p>7</p></td>
+<td><p>64</p></td>
+<td><p>0</p></td>
+<td><p>reg3</p></td>
+<td><p>Unsigned Integer</p></td>
+<td></td>
+<td></td>
+</tr>
+<tr class="row-odd"><td><p>TY_BINT</p></td>
+<td><p>4</p></td>
+<td><p>3</p></td>
+<td><p>32</p></td>
+<td><p>0</p></td>
+<td><p>reg0</p></td>
+<td><p>Byte Integer</p></td>
+<td><p>integer</p></td>
+<td><p>4</p></td>
+</tr>
+<tr class="row-even"><td><p>TY_SINT</p></td>
+<td><p>4</p></td>
+<td><p>3</p></td>
+<td><p>32</p></td>
+<td><p>0</p></td>
+<td><p>reg0</p></td>
+<td><p>Short Integer</p></td>
+<td><p>integer</p></td>
+<td><p>4</p></td>
+</tr>
+<tr class="row-odd"><td><p>TY_INT</p></td>
+<td><p>4</p></td>
+<td><p>3</p></td>
+<td><p>32</p></td>
+<td><p>0</p></td>
+<td><p>reg0</p></td>
+<td><p>Integer</p></td>
+<td><p>integer</p></td>
+<td><p>4</p></td>
+</tr>
+<tr class="row-even"><td><p>TY_INT8</p></td>
+<td><p>8</p></td>
+<td><p>7</p></td>
+<td><p>64</p></td>
+<td><p>0</p></td>
+<td><p>reg2</p></td>
+<td><p>Integer*8</p></td>
+<td><p>integer(8)</p></td>
+<td><p>8</p></td>
+</tr>
+<tr class="row-odd"><td><p>TY_HALF</p></td>
+<td><p>2</p></td>
+<td><p>1</p></td>
+<td><p>16</p></td>
+<td><p>0</p></td>
+<td><p>reg1</p></td>
+<td><p>Floating Point Half</p></td>
+<td><p>real</p></td>
+<td><p>2</p></td>
+</tr>
+<tr class="row-even"><td><p>TY_REAL</p></td>
+<td><p>4</p></td>
+<td><p>3</p></td>
+<td><p>32</p></td>
+<td><p>0</p></td>
+<td><p>reg1</p></td>
+<td><p>Floating Point Real</p></td>
+<td><p>real</p></td>
+<td><p>4</p></td>
+</tr>
+<tr class="row-odd"><td><p>TY_DBLE</p></td>
+<td><p>8</p></td>
+<td><p>7</p></td>
+<td><p>64</p></td>
+<td><p>0</p></td>
+<td><p>reg2</p></td>
+<td><p>Double Precision Real</p></td>
+<td><p>double precision</p></td>
+<td><p>8</p></td>
+</tr>
+<tr class="row-even"><td><p>TY_QUAD</p></td>
+<td><p>16</p></td>
+<td><p>15</p></td>
+<td><p>128</p></td>
+<td><p>0</p></td>
+<td><p>reg2</p></td>
+<td><p>Quad Precision Real</p></td>
+<td><p>real(16)</p></td>
+<td><p>16</p></td>
+</tr>
+<tr class="row-odd"><td><p>TY_HCMPLX</p></td>
+<td><p>4</p></td>
+<td><p>1</p></td>
+<td><p>32</p></td>
+<td><p>0</p></td>
+<td><p>reg2</p></td>
+<td><p>Half Complex</p></td>
+<td><p>half complex</p></td>
+<td><p>2</p></td>
+</tr>
+<tr class="row-even"><td><p>TY_CMPLX</p></td>
+<td><p>8</p></td>
+<td><p>3</p></td>
+<td><p>64</p></td>
+<td><p>0</p></td>
+<td><p>reg2</p></td>
+<td><p>Complex</p></td>
+<td><p>complex</p></td>
+<td><p>4</p></td>
+</tr>
+<tr class="row-odd"><td><p>TY_DCMPLX</p></td>
+<td><p>16</p></td>
+<td><p>7</p></td>
+<td><p>128</p></td>
+<td><p>0</p></td>
+<td><p>reg3</p></td>
+<td><p>Double Precision Complex</p></td>
+<td><p>complex(8)</p></td>
+<td><p>8</p></td>
+</tr>
+<tr class="row-even"><td><p>TY_QCMPLX</p></td>
+<td><p>32</p></td>
+<td><p>15</p></td>
+<td><p>256</p></td>
+<td><p>0</p></td>
+<td><p>reg3</p></td>
+<td><p>Quad Precision Complex</p></td>
+<td><p>complex(16)</p></td>
+<td><p>16</p></td>
+</tr>
+<tr class="row-odd"><td><p>TY_BLOG</p></td>
+<td><p>4</p></td>
+<td><p>3</p></td>
+<td><p>32</p></td>
+<td><p>0</p></td>
+<td><p>reg0</p></td>
+<td><p>Byte Logical</p></td>
+<td><p>logical</p></td>
+<td><p>4</p></td>
+</tr>
+<tr class="row-even"><td><p>TY_SLOG</p></td>
+<td><p>4</p></td>
+<td><p>3</p></td>
+<td><p>32</p></td>
+<td><p>0</p></td>
+<td><p>reg0</p></td>
+<td><p>Short Logical</p></td>
+<td><p>logical</p></td>
+<td><p>4</p></td>
+</tr>
+<tr class="row-odd"><td><p>TY_LOG</p></td>
+<td><p>4</p></td>
+<td><p>3</p></td>
+<td><p>32</p></td>
+<td><p>0</p></td>
+<td><p>reg0</p></td>
+<td><p>Logical</p></td>
+<td><p>logical</p></td>
+<td><p>4</p></td>
+</tr>
+<tr class="row-even"><td><p>TY_LOG8</p></td>
+<td><p>8</p></td>
+<td><p>7</p></td>
+<td><p>64</p></td>
+<td><p>0</p></td>
+<td><p>reg2</p></td>
+<td><p>Logical*8</p></td>
+<td><p>logical(8)</p></td>
+<td><p>8</p></td>
+</tr>
+<tr class="row-odd"><td><p>TY_CHAR</p></td>
+<td><p>1</p></td>
+<td><p>0</p></td>
+<td><p>8</p></td>
+<td><p>0</p></td>
+<td><p>mem2</p></td>
+<td><p>Character</p></td>
+<td><p>character</p></td>
+<td><p>1</p></td>
+</tr>
+<tr class="row-even"><td><p>TY_PTR</p></td>
+<td><p>8</p></td>
+<td><p>7</p></td>
+<td><p>64</p></td>
+<td><p>0</p></td>
+<td><p>reg2</p></td>
+<td><p>Address of</p></td>
+<td></td>
+<td></td>
+</tr>
+<tr class="row-odd"><td><p>TY_NCHAR</p></td>
+<td><p>2</p></td>
+<td><p>1</p></td>
+<td><p>16</p></td>
+<td><p>0</p></td>
+<td><p>mem2</p></td>
+<td><p>Kanji Character String</p></td>
+<td><p>ncharacter</p></td>
+<td><p>2</p></td>
+</tr>
+</tbody>
+</table>
+</section>
+<section id="target-machine-characteristics-utility-machar">
+<h2>Target Machine Characteristics Utility (MACHAR)<a class="headerlink" href="#target-machine-characteristics-utility-machar" title="Permalink to this heading">¶</a></h2>
+<p>MACHAR reads the nroff source for this appendix and extracts information to
+build the C include files containing the macro definitions for the target
+machine characteristics, actions, and data type information.
+MACHAR also reads <em>symtab.h</em> for a specific compiler to determine what the
+list of data types are.  If either of the input files change then MACHAR must
+be rerun.</p>
+<section id="inputs">
+<h3>Inputs<a class="headerlink" href="#inputs" title="Permalink to this heading">¶</a></h3>
+<p>MACHAR reads two input files:</p>
+<ol class="arabic">
+<li><p><em>machar.n</em>
+— Target machine characteristics file.  Defines the target machine
+characteristics.  This file contains the nroff source for this appendix
+so that this appendix as well as the C macro files can be generated
+from the same source file.  It contains nroff macros and tbl commands that are
+also recognized as directives to MACHAR.  The following kinds of directive lines
+are used:</p>
+<blockquote>
+<div><ol class="loweralpha">
+<li><p>Define action name lines of the form:</p>
+<div class="highlight-none notranslate"><div class="highlight"><pre><span></span>.DN actionname
+</pre></div>
+</div>
+<dl class="simple">
+<dt><code class="docutils literal notranslate"><span class="pre">actionname</span></code></dt><dd><p>the name of the action to define such as <code class="docutils literal notranslate"><span class="pre">LSHIFT</span></code>.</p>
+</dd>
+</dl>
+</li>
+<li><p>Define action lines of the form:</p>
+<div class="highlight-none notranslate"><div class="highlight"><pre><span></span>.DA &quot;action&quot;
+</pre></div>
+</div>
+<dl class="simple">
+<dt><code class="docutils literal notranslate"><span class="pre">action</span></code></dt><dd><p>the C macro code the compiler uses to perform the action given by actionname.
+Action must be enclosed in double quotes.
+One or more <code class="docutils literal notranslate"><span class="pre">.DA</span></code> lines must be specified for a macro
+containing macro code.  The <code class="docutils literal notranslate"><span class="pre">.DA</span></code> line(s) are associated
+with the most recently encountered actionname.  More than one
+<code class="docutils literal notranslate"><span class="pre">.DA</span></code> line may be required to express very large macro
+definitions.  C continuation characters are not required on multiple action
+lines.</p>
+</dd>
+</dl>
+</li>
+<li><p>Define characteristic lines:</p>
+<div class="highlight-none notranslate"><div class="highlight"><pre><span></span>%TM_char%description%present
+</pre></div>
+</div>
+<dl class="simple">
+<dt><code class="docutils literal notranslate"><span class="pre">TM_char</span></code></dt><dd><p>the target machine characteristic to define.  For example, <code class="docutils literal notranslate"><span class="pre">TM_UIDIV</span></code>.</p>
+</dd>
+<dt><code class="docutils literal notranslate"><span class="pre">description</span></code></dt><dd><p>a short description of what the characteristic is.</p>
+</dd>
+<dt><code class="docutils literal notranslate"><span class="pre">present</span></code></dt><dd><p>a value of yes or no indicating whether this macro is defined for this
+architecture.</p>
+</dd>
+</dl>
+</li>
+<li><p>Define data type size and alignment lines:</p>
+<div class="highlight-none notranslate"><div class="highlight"><pre><span></span>%TY_type%size%align%bits%scale%fval%description
+</pre></div>
+</div>
+<dl class="simple">
+<dt><code class="docutils literal notranslate"><span class="pre">TY_type</span></code></dt><dd><p>the data type to be specified.  For example, <code class="docutils literal notranslate"><span class="pre">TY_DBLE</span></code>.
+The possible values for type are listed above.</p>
+</dd>
+<dt><code class="docutils literal notranslate"><span class="pre">size</span></code></dt><dd><p>the number of bytes required for datatype.</p>
+</dd>
+<dt><code class="docutils literal notranslate"><span class="pre">align</span></code></dt><dd><p>the number of bytes required to align datatype properly.
+This value is added to the current byte address to ensure that
+the desired data type starts on an address consistent with its alignment
+requirements.  For example, byte integers’ value would be zero since
+they need only start on byte boundaries.  Data types requiring alignment on
+2-byte boundaries would use a value of one.</p>
+</dd>
+<dt><code class="docutils literal notranslate"><span class="pre">bits</span></code></dt><dd><p>the number of bits required for datatype.</p>
+</dd>
+<dt><code class="docutils literal notranslate"><span class="pre">scale</span></code></dt><dd><p>the scaling factor allowed for datatype.
+An architecture may allow an index (subscript)
+to be scaled when involved in an effective address calculation.
+This value indicates the scaling factor which can be applied to a
+subscript instead of multiplying the subscript by the datatype’s
+size.
+This value is the number of bits the subscript is scaled (shifted left).
+For example, a double could have a scaling factor of
+3 (the subscript is shifted left 3 positions).
+Note that a value of 0 implies either a byte datatype or that
+the architecture does not allow scaling of subscripts.</p>
+</dd>
+<dt><code class="docutils literal notranslate"><span class="pre">fval</span></code></dt><dd><p>indicates how the value of a function of this type is returned and
+also indicates the return group to which the function belongs (i.e.,
+certain function return types are returned in the same register).
+The possible values are ‘reg&lt;d&gt;’ (value is returned in a
+register), ‘mem&lt;d&gt;’ (value is returned in a temporary and its address
+is an implicit argument to the function), and ‘na’ (not applicable).
+<code class="docutils literal notranslate"><span class="pre">&lt;d&gt;</span></code> is a digit (0, 1, 2, etc.) indicating the group.
+These values are stored in the <code class="docutils literal notranslate"><span class="pre">dtypeinfo</span></code> array.
+A value of -1 indicates ‘na’.
+Otherwise, the value is divided
+into two fields:  the rightmost 2 bits indicate ‘reg’ or ‘mem’ (0, 1,
+respectively).  The remaining bits represent the group value (0, 1, etc.).</p>
+</dd>
+<dt>description</dt><dd><p>a textual description of the data type.</p>
+</dd>
+</dl>
+</li>
+<li><p>Support for multiple types of machines; this is used for the pghpf translator,
+for which the source files are identical, but the word sizes are different.
+A line of the form</p>
+<div class="highlight-none notranslate"><div class="highlight"><pre><span></span>.NM 5
+</pre></div>
+</div>
+<p>is used to tell the utility to generate datatype initializations for five
+machines.
+A line of the form</p>
+<div class="highlight-none notranslate"><div class="highlight"><pre><span></span>.MA number
+</pre></div>
+</div>
+<p>before the TY_type table tells the utility that the following table is
+for the given machine number, where number must be less than the number
+given in the NM directive.</p>
+</li>
+</ol>
+</div></blockquote>
+<ol class="arabic simple">
+<li><p><em>symtab.h</em>
+— the output file produced by the SYMINI utility.  This file is scanned for
+data type definitions, for example <code class="docutils literal notranslate"><span class="pre">TY_INT</span></code> to determine their
+numeric value.  This is done to guarantee that the <code class="docutils literal notranslate"><span class="pre">dtypeinfo</span></code>
+array is initialized in the correct order.</p></li>
+</ol>
+</li>
+</ol>
+</section>
+<section id="outputs">
+<h3>Outputs<a class="headerlink" href="#outputs" title="Permalink to this heading">¶</a></h3>
+<p>MACHAR produces two output files.</p>
+<ol class="arabic simple">
+<li><p><em>machar.h</em>
+— contains the C macro definitions for characteristics and actions.</p></li>
+<li><p><em>machardf.h</em>
+— contains the <code class="docutils literal notranslate"><span class="pre">dtypeinfo</span></code> array containing data type size
+and alignment information.</p></li>
+</ol>
+</section>
+</section>
+</section>
+
+
+      </div>
+      <div class="bottomnav" role="navigation" aria-label="bottom navigation">
+      
+        <p>
+        «&#160;&#160;<a href="../debugging_flang.html">Debugging flang</a>
+        &#160;&#160;::&#160;&#160;
+        <a class="uplink" href="../index.html">Contents</a>
+        &#160;&#160;::&#160;&#160;
+        <a href="../flang2/error.html">Error Reporting Utils</a>&#160;&#160;»
+        </p>
+
+      </div>
+
+    <div class="footer" role="contentinfo">
+        &#169; Copyright .
+      Created using <a href="https://www.sphinx-doc.org/">Sphinx</a> 5.3.0.
+    </div>
+  </body>
+</html>

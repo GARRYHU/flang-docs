@@ -1,0 +1,527 @@
+
+<!DOCTYPE html>
+
+<html lang="en">
+  <head>
+    <meta charset="utf-8" />
+    <meta name="viewport" content="width=device-width, initial-scale=1.0" /><meta name="generator" content="Docutils 0.19: https://docutils.sourceforge.io/" />
+
+    <title>Scanner &#8212; Flang 1.0 documentation</title>
+    <link rel="stylesheet" type="text/css" href="../_static/pygments.css" />
+    <link rel="stylesheet" type="text/css" href="../_static/haiku.css" />
+    <script data-url_root="../" id="documentation_options" src="../_static/documentation_options.js"></script>
+    <script src="../_static/jquery.js"></script>
+    <script src="../_static/underscore.js"></script>
+    <script src="../_static/_sphinx_javascript_frameworks_compat.js"></script>
+    <script src="../_static/doctools.js"></script>
+    <script src="../_static/sphinx_highlight.js"></script>
+    <link rel="index" title="Index" href="../genindex.html" />
+    <link rel="search" title="Search" href="../search.html" />
+    <link rel="next" title="Parser" href="parser.html" />
+    <link rel="prev" title="Program Controller" href="controller.html" /> 
+  </head><body>
+      <div class="header" role="banner"><h1 class="heading"><a href="../index.html">
+          <span>Flang 1.0 documentation</span></a></h1>
+        <h2 class="heading"><span>Scanner</span></h2>
+      </div>
+      <div class="topnav" role="navigation" aria-label="top navigation">
+      
+        <p>
+        «&#160;&#160;<a href="controller.html">Program Controller</a>
+        &#160;&#160;::&#160;&#160;
+        <a class="uplink" href="../index.html">Contents</a>
+        &#160;&#160;::&#160;&#160;
+        <a href="parser.html">Parser</a>&#160;&#160;»
+        </p>
+
+      </div>
+      <div class="content" role="main">
+        
+        
+  <section id="scanner">
+<h1>Scanner<a class="headerlink" href="#scanner" title="Permalink to this heading">¶</a></h1>
+<section id="overview">
+<h2>Overview<a class="headerlink" href="#overview" title="Permalink to this heading">¶</a></h2>
+<p>The Scanner reads the source input file and extracts tokens, which
+are passed to the Parser.
+Tokens include identifiers, keywords, numbers, and special characters
+such as “/”, “+”, “-”, etc.
+If the -list flag is specified, the Scanner writes the source listing
+as it reads the source input.</p>
+<p>In order to accomplish its basic task, the Scanner must:</p>
+<ul class="simple">
+<li><p>process either fixed-form or freeform input</p></li>
+<li><p>process statements up to and including 132 columns if the -extend
+flag is specified.</p></li>
+<li><p>process statements separated by semicolons.</p></li>
+<li><p>recognize and process statements which begin with the tab character
+(following the VMS conventions).</p></li>
+<li><p>recognize and ignore comment lines and inline comments.</p></li>
+<li><p>recognize continuation cards.</p></li>
+<li><p>recognize and process OpenMP directives</p></li>
+<li><p>recognize <code class="docutils literal notranslate"><span class="pre">INCLUDE</span></code> statements and <code class="docutils literal notranslate"><span class="pre">$INSERT</span></code> directives and open
+the specified files.</p></li>
+<li><p>extract labels from the label field of statements and enter them into the
+symbol table.</p></li>
+<li><p>convert integer and floating point constants including any optional kind values
+into the target machine’s
+format.</p></li>
+<li><p>look up Fortran keywords in the keyword table.</p></li>
+<li><p>maintain a certain amount of “syntactic awareness” in order to
+distinguish keywords from identically named identifiers.</p></li>
+<li><p>convert characters to lower case unless the -upcase flag is specified.</p></li>
+<li><p>recognize character strings including any optional kind values
+and the various C backslash escape sequences which are allowed within them.</p></li>
+<li><p>recognize hollerith constants.</p></li>
+<li><p>issue error messages for the various syntactic errors which it is able
+to recognize.</p></li>
+</ul>
+</section>
+<section id="data-structures">
+<h2>Data Structures<a class="headerlink" href="#data-structures" title="Permalink to this heading">¶</a></h2>
+<p><em>Token Id’s</em> — The Scanner returns token id numbers and possibly additional information
+such as a symbol table pointer to the Parser.
+These numbers are defined by the
+<em>prstab</em>
+utility (see section 4) and are referenced within the scanner using C
+constant symbols whose names begin with “<code class="docutils literal notranslate"><span class="pre">TK_</span></code>”.</p>
+<p><em>Statement Buffer</em> — an array (<code class="docutils literal notranslate"><span class="pre">stmtb</span></code>)
+of char local to the scanner module which holds an entire Fortran
+statement including up to 99 continuation lines, but not including
+the label field.
+The end of the statement is marked by the newline character.</p>
+<p>Initially, the statement buffer contains the statement text as it appears
+in the source file.
+After the routine
+<em>crunch</em>
+has processed the statement, it contains the
+<em>crunched</em>
+statement (see below).
+If the input is in fixed form, blanks and tabs are removed; for freeform
+input, consectutive blanks are collapsed into a single.</p>
+<p><em>Keyword Tables</em> — four tables local to the scanner module are initialized within the scanner.
+Note that if a grammar change uses a new token, not only must the token input
+file be changed, but the token must also be added to one of the tables.
+The keyword tables allow a binary search to be performed in order to
+determine if a given identifier is a keyword and if so, what its
+token id number is.
+The four tables correspond to four classes of keywords:</p>
+<ol class="arabic simple">
+<li><p>normal keywords, i.e., those which can begin a statement.</p></li>
+<li><p>logical keywords, i.e., those which may appear in logical expressions
+(beginning and ending with ‘.’).</p></li>
+<li><p>I/O keywords, i.e., those which are used as specifiers within I/O
+statements.</p></li>
+<li><p>format keywords, i.e., those which appear within FORMAT statements.</p></li>
+</ol>
+<p>Certain keywords may contain optional blanks; for example,
+<code class="docutils literal notranslate"><span class="pre">DOUBLEPRECISION</span></code>,
+<code class="docutils literal notranslate"><span class="pre">DOUBLE</span> <span class="pre">PRECISION</span></code>,
+<code class="docutils literal notranslate"><span class="pre">END</span> <span class="pre">DO</span></code>,
+and
+<code class="docutils literal notranslate"><span class="pre">ENDDO</span></code>.
+For cases where a blank is optional and the first part of the keyword
+is itself not a keyword, a
+<em>pseudo</em>
+keyword representing its name appears in the keyword table.
+This
+<em>pseudo</em>
+keyword is associated with a token macro whose name is prefixed with
+<code class="docutils literal notranslate"><span class="pre">TKF\_</span></code>.
+When a
+<em>pseudo</em>
+keyword is recognized, the scanner checks if what follows
+matches the name of any of the keyword’s second parts.
+If a matching name is not found, an identifier token is returned.
+If the first part of the keyword is itself a keyword,
+the processing is the same to determine if a
+<em>longer</em>
+keyword can be recognized;
+however, if a matching name is not found, a keyword token is returned.</p>
+<p><em>Symbol Table</em> — The scanner enters identifiers and certain constants into the symbol table
+when it recognizes them (refer to section 11).
+When an identifier is recognized,
+the scanner must check if the symbol table entry represents an
+<em>alias</em>
+(e.g., the <code class="docutils literal notranslate"><span class="pre">RESULT</span></code> identifier for a function).
+If the identifer is an alias, the aliased identfier is returned.</p>
+</section>
+<section id="processing">
+<h2>Processing<a class="headerlink" href="#processing" title="Permalink to this heading">¶</a></h2>
+<p>The Scanner is initialized by calling the routine
+<em>scan_init</em>
+at the beginning of processing. From then on, the routine
+<em>get_token</em>
+is called to extract and return the next token. The routine
+<em>scan_reset</em>
+is called to resume scanning at the next Fortran statement
+(for instance after the Parser or Scanner finds a syntax error).</p>
+<p>The form of the input to the compiler may either be fixed-form
+or freeform and is controlled by a compiler option.
+Each type of input has its own set of routines for reading the next
+statement (<em>get_stmt</em>), including continuations,
+and for reading the next card or line (<em>read_card</em>).</p>
+<p>If the current character pointer is <code class="docutils literal notranslate"><span class="pre">NULL</span></code>, the input-type’s
+<em>get_stmt</em>
+is called to read the next Fortran statement including any continuations
+into the statement buffer.
+This may involve scanning past comment lines and processing compiler
+directives.
+When a card is read, the position within <code class="docutils literal notranslate"><span class="pre">stmtb</span></code>
+marking the last character of the card is remembered.
+<em>get_stmt</em>
+calls the input-type’s
+<em>read_card</em>
+to read in a single card or line.
+This routine determines what type of card has been read.
+The card types are described by the following C macros which are local
+to the scanner:</p>
+<dl class="simple">
+<dt><code class="docutils literal notranslate"><span class="pre">CT_COMMENT</span></code></dt><dd><p>any card which is considered a comment card.  This includes
+a “blank” card, a card which begins with ‘!’ except if it is in column
+6, and a card
+beginning with ‘D’ in column 1 and if the -dlines flag is NOT set.</p>
+</dd>
+<dt><code class="docutils literal notranslate"><span class="pre">CT_DIRECTIVE</span></code></dt><dd><p>those beginning with ‘$’ or ‘%’ in column 1.</p>
+</dd>
+<dt><code class="docutils literal notranslate"><span class="pre">CT_END</span></code></dt><dd><p>the <code class="docutils literal notranslate"><span class="pre">END</span></code> statement.</p>
+</dd>
+<dt><code class="docutils literal notranslate"><span class="pre">CT_CONTINUATION</span></code></dt><dd><p>continuation card.</p>
+</dd>
+<dt><code class="docutils literal notranslate"><span class="pre">CT_PRAGMA</span></code></dt><dd><p>a C pragma directive card.</p>
+</dd>
+<dt><code class="docutils literal notranslate"><span class="pre">CT_LINE</span></code></dt><dd><p>a ‘# line’ card.</p>
+</dd>
+<dt><code class="docutils literal notranslate"><span class="pre">CT_EOF</span></code></dt><dd><p>end of file.</p>
+</dd>
+<dt><code class="docutils literal notranslate"><span class="pre">CT_INITIAL</span></code></dt><dd><p>any other Fortran statement.</p>
+</dd>
+</dl>
+<p>Next the routine
+<em>crunch</em>
+is called to prepare the statement for further scanning.
+Crunching involves:</p>
+<ol class="arabic simple">
+<li><p>eliminating blanks and tab characters (“whitespace” characters,
+actually, any character whose ASCII value is not greater than the
+ASCII value of a space is eliminated).
+If the input form is freeform,
+consecutive blanks are collapsed into a single
+blank.
+Whenever the scanner must examine the
+<em>first</em>
+character after a token,
+either that character or the second character (if the first
+character is a blank) is examined.</p></li>
+<li><p>converting upper case letters to lower case unless the -upcase flag is
+specified or the letters occur in character strings.</p></li>
+<li><p>recognizing and entering into the symbol table hollerith and character
+constants.  The resulting symbol table is placed and marked in the
+statement buffer.  Note that the number of positions in the statement
+buffer required to encode the symbol table pointer
+is three (1 for a special marker, and 2 for the 16-bit
+symbol table pointer).</p></li>
+<li><p>recognizing non-decimal constants and marking them in the statement
+buffer.</p></li>
+<li><p>stripping in-line comments.</p></li>
+<li><p>balancing parentheses.</p></li>
+<li><p>determining if the statement contains an equals sign, comma, or
+the lexical entity for attributed declarations (i.e., two consecutive
+colons)
+which is not nested within parentheses and does not occur in a hollerith or
+character constant.</p></li>
+</ol>
+<p><em>get_token</em>
+next performs a switch statement using the current character in the
+statement buffer.
+Subsequent processing depends on the type of the character.</p>
+<p>If the character can begin an identifier (alphabetic, ‘_’, or ‘$’),
+the routine
+<em>alpha</em>
+is called to determine if the token is a keyword or an identifier.
+To do this,
+<em>alpha</em>
+is required in many cases to remember what type of statement it is
+scanning, and where it is within that statement.  This information
+is maintained in the following variables:</p>
+<dl class="simple">
+<dt><code class="docutils literal notranslate"><span class="pre">par_depth</span></code></dt><dd><p>current nesting level of parentheses (the value is incremented and
+decremented when
+<em>get_token</em>
+sees a ‘)’ and a ‘(’, respectively).</p>
+</dd>
+<dt><code class="docutils literal notranslate"><span class="pre">scmode</span></code></dt><dd><p>scan mode - depends on the type of the statement currently being processed
+and possibly the position within that statement (see the next section,
+<em>Scan Modes</em>).</p>
+</dd>
+<dt><code class="docutils literal notranslate"><span class="pre">exp_equal</span></code></dt><dd><p>exposed equals sign.  An equals sign is in the statement that is not
+in a nest of parentheses and not in a hollerith or character constant.
+This variable is set by routine
+<em>crunch</em>.</p>
+</dd>
+<dt><code class="docutils literal notranslate"><span class="pre">exp_comma</span></code></dt><dd><p>exposed comma.  A comma is in the statement that is not
+in a nest of parentheses and not in a hollerith or character constant.
+This variable is set by routine
+<em>crunch</em>.</p>
+</dd>
+<dt><code class="docutils literal notranslate"><span class="pre">exp_attr</span></code></dt><dd><p>exposed atttribute.  Two consecutive colons are in the statement that are not
+in a nest of parentheses and not in a hollerith or character constant.
+This variable is set by routine
+<em>crunch</em>.</p>
+</dd>
+<dt><code class="docutils literal notranslate"><span class="pre">sem.pgphase</span></code></dt><dd><p>program phase tracked by the Semantic Analyzer. The value of this variable
+indicates the “phase” of the statements in the current subprogram being
+scanned.  This value corresponds to the statement ordering accepted by
+the Fortran compiler.</p>
+</dd>
+</dl>
+<p>If the first character is a digit, the routine
+<em>get_number</em>
+is called to extract and convert the integer or floating point constant.
+<em>get_number</em>
+may also be called when the first character is ‘(’, since this could
+represent the beginning of a complex constant.</p>
+<p>If the first character is a period, the routine
+<em>do_dot</em>
+is called to perform more analysis on the characters after the period.
+<em>do_dot</em>
+returns either a logical keyword, a floating point constant,
+or the token <code class="docutils literal notranslate"><span class="pre">TK_DOT</span></code>.</p>
+<p><em>get_token</em>
+returns two values to the Parser each time it is called:</p>
+<ol class="arabic">
+<li><p>Token id number for the token.</p></li>
+<li><p>Token value. This value depends on the type of token:</p>
+<blockquote>
+<div><dl class="simple">
+<dt>identifier</dt><dd><p>the symbol table pointer to the identifier</p>
+</dd>
+<dt>constant</dt><dd><p>symbol table pointer to the constant, except for integer, real, and logical
+constants, in which case the actual 32-bit value is returned.</p>
+</dd>
+<dt>letter</dt><dd><p>the ASCII character value.</p>
+</dd>
+</dl>
+</div></blockquote>
+</li>
+</ol>
+<section id="scan-modes">
+<h3>Scan Modes<a class="headerlink" href="#scan-modes" title="Permalink to this heading">¶</a></h3>
+<p>In order to distinguish between an identifier and a keyword, several scan
+modes are defined.
+The scanner enters one of the modes when
+the first keyword or identifier of a statement is scanned.
+The following C macros, local to the scanner module,
+indicate the modes:</p>
+<dl class="simple">
+<dt><code class="docutils literal notranslate"><span class="pre">SCM_FIRST</span></code></dt><dd><p>the first token of a statement is to be processed.
+When in this mode, the scanner must watch out for certain cases where there
+is an exposed equals sign.
+The equals sign could be part of an assignment statement, a DO statement,
+an assignment statement following “<code class="docutils literal notranslate"><span class="pre">IF(...)</span></code>”,
+an assignment statement following “<code class="docutils literal notranslate"><span class="pre">WHERE(...)</span></code>”,
+or in the non-parentheses form of the <code class="docutils literal notranslate"><span class="pre">PARAMETER</span></code> statement.</p>
+</dd>
+<dt><code class="docutils literal notranslate"><span class="pre">SCM_IDENT</span></code></dt><dd><p>look only for identifiers.</p>
+</dd>
+<dt><code class="docutils literal notranslate"><span class="pre">SCM_FORMAT</span></code></dt><dd><p>current statement is a <code class="docutils literal notranslate"><span class="pre">FORMAT</span></code> statement; look for format keywords
+only if the current position is not in a nest of angle brackets.</p>
+</dd>
+<dt><code class="docutils literal notranslate"><span class="pre">SCM_IMPLICIT</span></code></dt><dd><p>current statement is an <code class="docutils literal notranslate"><span class="pre">IMPLICIT</span></code> statement; look for a letter
+or the keyword <code class="docutils literal notranslate"><span class="pre">NONE</span></code>.</p>
+</dd>
+<dt><code class="docutils literal notranslate"><span class="pre">SCM_FUNCTION</span></code></dt><dd><p>look for the keyword <code class="docutils literal notranslate"><span class="pre">FUNCTION</span></code>.
+The scanner enters this mode when the first keyword
+of the statement is one of the allowed Fortran data types.
+If the next token is <code class="docutils literal notranslate"><span class="pre">FUNCTION</span></code>, then the current statement is
+a function statement.
+Upon recognizing the keyword, the scanner enters the mode
+<code class="docutils literal notranslate"><span class="pre">SCM_IDENT</span></code>.</p>
+</dd>
+<dt><code class="docutils literal notranslate"><span class="pre">SCM_IO</span></code></dt><dd><p>current statement is an I/O statement; the I/O keyword table must be
+searched only if the character following the identifier is not an equals
+sign.
+Note that when
+<em>get_token</em>
+sees a ‘)’, the variable <code class="docutils literal notranslate"><span class="pre">par_depth</span></code>
+is decremented.
+If the resulting value is zero and if the scanner is currently in the
+mode <code class="docutils literal notranslate"><span class="pre">SCM_IO</span></code>, the scanner enters the mode <code class="docutils literal notranslate"><span class="pre">SCM_IDENT</span></code>.</p>
+</dd>
+<dt><code class="docutils literal notranslate"><span class="pre">SCM_TO</span></code></dt><dd><p>current statement begins with “<code class="docutils literal notranslate"><span class="pre">ASSIGN</span> <span class="pre">&lt;label&gt;</span></code>”;
+the <code class="docutils literal notranslate"><span class="pre">TO</span></code> keyword is expected.
+The scanner enters the mode <code class="docutils literal notranslate"><span class="pre">SCM_IDENT</span></code>.</p>
+</dd>
+<dt><code class="docutils literal notranslate"><span class="pre">SCM_IF</span></code></dt><dd><p>current statement is an <code class="docutils literal notranslate"><span class="pre">IF</span></code> or <code class="docutils literal notranslate"><span class="pre">ELSEIF</span></code>.
+Note that once the scanner has processed the corresponding
+right parenthesis of the left parenthesis following one
+of these keywords, the scanner enters the mode <code class="docutils literal notranslate"><span class="pre">SCM_FIRST</span></code>.</p>
+</dd>
+<dt><code class="docutils literal notranslate"><span class="pre">SCM_DOLAB</span></code></dt><dd><p>the scanner has processed the “<code class="docutils literal notranslate"><span class="pre">DO</span> <span class="pre">&lt;label&gt;</span></code>” prefix.
+The scanner enters the mode <code class="docutils literal notranslate"><span class="pre">SCM_IDENT</span></code>.</p>
+</dd>
+<dt><code class="docutils literal notranslate"><span class="pre">SCM_GOTO</span></code></dt><dd><p>current statement is a <code class="docutils literal notranslate"><span class="pre">GOTO</span></code>.</p>
+</dd>
+<dt><code class="docutils literal notranslate"><span class="pre">SCM_DOWHILE</span></code></dt><dd><p>current statement begins with the keyword <code class="docutils literal notranslate"><span class="pre">DO</span></code> and does not
+represent the DO-iteration type.
+The next identifier should be the keyword <code class="docutils literal notranslate"><span class="pre">WHILE</span></code>; if it’s
+found, the scanner enters the mode <code class="docutils literal notranslate"><span class="pre">SCM_IDENT</span></code>.
+Note that the keyword <code class="docutils literal notranslate"><span class="pre">DO</span></code> for the DO-iteration statement
+is found by checking <code class="docutils literal notranslate"><span class="pre">exp_equal</span></code> and <code class="docutils literal notranslate"><span class="pre">exp_comma</span></code> in
+routine
+<em>alpha</em>.</p>
+</dd>
+<dt><code class="docutils literal notranslate"><span class="pre">SCM_ALLOC</span></code></dt><dd><p>current statement is an <code class="docutils literal notranslate"><span class="pre">ALLOCATE</span></code> or <code class="docutils literal notranslate"><span class="pre">DEALLOCATE</span></code>
+statement; the I/O keyword table must be searched (since these statements’
+specifiers are also I/O specifiers) only if the character following
+the identifier is not an equals sign.</p>
+</dd>
+<dt><code class="docutils literal notranslate"><span class="pre">SCM_WITH</span></code></dt><dd><p>current statement is an <code class="docutils literal notranslate"><span class="pre">ALIGN</span></code> or <code class="docutils literal notranslate"><span class="pre">REALIGN</span></code> statement;
+If
+<code class="docutils literal notranslate"><span class="pre">exp_attr</span></code>
+is set, the next token is the
+<code class="docutils literal notranslate"><span class="pre">WITH</span></code>
+keyword (mode <code class="docutils literal notranslate"><span class="pre">SCM_WITH</span></code> is entered); when the
+<code class="docutils literal notranslate"><span class="pre">WITH</span></code>
+keyword is recognized, the scanner enters the mode (*cfSCM_ID_ATTR\*(rf.
+If
+<code class="docutils literal notranslate"><span class="pre">exp_attr</span></code>
+is not set, the next token is an identifier followed by the
+keyword
+<code class="docutils literal notranslate"><span class="pre">WITH</span></code>
+(mode <code class="docutils literal notranslate"><span class="pre">SCM_ID_WITH</span></code> is entered).</p>
+</dd>
+<dt><code class="docutils literal notranslate"><span class="pre">SCM_ID_WITH</span></code></dt><dd><p>the scanner has processed an identifier and the scanner enters the
+mode <code class="docutils literal notranslate"><span class="pre">SCM_WITH</span></code>.</p>
+</dd>
+<dt><code class="docutils literal notranslate"><span class="pre">SCM_ID_ATTR</span></code></dt><dd><p>the next identifer is just an identifier token.
+This mode is the general case for a statement in
+<em>entity</em>
+form (i.e.,
+<code class="docutils literal notranslate"><span class="pre">exp_attr</span></code>
+is set.
+This mode indcates that identifiers are scanned until an
+exposed comma is seen; when the the exposed comma is seen the
+scanner enters the mode (*cfSCM_FIRST\*(rf (i.e., the comma precedes
+a comma).
+This mode is entered whenever a keyword in an
+<em>entity</em>
+form of a statement is detected (for this type of statement,
+<code class="docutils literal notranslate"><span class="pre">exp_attr</span></code>
+is set).</p>
+</dd>
+<dt><code class="docutils literal notranslate"><span class="pre">SCM_ONTO</span></code></dt><dd><p>current statement is an <code class="docutils literal notranslate"><span class="pre">DISTRIBUTE</span></code>
+or <code class="docutils literal notranslate"><span class="pre">REDISTRIBUTE</span></code> statement;
+If
+<code class="docutils literal notranslate"><span class="pre">exp_attr</span></code>
+is set, the next token is the
+<code class="docutils literal notranslate"><span class="pre">ONTO</span></code>
+keyword (mode <code class="docutils literal notranslate"><span class="pre">SCM_ONTO</span></code> is entered);
+when the
+<code class="docutils literal notranslate"><span class="pre">ONTO</span></code>
+keyword is recognized, the scanner enters the mode (*cfSCM_ID_ATTR\*(rf.
+If
+<code class="docutils literal notranslate"><span class="pre">exp_attr</span></code>
+is not set, the next token is an identifier followed by the
+keyword
+<code class="docutils literal notranslate"><span class="pre">ONTO</span></code>
+(mode <code class="docutils literal notranslate"><span class="pre">SCM_ID_ONTO</span></code> is entered).</p>
+</dd>
+<dt><code class="docutils literal notranslate"><span class="pre">SCM_ID_ONTO</span></code></dt><dd><p>the scanner has processed an identifier and the scanner enters the
+mode <code class="docutils literal notranslate"><span class="pre">SCM_ONTO</span></code>.</p>
+</dd>
+<dt><code class="docutils literal notranslate"><span class="pre">SCM_EXTRINSIC</span></code></dt><dd><p>the next identifier should be enclosed in parenthesis and represents the
+type of <code class="docutils literal notranslate"><span class="pre">EXTRINSIC</span></code> interface.</p>
+</dd>
+<dt><code class="docutils literal notranslate"><span class="pre">SCM_INTERFACE</span></code></dt><dd><p>current statement is an <code class="docutils literal notranslate"><span class="pre">INTERFACE</span></code> statement;
+this keyword may be followed by either the <em>generic</em>
+keyword <code class="docutils literal notranslate"><span class="pre">OPERATOR</span></code> or <code class="docutils literal notranslate"><span class="pre">ASSIGNMENT</span></code>.</p>
+</dd>
+<dt><code class="docutils literal notranslate"><span class="pre">SCM_INDEPENDENT</span></code></dt><dd><p>current statement is an <code class="docutils literal notranslate"><span class="pre">INDEPENDENT</span></code> statement;
+any exposed identifer after <code class="docutils literal notranslate"><span class="pre">INDEPENDENT</span></code> is either the <code class="docutils literal notranslate"><span class="pre">NEW</span></code>
+or <code class="docutils literal notranslate"><span class="pre">ONHOME</span></code> keyword.</p>
+</dd>
+</dl>
+</section>
+<section id="encoded-tokens">
+<h3>Encoded Tokens<a class="headerlink" href="#encoded-tokens" title="Permalink to this heading">¶</a></h3>
+<p>When routine
+<em>crunch</em>
+is processing a statement, it is removing whitespace characters, thus
+compressing the statement buffer. Generally, characters are just copied
+from their current positions to positions to their left in <code class="docutils literal notranslate"><span class="pre">stmtb</span></code>.
+In certain cases,
+<em>crunch</em>
+recognizes tokens and places a special marker in <code class="docutils literal notranslate"><span class="pre">stmtb</span></code>
+to communicate to
+<em>get_token</em>
+that what follows is an encoded token.
+These markers are just integer values chosen from the set of
+non-printing characters. The following C macros describe the markers:</p>
+<dl class="simple">
+<dt><code class="docutils literal notranslate"><span class="pre">CH_X</span></code></dt><dd><p>hexadecimal constant - the sequence of characters following this value
+are the digits of the constant.  The sequence is terminated by a single
+quote.
+Note that when
+<em>get_token</em>
+sees this case and the following case, it calls the routine
+<em>get_nondec</em>
+to extract the constant and returns the constant value as the token value
+and the non-decimal constant token id.</p>
+</dd>
+<dt><code class="docutils literal notranslate"><span class="pre">CH_O</span></code></dt><dd><p>octal constant - the sequence of characters following this value
+are the digits of the constant.  The sequence is terminated by a single
+quote.</p>
+</dd>
+<dt><code class="docutils literal notranslate"><span class="pre">CH_B</span></code></dt><dd><p>binary constant - the sequence of characters following this value
+are the digits of the constant.  The sequence is terminated by a single
+quote.</p>
+</dd>
+<dt><code class="docutils literal notranslate"><span class="pre">CH_HOLLERITH</span></code></dt><dd><p>hollerith constant - the following 2 positions contain the symbol table
+pointer for the constant.</p>
+</dd>
+<dt><code class="docutils literal notranslate"><span class="pre">CH_STRING</span></code></dt><dd><p>character constant - the following 2 positions contain the symbol table
+pointer for the constant.</p>
+</dd>
+<dt><code class="docutils literal notranslate"><span class="pre">CH_IOLP</span></code></dt><dd><p>this marker is actually stored when the statement is recognized as an
+I/O statement.
+The left parenthesis after the I/O keyword is replaced by this marker.
+When
+<em>get_token</em>
+sees this marker, the token TK_IOLP is returned.
+Without this special token, the grammar is ambiguous.</p>
+</dd>
+<dt><code class="docutils literal notranslate"><span class="pre">CH_IMLP</span></code></dt><dd><p>this marker is actually stored when the statement is recognized as
+an <code class="docutils literal notranslate"><span class="pre">IMPLICIT</span></code> statement.
+The left parenthesis after the IMPLICIT keyword which encloses the
+implicit specifiers is replaced by this marker.
+When
+<em>get_token</em>
+sees this marker, the token TK_IMLP is returned.
+Without this special token, the grammar is ambiguous.</p>
+</dd>
+</dl>
+</section>
+</section>
+</section>
+
+
+      </div>
+      <div class="bottomnav" role="navigation" aria-label="bottom navigation">
+      
+        <p>
+        «&#160;&#160;<a href="controller.html">Program Controller</a>
+        &#160;&#160;::&#160;&#160;
+        <a class="uplink" href="../index.html">Contents</a>
+        &#160;&#160;::&#160;&#160;
+        <a href="parser.html">Parser</a>&#160;&#160;»
+        </p>
+
+      </div>
+
+    <div class="footer" role="contentinfo">
+        &#169; Copyright .
+      Created using <a href="https://www.sphinx-doc.org/">Sphinx</a> 5.3.0.
+    </div>
+  </body>
+</html>

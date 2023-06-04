@@ -1,0 +1,290 @@
+
+<!DOCTYPE html>
+
+<html lang="en">
+  <head>
+    <meta charset="utf-8" />
+    <meta name="viewport" content="width=device-width, initial-scale=1.0" /><meta name="generator" content="Docutils 0.19: https://docutils.sourceforge.io/" />
+
+    <title>Program Controller &#8212; Flang 1.0 documentation</title>
+    <link rel="stylesheet" type="text/css" href="../_static/pygments.css" />
+    <link rel="stylesheet" type="text/css" href="../_static/haiku.css" />
+    <script data-url_root="../" id="documentation_options" src="../_static/documentation_options.js"></script>
+    <script src="../_static/jquery.js"></script>
+    <script src="../_static/underscore.js"></script>
+    <script src="../_static/_sphinx_javascript_frameworks_compat.js"></script>
+    <script src="../_static/doctools.js"></script>
+    <script src="../_static/sphinx_highlight.js"></script>
+    <link rel="index" title="Index" href="../genindex.html" />
+    <link rel="search" title="Search" href="../search.html" />
+    <link rel="next" title="Expander" href="expander.html" />
+    <link rel="prev" title="Introduction" href="intro.html" /> 
+  </head><body>
+      <div class="header" role="banner"><h1 class="heading"><a href="../index.html">
+          <span>Flang 1.0 documentation</span></a></h1>
+        <h2 class="heading"><span>Program Controller</span></h2>
+      </div>
+      <div class="topnav" role="navigation" aria-label="top navigation">
+      
+        <p>
+        «&#160;&#160;<a href="intro.html">Introduction</a>
+        &#160;&#160;::&#160;&#160;
+        <a class="uplink" href="../index.html">Contents</a>
+        &#160;&#160;::&#160;&#160;
+        <a href="expander.html">Expander</a>&#160;&#160;»
+        </p>
+
+      </div>
+      <div class="content" role="main">
+        
+        
+  <section id="program-controller">
+<h1>Program Controller<a class="headerlink" href="#program-controller" title="Permalink to this heading">¶</a></h1>
+<p>The Program Controller (main routine) controls invocation of the initialization
+routines, the other major compiler modules, and the finish routine.</p>
+<p>Initialization is performed by the routine
+<em>init</em>
+at the
+very beginning of execution.</p>
+<section id="id1">
+<h2>Program Controller<a class="headerlink" href="#id1" title="Permalink to this heading">¶</a></h2>
+<p>Each subprogram is completely processed and output before the
+next subprogram is processed. Conceptually, it is as if each subprogram
+were in a separate file.
+For Fortran 90 contained subprograms, some information must be preserved
+from the host subprogram to the contained subprograms, particularly any
+stack or BSS addresses assigned to host subprogram variables.</p>
+<p>The same source file is used to generate the program controller
+for both the compiler and the extractor, since they share so much code.
+The differences in the source code appear as tests of the preprocessor
+variable
+<code class="docutils literal notranslate"><span class="pre">EXTRACTOR,</span></code>
+which is defined only for the extractor controller.</p>
+<p>See figure 2-1 for a pseudo-code description of the Program Controller processing
+for the compiler.
+See figure 2-2 for a pseudo-code description of the Program Controller
+for the extractor.</p>
+<div class="highlight-none notranslate"><div class="highlight"><pre><span></span>init();
+
+for (each subprogram) {
+   reinit();   /\* init for subprogram \*/
+   upper();    /\* import ILMs from F90 front end \*/
+   extractor();/\* optionally extract subprograms for future inlining \*/
+   expand();   /\* expand ILMs into shared ILI \*/
+   upper_save_syminfo();       /\* save host subprogram info \*/
+   xref();     /\* optionally generate cross reference \*/
+}
+
+finish();
+</pre></div>
+</div>
+<p>Figure 2-1 Program Controller Operation for Compiler</p>
+<div class="highlight-none notranslate"><div class="highlight"><pre><span></span>init();
+
+for (each subprogram) {
+    reinit();        /\* init for subprogram \*/
+    upper();    /\* import ILMs from F90 front end \*/
+    extractor();/\* extract subprograms for future inlining \*/
+}
+
+finish();
+</pre></div>
+</div>
+<p>Figure 2-2 Program Controller Operation for Extractor</p>
+</section>
+<section id="init">
+<h2>Init<a class="headerlink" href="#init" title="Permalink to this heading">¶</a></h2>
+<p>The
+<code class="docutils literal notranslate"><span class="pre">init</span></code>
+module performs the following five major tasks:</p>
+<ol class="arabic simple">
+<li><p>Processes command line and sets values of internal variables
+depending on the flags specified by the user.</p></li>
+<li><p>Opens input and output files.</p></li>
+<li><p>If a listing file is being generated, writes the Listing
+Header.</p></li>
+<li><p>Initializes the Error message module, Symbol table module,
+Scanner, Directive processing, and other modules
+by calling the appropriate init routine for each.</p></li>
+</ol>
+<section id="adding-compiler-flags">
+<h3>Adding Compiler Flags<a class="headerlink" href="#adding-compiler-flags" title="Permalink to this heading">¶</a></h3>
+<p>The command line processor searches the structure
+<code class="docutils literal notranslate"><span class="pre">swtchtab[]</span></code>
+(defined in
+<code class="docutils literal notranslate"><span class="pre">main.c</span></code>)
+to
+find valid flags or flag prefixes.
+To add a flag, add the new flag (without
+the preceeding
+“(mi”)
+to
+<code class="docutils literal notranslate"><span class="pre">swtchtab[]</span></code>’s
+initialization, keeping the flags in lexicographic order.
+Also add a case constant to the initialization.
+Switch case constants are
+<code class="docutils literal notranslate"><span class="pre">#define</span></code>’d
+constants of the form
+<code class="docutils literal notranslate"><span class="pre">SW_&lt;flag</span> <span class="pre">name</span> <span class="pre">in</span> <span class="pre">caps&gt;</span></code>,
+and appear
+above the definition
+of
+<code class="docutils literal notranslate"><span class="pre">swtchtab</span></code>.
+The case constant must be unique but numerical order is not necessary.
+(i.e., you don’t have to change existing constants, just use the next
+biggest unused integer.)</p>
+<p>Add the case label
+<code class="docutils literal notranslate"><span class="pre">SW_&lt;flag</span> <span class="pre">name</span> <span class="pre">in</span> <span class="pre">caps&gt;:</span></code>
+to
+<code class="docutils literal notranslate"><span class="pre">init()</span></code>
+(also defined in
+<code class="docutils literal notranslate"><span class="pre">main.c</span></code>).
+Also, add code to process flag and any values that follow the flag.
+See existing code in
+<code class="docutils literal notranslate"><span class="pre">init()</span></code>
+for examples.</p>
+</section>
+</section>
+<section id="finish">
+<h2>Finish<a class="headerlink" href="#finish" title="Permalink to this heading">¶</a></h2>
+<p><code class="docutils literal notranslate"><span class="pre">finish</span></code>
+is called at the end of compiler execution to
+close files, write a compilation summary line to the
+user’s terminal, and exit.</p>
+</section>
+<section id="debugging">
+<h2>Debugging<a class="headerlink" href="#debugging" title="Permalink to this heading">¶</a></h2>
+<p>The development compiler supports debug output in the
+compile process; these are mostly
+disabled when the preprocessor variable DEBUG is zero,
+as is done for a release.
+Most debug output is enabled with a
+<code class="docutils literal notranslate"><span class="pre">-q</span></code>
+or
+<code class="docutils literal notranslate"><span class="pre">-qq</span></code>
+switch.
+Each of these takes two arguments;
+the
+<code class="docutils literal notranslate"><span class="pre">-q</span> <span class="pre">45</span> <span class="pre">8</span></code>
+sets bit mask
+<code class="docutils literal notranslate"><span class="pre">8</span></code>
+in
+<code class="docutils literal notranslate"><span class="pre">flg.dbg[45]</span></code>.
+This is tested in the compiler source code with</p>
+<div class="highlight-none notranslate"><div class="highlight"><pre><span></span>#if DEBUG
+   if( DBGBIT(45,8) ) fprintf( gbl.dbgfil, &quot;debug output\\n&quot; );
+#endif
+</pre></div>
+</div>
+<p>The
+<code class="docutils literal notranslate"><span class="pre">#if</span> <span class="pre">DEBUG</span></code>
+test disables this code for a release.
+The
+<code class="docutils literal notranslate"><span class="pre">DBGBIT(45,8)</span></code>
+macro is shorthand for
+<code class="docutils literal notranslate"><span class="pre">(flg.dbg[45]&amp;8)</span></code>.</p>
+<p>Debug output is normally written to
+<code class="docutils literal notranslate"><span class="pre">gbl.dbgfil</span></code>,
+which is normally be opened to the file
+<code class="docutils literal notranslate"><span class="pre">filename.qdbg</span></code>
+by
+<em>init</em>
+unless
+<code class="docutils literal notranslate"><span class="pre">-q</span> <span class="pre">0</span> <span class="pre">1</span></code>
+is specified, which says to open
+<code class="docutils literal notranslate"><span class="pre">gbl.dbgfil</span></code>
+to standard output.
+Using the compiler driver, debug switches can be set using</p>
+<div class="highlight-none notranslate"><div class="highlight"><pre><span></span>-Mq,45,8
+-Mq,66,7
+</pre></div>
+</div>
+<p>where the latter sets bits 1, 2, and 4.</p>
+<p>The controller can also generate dumps during
+compile process.
+At various points in the controller will appear a line like:</p>
+<div class="highlight-none notranslate"><div class="highlight"><pre><span></span>DUMP( &quot;expand&quot; );
+</pre></div>
+</div>
+<p>This is a preprocessor macro that calls a generic debug dump routine.
+To enable a dump, you can pass a
+<code class="docutils literal notranslate"><span class="pre">-qq</span></code>
+switch to the compiler like</p>
+<div class="highlight-none notranslate"><div class="highlight"><pre><span></span>-qq expand blocks
+</pre></div>
+</div>
+<p>which will invoke the
+<code class="docutils literal notranslate"><span class="pre">blocks</span></code>
+dump after the
+<code class="docutils literal notranslate"><span class="pre">expand</span></code>
+phase.
+Multiple phases and multiple dumps can be specified at once, like</p>
+<div class="highlight-none notranslate"><div class="highlight"><pre><span></span>-qq expand+optimize blocks
+-qq unroll printblocks+sym
+</pre></div>
+</div>
+<p>which will invoke the
+<code class="docutils literal notranslate"><span class="pre">blocks</span></code>
+dump after both the
+<code class="docutils literal notranslate"><span class="pre">expand</span></code>
+and
+<code class="docutils literal notranslate"><span class="pre">optimize</span></code>
+phases, and will invoke both the
+<code class="docutils literal notranslate"><span class="pre">printblocks</span></code>
+and
+<code class="docutils literal notranslate"><span class="pre">sym</span></code>
+dumps after the
+<code class="docutils literal notranslate"><span class="pre">unroll</span></code>
+phase.
+Using the driver, these would appear as</p>
+<div class="highlight-none notranslate"><div class="highlight"><pre><span></span>-Mqq,expand+optimize,blocks
+-Mqq,unroll,printblocks+sym
+</pre></div>
+</div>
+<p>Specifying
+<code class="docutils literal notranslate"><span class="pre">all</span></code>
+as the phase name will invoke those dump routines after all phases.
+The list of available phases is available by looking at the source code
+for the</p>
+<div class="highlight-none notranslate"><div class="highlight"><pre><span></span>DUMP( &quot;phase&quot; )
+</pre></div>
+</div>
+<p>lines, or by looking at the
+<code class="docutils literal notranslate"><span class="pre">filename.qdbg</span></code>
+file for lines something like</p>
+<div class="highlight-none notranslate"><div class="highlight"><pre><span></span>{pgf90-linux86-64 after expand
+{pgf90-linux86-64 after upper
+</pre></div>
+</div>
+<p>The dump controller prints out these lines before every active phase, and will
+generate any dumps after each of these lines.
+New dump points can be inserted anywhere in the source of the program controller.
+The list of available dumps is only available by looking at the source code
+of the program controller; look for the variable
+<code class="docutils literal notranslate"><span class="pre">dumpnames</span></code>.
+New dump names can be added here, and the appropriate dump code added
+in the switch statement in routine
+<code class="docutils literal notranslate"><span class="pre">do_debug</span></code>.</p>
+</section>
+</section>
+
+
+      </div>
+      <div class="bottomnav" role="navigation" aria-label="bottom navigation">
+      
+        <p>
+        «&#160;&#160;<a href="intro.html">Introduction</a>
+        &#160;&#160;::&#160;&#160;
+        <a class="uplink" href="../index.html">Contents</a>
+        &#160;&#160;::&#160;&#160;
+        <a href="expander.html">Expander</a>&#160;&#160;»
+        </p>
+
+      </div>
+
+    <div class="footer" role="contentinfo">
+        &#169; Copyright .
+      Created using <a href="https://www.sphinx-doc.org/">Sphinx</a> 5.3.0.
+    </div>
+  </body>
+</html>

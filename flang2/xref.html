@@ -1,0 +1,149 @@
+
+<!DOCTYPE html>
+
+<html lang="en">
+  <head>
+    <meta charset="utf-8" />
+    <meta name="viewport" content="width=device-width, initial-scale=1.0" /><meta name="generator" content="Docutils 0.19: https://docutils.sourceforge.io/" />
+
+    <title>Cross Reference &#8212; Flang 1.0 documentation</title>
+    <link rel="stylesheet" type="text/css" href="../_static/pygments.css" />
+    <link rel="stylesheet" type="text/css" href="../_static/haiku.css" />
+    <script data-url_root="../" id="documentation_options" src="../_static/documentation_options.js"></script>
+    <script src="../_static/jquery.js"></script>
+    <script src="../_static/underscore.js"></script>
+    <script src="../_static/_sphinx_javascript_frameworks_compat.js"></script>
+    <script src="../_static/doctools.js"></script>
+    <script src="../_static/sphinx_highlight.js"></script>
+    <link rel="index" title="Index" href="../genindex.html" />
+    <link rel="search" title="Search" href="../search.html" />
+    <link rel="next" title="libpgmath" href="../libpgmath.html" />
+    <link rel="prev" title="Other Compiler Switches" href="xflag.html" /> 
+  </head><body>
+      <div class="header" role="banner"><h1 class="heading"><a href="../index.html">
+          <span>Flang 1.0 documentation</span></a></h1>
+        <h2 class="heading"><span>Cross Reference</span></h2>
+      </div>
+      <div class="topnav" role="navigation" aria-label="top navigation">
+      
+        <p>
+        «&#160;&#160;<a href="xflag.html">Other Compiler Switches</a>
+        &#160;&#160;::&#160;&#160;
+        <a class="uplink" href="../index.html">Contents</a>
+        &#160;&#160;::&#160;&#160;
+        <a href="../libpgmath.html">libpgmath</a>&#160;&#160;»
+        </p>
+
+      </div>
+      <div class="content" role="main">
+        
+        
+  <section id="cross-reference">
+<h1>Cross Reference<a class="headerlink" href="#cross-reference" title="Permalink to this heading">¶</a></h1>
+<section id="overview">
+<h2>Overview<a class="headerlink" href="#overview" title="Permalink to this heading">¶</a></h2>
+<p>The Cross Reference Generator is the compiler module
+responsible for generating the Cross Reference Listing,
+appearing in the Listing File.
+It is called if the user has specified the
+<code class="docutils literal notranslate"><span class="pre">-xref</span></code>
+switch.</p>
+<p>The Cross Reference Listing is an alphabetic listing of user defined
+symbols with their associated attributes, such as data type, relative
+memory address, etc.
+In addition, the source line number of each occurrence of the
+symbol is given with an indicator of the type of use:</p>
+<dl class="simple">
+<dt><em>d</em></dt><dd><p>definition or declaration of the symbol.
+This includes occurrence of a symbol in a declaration or definition statement.</p>
+</dd>
+<dt><em>r</em></dt><dd><p>reference of the symbol.</p>
+</dd>
+<dt><em>i</em></dt><dd><p>initialization of the symbol.</p>
+</dd>
+<dt><em>m</em></dt><dd><p>modification of the symbol’s value. (NOT IMPLEMENTED)
+This includes occurrence of a symbol on the left side of
+an assignment or in a declaration with an initializer.</p>
+</dd>
+<dt><em>a</em></dt><dd><p>The symbol is an operand of the address (unary &amp;) operator.(NOT IMPLEMENTED)</p>
+</dd>
+</dl>
+</section>
+<section id="data-structures">
+<h2>Data Structures<a class="headerlink" href="#data-structures" title="Permalink to this heading">¶</a></h2>
+<p><em>Symbol Table</em> — contains symbol names and attributes used in the
+Cross Reference Listing.
+See section 11.</p>
+<p><em>Reference File</em> — temporary binary file containing a record for each occurrence
+of a user defined symbol in the input source.
+This file is written only if the
+<code class="docutils literal notranslate"><span class="pre">-xref</span></code>
+flag is specified.
+All records are written by the Semantic Analyzer.</p>
+<p>Each record consists of 3 words :</p>
+<ol class="arabic simple">
+<li><p>symbol table pointer to a user defined symbol (type
+<code class="docutils literal notranslate"><span class="pre">INT</span></code>).</p></li>
+<li><p>source input file line number of occurrence (type
+<a href="#id1"><span class="problematic" id="id2">``</span></a>short``int ).
+Negated if occurrence was in an include file? (HAVE NOT DETERMINED HOW
+TO HANDLE INCLUDE FILES.)</p></li>
+<li><p>type of occurrence (type
+<a href="#id3"><span class="problematic" id="id4">``</span></a>short``int ).
+One of the characters
+<em>d</em>,
+<em>r</em>,
+<em>i</em>,
+<em>m</em>,
+or
+<em>a</em>,
+representing
+the occurrence types defined above.</p></li>
+</ol>
+</section>
+<section id="processing-overview">
+<h2>Processing Overview<a class="headerlink" href="#processing-overview" title="Permalink to this heading">¶</a></h2>
+<p>The Cross Reference Generator performs the following steps:</p>
+<ol class="arabic simple">
+<li><p>Reads the Reference File and constructs a list of references
+for each symbol.
+All reference records are read into memory.
+The symbol pointer field is used to link the records to the appropriate
+list.
+The head of the list is pointed to by a field in the symbol table entry
+for the symbol referenced.
+Macros exist to access this field.</p></li>
+<li><p>Sorts referenced symbols alphabetically using a mergesort.
+Insertion sort is used for small subsequences.
+To determine whether or not a symbol is referenced, only the
+Reference File records are used, not the symbol table
+<code class="docutils literal notranslate"><span class="pre">REF</span></code>
+flag or any
+other symbol table field.
+The insertion sort is responsible for excluding nonreferenced symbols
+of the symbol table.</p></li>
+<li><p>Writes the Cross Reference Listing.</p></li>
+</ol>
+</section>
+</section>
+
+
+      </div>
+      <div class="bottomnav" role="navigation" aria-label="bottom navigation">
+      
+        <p>
+        «&#160;&#160;<a href="xflag.html">Other Compiler Switches</a>
+        &#160;&#160;::&#160;&#160;
+        <a class="uplink" href="../index.html">Contents</a>
+        &#160;&#160;::&#160;&#160;
+        <a href="../libpgmath.html">libpgmath</a>&#160;&#160;»
+        </p>
+
+      </div>
+
+    <div class="footer" role="contentinfo">
+        &#169; Copyright .
+      Created using <a href="https://www.sphinx-doc.org/">Sphinx</a> 5.3.0.
+    </div>
+  </body>
+</html>

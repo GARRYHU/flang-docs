@@ -1,0 +1,761 @@
+
+<!DOCTYPE html>
+
+<html lang="en">
+  <head>
+    <meta charset="utf-8" />
+    <meta name="viewport" content="width=device-width, initial-scale=1.0" /><meta name="generator" content="Docutils 0.19: https://docutils.sourceforge.io/" />
+
+    <title>Coding Practices &#8212; Flang 1.0 documentation</title>
+    <link rel="stylesheet" type="text/css" href="../_static/pygments.css" />
+    <link rel="stylesheet" type="text/css" href="../_static/haiku.css" />
+    <script data-url_root="../" id="documentation_options" src="../_static/documentation_options.js"></script>
+    <script src="../_static/jquery.js"></script>
+    <script src="../_static/underscore.js"></script>
+    <script src="../_static/_sphinx_javascript_frameworks_compat.js"></script>
+    <script src="../_static/doctools.js"></script>
+    <script src="../_static/sphinx_highlight.js"></script>
+    <link rel="index" title="Index" href="../genindex.html" />
+    <link rel="search" title="Search" href="../search.html" />
+    <link rel="next" title="Debugging flang" href="../debugging_flang.html" />
+    <link rel="prev" title="Introduction to Flang" href="../introduction_to_flang.html" /> 
+  </head><body>
+      <div class="header" role="banner"><h1 class="heading"><a href="../index.html">
+          <span>Flang 1.0 documentation</span></a></h1>
+        <h2 class="heading"><span>Coding Practices</span></h2>
+      </div>
+      <div class="topnav" role="navigation" aria-label="top navigation">
+      
+        <p>
+        «&#160;&#160;<a href="../introduction_to_flang.html">Introduction to Flang</a>
+        &#160;&#160;::&#160;&#160;
+        <a class="uplink" href="../index.html">Contents</a>
+        &#160;&#160;::&#160;&#160;
+        <a href="../debugging_flang.html">Debugging flang</a>&#160;&#160;»
+        </p>
+
+      </div>
+      <div class="content" role="main">
+        
+        
+  <section id="coding-practices">
+<h1>Coding Practices<a class="headerlink" href="#coding-practices" title="Permalink to this heading">¶</a></h1>
+<section id="source-file-database-structure">
+<h2>Source File Database Structure<a class="headerlink" href="#source-file-database-structure" title="Permalink to this heading">¶</a></h2>
+<dl>
+<dt>tools</dt><dd><p>Source files (.c and .h) for the Fortran front end (fe90) and
+Fortran middle/LLVM bridge (f90) compilers.</p>
+</dd>
+<dt>utils</dt><dd><p>(The directories tools/fe90 and tools/f90 have a utils
+directory)
+Utility programs used to create static data bases for the compiler,
+and their inputs.
+Consists of the following subdirectories:</p>
+<div class="line-block">
+<div class="line">prstab - parse table generator (grammar definition).</div>
+<div class="line">symtab - initial symbol table generator.</div>
+<div class="line">errmsg - error message text utility.</div>
+<div class="line">ilmtp -  ILM utility.</div>
+<div class="line">upper - Additional ILM utility used by Fortran.</div>
+<div class="line">ilitp -  ILI utility.</div>
+<div class="line">machar - Machine characteristics utility.</div>
+<div class="line">utils  - Small utility routine library used by the other utility programs (except for prstab).</div>
+</div>
+</dd>
+<dt>docs</dt><dd><p>Doxygen and Sphinx documentation for the compiler internals.</p>
+</dd>
+</dl>
+</section>
+<section id="compiler-build-procedures">
+<h2>Compiler Build Procedures<a class="headerlink" href="#compiler-build-procedures" title="Permalink to this heading">¶</a></h2>
+<p>To build new version of the compiler:</p>
+<ol class="arabic simple">
+<li><p>Move into src directory any source files which have been changed.</p></li>
+<li><p>Run utility programs if input files have been changed.
+After a utility is run, its copy command file should be
+run to actually move the results into the src directory.</p></li>
+<li><p>Change compiler version number in file version.h.</p></li>
+<li><p>Attach to bin directory and type “make” to compile
+and link the source files.</p></li>
+<li><p>Once the new version has been tested, the Install command
+in the bin directory should be used to copy the compiler into
+the public directory.</p></li>
+</ol>
+</section>
+<section id="coding-conventions">
+<h2>Coding Conventions<a class="headerlink" href="#coding-conventions" title="Permalink to this heading">¶</a></h2>
+<p>This section describes coding conventions followed within the compiler.</p>
+<ol class="arabic">
+<li><p>The compiler is written in a common, portable subset of ANSI C89.
+Some K&amp;R code exists, but will eventually be removed.</p></li>
+<li><p>Variables used within a single source file, but in more than one
+function are declared
+<em>static,</em>
+at the beginning of the source file.</p></li>
+<li><p>Variables used in more than one file (external variables)
+are
+<em>declared</em>
+in a single header (.h) file which is included into every
+source file which uses the variable.
+They are
+<em>defined</em>
+in a .c file which contains only data definitions (no function
+definitions).
+In other words, external variables are never declared within
+the functions which use them, and are never defined in a
+file which contains function definitions.</p></li>
+<li><p>Source files which contain external data definitions have names
+which end with “df.c”, for example fenddf.c and symtabdf.c.
+Similarly, include (.h) files which contain external data definitions
+have names ending with “df.h”.</p></li>
+<li><p>Logically related external variables are generally grouped
+into structures (which are given 3 character names).
+This is to reduce the chances of having different
+variables with the same name, and to minimize the
+number of external names which must be resolved by the linker.</p></li>
+<li><p>Functions which return no value are declared to have type void.
+Functions used only within the file in which they are defined
+are defined as static.</p></li>
+<li><p>Variable names are lower case.
+Macro and typedef names are (almost always) entirely upper case.
+Enumeration constant names begin with a capital letter, then are
+lower case.</p></li>
+<li><p>Related macros are generally given names which begin with
+the same first 3 or 4 characters: two or three upper case letters, then “_”.
+For example, ST_LABEL, ST_VAR, ST_ARRAY, etc.</p></li>
+<li><p>The first non-comment line of each .c file is</p>
+<div class="line-block">
+<div class="line">#include “gbldefs.h”</div>
+</div>
+<p>This file includes “scutil.h” and contains any other host
+dependent and compiler version dependent macro definitions.</p>
+</li>
+<li><p>#include statements occur only at the beginning of files
+and are never nested (except for the include of scutil.h
+by gbldefs.h).</p></li>
+<li><p>All dynamic storage allocation and freeing is done through
+the macros NEW, NEED, and FREE defined in gbldefs.h.</p></li>
+<li><p>When a source file is shared by 2 or more of the compilers,
+the main copy resides in the scc directory and soft links
+are defined from the corresponding locations within the
+other compilers’ directories.
+If possible, the header of the shared file should indicate
+that it is shared.</p></li>
+<li><p>In gbldefs.h for each compiler, a macro is defined for the respective
+compiler (i.e., PGC, PGFTN).
+These should be used with “#ifdef/#ifndef” directories to
+insert language dependent code into shared files.</p></li>
+</ol>
+</section>
+<section id="debug-facilities">
+<h2>Debug Facilities<a class="headerlink" href="#debug-facilities" title="Permalink to this heading">¶</a></h2>
+<section id="macros">
+<h3>Macros<a class="headerlink" href="#macros" title="Permalink to this heading">¶</a></h3>
+<p>The macros DEBUG and assert are defined in gbldefs.h.</p>
+<p>DEBUG is used to switch in or out source code which is
+needed for compiler debugging and maintenance, but
+not for released, production versions
+of the compiler.</p>
+<p>The macro assert encapsulates a test of a condition, and
+a call to interr if the condition is not true.
+For production compilers, assert may be redefined to eliminate
+these tests.
+The 4 arguments to  assert consist of a condition which
+is expected to be true, followed by the 3 arguments
+for interr.
+For example:</p>
+<div class="line-block">
+<div class="line">assert(sptr &gt; 0, “semant: bad sptr”, sptr, 3);</div>
+</div>
+</section>
+<section id="debug-switches">
+<h3>Debug Switches<a class="headerlink" href="#debug-switches" title="Permalink to this heading">¶</a></h3>
+<p>Debug switches are specified via the -q command line
+switch.
+This switch may appear multiple times on the command line;
+each occurrence must by followed by two positive integers.
+The first value is the number of a debug flag and the
+second is a value for that flag (values of all flags are
+0 by default).
+Within the compiler, the value of flag i is referenced
+by ‘flg.dbg[i]’.</p>
+<p>Table 18-1 lists the debug flags and indicates
+what action is performed for the different possible values
+of each flag.</p>
+<table class="docutils align-default">
+<thead>
+<tr class="row-odd"><th class="head" colspan="3"><p>Table 18-1 Debug Flags</p></th>
+</tr>
+<tr class="row-even"><th class="head"><p>flg</p></th>
+<th class="head"><p>value</p></th>
+<th class="head"><p>description</p></th>
+</tr>
+</thead>
+<tbody>
+<tr class="row-odd"><td><p>0</p></td>
+<td><p>1</p></td>
+<td><p>Use stderr for debug file (instead of “.qdbg”).</p></td>
+</tr>
+<tr class="row-even"><td></td>
+<td><p>2</p></td>
+<td><p>Write error messages to debugfile also.</p></td>
+</tr>
+<tr class="row-odd"><td></td>
+<td><p>4</p></td>
+<td><p>Write listing file to debugfile also.</p></td>
+</tr>
+<tr class="row-even"><td></td>
+<td><p>8</p></td>
+<td><p>Report timing of compiler phases in listing file if list requested.
+Otherwise, the report is written to the debug file.</p></td>
+</tr>
+<tr class="row-odd"><td></td>
+<td><p>16</p></td>
+<td><p>Don’t unlink object file.</p></td>
+</tr>
+<tr class="row-even"><td></td>
+<td><p>32</p></td>
+<td><p>Do not pad listing file with extra lines.</p></td>
+</tr>
+<tr class="row-odd"><td></td>
+<td><p>64</p></td>
+<td><p>Suppress error limit (50) restriction</p></td>
+</tr>
+<tr class="row-even"><td></td>
+<td><p>0x80</p></td>
+<td><p>used in cgutil.c</p></td>
+</tr>
+<tr class="row-odd"><td></td>
+<td><p>0x100</p></td>
+<td><p>Force full entry/exit for functions.</p></td>
+</tr>
+<tr class="row-even"><td></td>
+<td><p>0x200</p></td>
+<td><p>Fortran Front End: Dump storage statistics (dump_stg_stat(char *)).</p></td>
+</tr>
+<tr class="row-odd"><td></td>
+<td><p>0x1000</p></td>
+<td><p>Quick entry and exit for all functions where appropriate.</p></td>
+</tr>
+<tr class="row-even"><td></td>
+<td><p>0x8000</p></td>
+<td><p>(0x8000), send minfo messages to stderr as they’re produced.</p></td>
+</tr>
+<tr class="row-odd"><td></td>
+<td><p>0x10000</p></td>
+<td><p>debug output for reading module files (interf.c and module.c)</p></td>
+</tr>
+<tr class="row-even"><td></td>
+<td><p>0x20000</p></td>
+<td><p>debug output for memory allocation</p></td>
+</tr>
+<tr class="row-odd"><td colspan="3"><p>_</p></td>
+</tr>
+<tr class="row-even"><td><p>1</p></td>
+<td><p>1</p></td>
+<td><p>Dump tokens returned by Scanner.</p></td>
+</tr>
+<tr class="row-odd"><td></td>
+<td><p>2</p></td>
+<td><p>reserved</p></td>
+</tr>
+<tr class="row-even"><td></td>
+<td><p>0x100</p></td>
+<td><p>Dump function’s dirset (C pragma, Fortran directives)</p></td>
+</tr>
+<tr class="row-odd"><td></td>
+<td><p>0x200</p></td>
+<td><p>Dump loop dirsets</p></td>
+</tr>
+<tr class="row-even"><td></td>
+<td><p>0x400</p></td>
+<td><p>Trace C pragma (Fortran directives) processing</p></td>
+</tr>
+<tr class="row-odd"><td></td>
+<td><p>0x800</p></td>
+<td><p>Trace ili pragma (directive) processing</p></td>
+</tr>
+<tr class="row-even"><td colspan="3"><p>_</p></td>
+</tr>
+<tr class="row-odd"><td><p>2</p></td>
+<td></td>
+<td><p>Parser debug.</p></td>
+</tr>
+<tr class="row-even"><td></td>
+<td><p>1</p></td>
+<td><p>Trace reductions performed.</p></td>
+</tr>
+<tr class="row-odd"><td></td>
+<td><p>2</p></td>
+<td><p>reserved</p></td>
+</tr>
+<tr class="row-even"><td></td>
+<td><p>4</p></td>
+<td><p>compile even with errors (Fortran)</p></td>
+</tr>
+<tr class="row-odd"><td></td>
+<td><p>8</p></td>
+<td><p>reserved</p></td>
+</tr>
+<tr class="row-even"><td></td>
+<td><p>32</p></td>
+<td><p>more parser debug output</p></td>
+</tr>
+<tr class="row-odd"><td colspan="3"><p>_</p></td>
+</tr>
+<tr class="row-even"><td><p>3</p></td>
+<td></td>
+<td><p>Semantic Analyzer debug.</p></td>
+</tr>
+<tr class="row-odd"><td></td>
+<td><p>4</p></td>
+<td><p>reserved</p></td>
+</tr>
+<tr class="row-even"><td></td>
+<td><p>8</p></td>
+<td><p>Trace equivalence processing (Fortran Front End).</p></td>
+</tr>
+<tr class="row-odd"><td></td>
+<td><p>16</p></td>
+<td><p>Dump statement function descriptors (Fortran Front End).</p></td>
+</tr>
+<tr class="row-even"><td></td>
+<td><p>32</p></td>
+<td><p>Dump statement function descriptors (Fortran Front End).</p></td>
+</tr>
+<tr class="row-odd"><td></td>
+<td><p>64</p></td>
+<td><p>Array constructor dump and module import debug output (Fortran Front End).</p></td>
+</tr>
+<tr class="row-even"><td></td>
+<td><p>0x80</p></td>
+<td><p>Trace format list processing (Fortran Front End).</p></td>
+</tr>
+<tr class="row-odd"><td></td>
+<td><p>0x100</p></td>
+<td><p>Trace generic &amp; operator overloading (Fortran Front End).</p></td>
+</tr>
+<tr class="row-even"><td></td>
+<td><p>0x400</p></td>
+<td><p>Trace modification of the dpdsc area for derived type support (Fortran Front End).</p></td>
+</tr>
+<tr class="row-odd"><td colspan="3"><p>_</p></td>
+</tr>
+<tr class="row-even"><td><p>4</p></td>
+<td><p>1</p></td>
+<td><p>Dump ILM’s written by Semantic Analyzer.</p></td>
+</tr>
+<tr class="row-odd"><td></td>
+<td><p>2</p></td>
+<td><p>Write source lines to debug file as seen.</p></td>
+</tr>
+<tr class="row-even"><td></td>
+<td><p>4</p></td>
+<td><p>Trace addilm</p></td>
+</tr>
+<tr class="row-odd"><td></td>
+<td><p>8</p></td>
+<td><p>Dump ILM’s saved by save_ilms()</p></td>
+</tr>
+<tr class="row-even"><td></td>
+<td><p>16</p></td>
+<td><p>extract.c</p></td>
+</tr>
+<tr class="row-odd"><td></td>
+<td><p>0x100</p></td>
+<td><p>Dump ASTs after semant</p></td>
+</tr>
+<tr class="row-even"><td></td>
+<td><p>0x200</p></td>
+<td><p>Include hash table for ASTs</p></td>
+</tr>
+<tr class="row-odd"><td></td>
+<td><p>0x400</p></td>
+<td><p>Dump source from internal file</p></td>
+</tr>
+<tr class="row-even"><td></td>
+<td><p>0x800</p></td>
+<td><p>Dump ASTs prior to print_stmts()</p></td>
+</tr>
+<tr class="row-odd"><td></td>
+<td><p>0x1000</p></td>
+<td><p>Dump ASTs immediately after exporting a module</p></td>
+</tr>
+<tr class="row-even"><td></td>
+<td><p>0x2000</p></td>
+<td><p>Dump ASTs immediately after importing a module.</p></td>
+</tr>
+<tr class="row-odd"><td></td>
+<td><p>0x4000</p></td>
+<td><p>Dump ASTs immediately after importing an inline file</p></td>
+</tr>
+<tr class="row-even"><td colspan="3"><p>_</p></td>
+</tr>
+<tr class="row-odd"><td><p>5</p></td>
+<td></td>
+<td><p>Symbol Table debug.</p></td>
+</tr>
+<tr class="row-even"><td></td>
+<td><p>1</p></td>
+<td><p>Dump Symbol Table immediately after Semant.</p></td>
+</tr>
+<tr class="row-odd"><td></td>
+<td><p>2</p></td>
+<td><p>Dump STDs immediately after Semant.</p></td>
+</tr>
+<tr class="row-even"><td></td>
+<td><p>4</p></td>
+<td><p>Dump Symbol Table after Assembler.</p></td>
+</tr>
+<tr class="row-odd"><td></td>
+<td><p>8</p></td>
+<td><p>Include predefined portion of symtab in dump.</p></td>
+</tr>
+<tr class="row-even"><td></td>
+<td><p>16</p></td>
+<td><p>Dump the data type area (C,Fortran).</p></td>
+</tr>
+<tr class="row-odd"><td></td>
+<td><p>32</p></td>
+<td><p>reserved</p></td>
+</tr>
+<tr class="row-even"><td></td>
+<td><p>0x200</p></td>
+<td><p>Trace push/pop/save/restore scope calls</p></td>
+</tr>
+<tr class="row-odd"><td></td>
+<td><p>0x400</p></td>
+<td><p>Trace pop_sym()</p></td>
+</tr>
+<tr class="row-even"><td></td>
+<td><p>0x800</p></td>
+<td><p>Dump symtab after importing anything</p></td>
+</tr>
+<tr class="row-odd"><td></td>
+<td><p>0x1000</p></td>
+<td><p>(0x1000) Dump Symbol Table and data types immediately after exporting a module.</p></td>
+</tr>
+<tr class="row-even"><td></td>
+<td><p>0x2000</p></td>
+<td><p>(0x2000) Dump Symbol Table and data types immediately after importing a module.</p></td>
+</tr>
+<tr class="row-odd"><td></td>
+<td><p>0x4000</p></td>
+<td><p>(0x4000) Dump Symbol Table and data types immediately after importing an
+inline file.</p></td>
+</tr>
+<tr class="row-even"><td></td>
+<td><p>0x8000</p></td>
+<td><p>(0x8000) Dump Symbol Table immediately after trans_process_align() and
+transform().</p></td>
+</tr>
+<tr class="row-odd"><td colspan="3"><p>_</p></td>
+</tr>
+<tr class="row-even"><td><p>6</p></td>
+<td><p>1</p></td>
+<td><p>Dump the Data Initialization File as records are written to it.</p></td>
+</tr>
+<tr class="row-odd"><td></td>
+<td><p>2</p></td>
+<td><p>Trace data initialization processing (Fortran).</p></td>
+</tr>
+<tr class="row-even"><td></td>
+<td><p>4</p></td>
+<td><p>reserved</p></td>
+</tr>
+<tr class="row-odd"><td></td>
+<td><p>8</p></td>
+<td><p>reserved</p></td>
+</tr>
+<tr class="row-even"><td></td>
+<td><p>16</p></td>
+<td><p>(Fortran) Trace deferred dinit write</p></td>
+</tr>
+<tr class="row-odd"><td></td>
+<td><p>32</p></td>
+<td><p>(Fortran) Trace deferred dinit read</p></td>
+</tr>
+<tr class="row-even"><td></td>
+<td><p>64</p></td>
+<td><p>reserved</p></td>
+</tr>
+<tr class="row-odd"><td></td>
+<td><p>0x80</p></td>
+<td><p>reserved</p></td>
+</tr>
+<tr class="row-even"><td colspan="3"><p>_</p></td>
+</tr>
+<tr class="row-odd"><td><p>7</p></td>
+<td><p>1</p></td>
+<td><p>Trace storage allocation calls (mlalloc, free, etc.).</p></td>
+</tr>
+<tr class="row-even"><td></td>
+<td><p>2</p></td>
+<td><p>Fill buffers allocated with NEW, NEED with junk.</p></td>
+</tr>
+<tr class="row-odd"><td></td>
+<td><p>4</p></td>
+<td><p>For sun, call malloc_debug/verify.</p></td>
+</tr>
+<tr class="row-even"><td colspan="3"><p>_</p></td>
+</tr>
+</tbody>
+</table>
+<table class="docutils align-default">
+<thead>
+<tr class="row-odd"><th class="head" colspan="3"><p>Table 18-1 Debug Flags (continued)</p></th>
+</tr>
+<tr class="row-even"><th class="head"><p>flg</p></th>
+<th class="head"><p>value</p></th>
+<th class="head"><p>description</p></th>
+</tr>
+</thead>
+<tbody>
+<tr class="row-odd"><td><p>10</p></td>
+<td></td>
+<td><p>ILI dumps.</p></td>
+</tr>
+<tr class="row-even"><td></td>
+<td><p>1</p></td>
+<td><p>Dump ILI hash tables (valid only if 2 or 4 also selected).</p></td>
+</tr>
+<tr class="row-odd"><td></td>
+<td><p>2</p></td>
+<td><p>Dump blocks and ILI after Expander.</p></td>
+</tr>
+<tr class="row-even"><td></td>
+<td><p>8</p></td>
+<td><p>Hash table for names area.</p></td>
+</tr>
+<tr class="row-odd"><td></td>
+<td><p>16</p></td>
+<td><p>Names area after Expander.</p></td>
+</tr>
+<tr class="row-even"><td></td>
+<td><p>0x80</p></td>
+<td><p>Dump the ILI for each ILT in tree form (valid only if 2 or 4 is selected).</p></td>
+</tr>
+<tr class="row-odd"><td></td>
+<td><p>0x100</p></td>
+<td><p>Trace of addnme</p></td>
+</tr>
+<tr class="row-even"><td></td>
+<td><p>0x200</p></td>
+<td><p>Dump ili in C-like form</p></td>
+</tr>
+<tr class="row-odd"><td></td>
+<td><p>0x400</p></td>
+<td><p>Statistics on ILI garbage collection</p></td>
+</tr>
+<tr class="row-even"><td></td>
+<td><p>0x800</p></td>
+<td><p>Disable garbage collection on ILI</p></td>
+</tr>
+<tr class="row-odd"><td colspan="3"><p>_</p></td>
+</tr>
+</tbody>
+</table>
+<table class="docutils align-default">
+<thead>
+<tr class="row-odd"><th class="head" colspan="3"><p>Table 18-1 Debug Flags (continued)</p></th>
+</tr>
+<tr class="row-even"><th class="head"><p>flg</p></th>
+<th class="head"><p>value</p></th>
+<th class="head"><p>description</p></th>
+</tr>
+</thead>
+<tbody>
+<tr class="row-odd"><td colspan="3"><p>_</p></td>
+</tr>
+<tr class="row-even"><td><p>43</p></td>
+<td></td>
+<td><p>Fortran Front End communication optimizations.</p></td>
+</tr>
+<tr class="row-odd"><td></td>
+<td><p>1</p></td>
+<td><p>Dump flowgraph after communication calls generated.</p></td>
+</tr>
+<tr class="row-even"><td></td>
+<td><p>4</p></td>
+<td><p>Dump loops after communication calls generated.</p></td>
+</tr>
+<tr class="row-odd"><td></td>
+<td><p>8</p></td>
+<td><p>Trace kernels rescope information.</p></td>
+</tr>
+<tr class="row-even"><td></td>
+<td><p>64</p></td>
+<td><p>Dump statements before &amp; after hoisting.</p></td>
+</tr>
+<tr class="row-odd"><td></td>
+<td><p>0x80</p></td>
+<td><p>Dump statements after array collapsing.</p></td>
+</tr>
+<tr class="row-even"><td></td>
+<td><p>0x100</p></td>
+<td><p>List loops where array collapsing occurs.</p></td>
+</tr>
+<tr class="row-odd"><td colspan="3"><p>_</p></td>
+</tr>
+<tr class="row-even"><td><p>47</p></td>
+<td></td>
+<td><p>Native F90 Lowering debug</p></td>
+</tr>
+<tr class="row-odd"><td></td>
+<td><p>1</p></td>
+<td><p>symbol table/data type dump after lowering initialization</p></td>
+</tr>
+<tr class="row-even"><td></td>
+<td><p>2</p></td>
+<td><p>enable lowering trace output</p></td>
+</tr>
+<tr class="row-odd"><td></td>
+<td><p>4</p></td>
+<td><p>std/sym/dtype dump after lowering</p></td>
+</tr>
+<tr class="row-even"><td></td>
+<td><p>8</p></td>
+<td><p>use relative ilm refs and symbol names in output suitable for ‘diff’</p></td>
+</tr>
+<tr class="row-odd"><td></td>
+<td><p>16</p></td>
+<td><p>use long-form output</p></td>
+</tr>
+<tr class="row-even"><td></td>
+<td><p>0x100</p></td>
+<td><p>trace upper</p></td>
+</tr>
+<tr class="row-odd"><td></td>
+<td><p>0x200</p></td>
+<td><p>upper: dump datatypes, symbols after importing</p></td>
+</tr>
+<tr class="row-even"><td colspan="3"><p>_</p></td>
+</tr>
+<tr class="row-odd"><td><p>50</p></td>
+<td></td>
+<td><p>Fortran transformation flags.</p></td>
+</tr>
+<tr class="row-even"><td></td>
+<td><p>1</p></td>
+<td><p>dump common blocks when splitting commons</p></td>
+</tr>
+<tr class="row-odd"><td></td>
+<td><p>2</p></td>
+<td><p>print statements after transform pass</p></td>
+</tr>
+<tr class="row-even"><td colspan="3"><p>_</p></td>
+</tr>
+<tr class="row-odd"><td><p>51</p></td>
+<td></td>
+<td><p>Additional Fortran transformation flags</p></td>
+</tr>
+<tr class="row-even"><td colspan="3"><p>_</p></td>
+</tr>
+</tbody>
+</table>
+</section>
+</section>
+<section id="utility-programs">
+<h2>Utility Programs<a class="headerlink" href="#utility-programs" title="Permalink to this heading">¶</a></h2>
+<p>Utility programs are used to build static data bases or tables
+used by the compilers.
+The output of a utility program is one or more
+include files containing data definitions and initializations (df.h
+files),
+and one or more include files containing data declarations and
+macro definitions.
+These files are copied into the src directory after the
+utility has been successfully executed.</p>
+<p>The input to a utility program is a text file which is created
+and modified by hand.
+Except for the utility PRSTAB, the input files are in nroff
+format and are also used to generate one of the
+appendices of this document.</p>
+<p>The utility programs are:</p>
+<div class="line-block">
+<div class="line">PRSTAB - parse table generator.</div>
+<div class="line">SYMTAB - symbol table generator.</div>
+<div class="line">ERRMSG - error message text.</div>
+<div class="line">ILMTP  - ILM template utility.</div>
+<div class="line">ILITP  - ILI template utility.</div>
+<div class="line">MACHAR - Machine characteristics utility.</div>
+<div class="line">MICROP - Micro-operation utility.</div>
+</div>
+<p>There are some dependencies between utilities which
+require that one utility be run when a change is made
+to the input file of a different utility.
+These dependencies are:</p>
+<ol class="arabic simple">
+<li><p>For PGFTN, SYMTAB must be run whenever a change
+is made to the ilm definition file which changes ILM numbers;
+for all compilers, SYMTAB must be run whenever
+the symbol table structure or macros are changed.</p></li>
+<li><p>The ILI Definition file (ilitp.n) is used as an input to
+ILMTP (in addition to ILITP).
+Any change to it which deletes or adds ILI, or
+changes the number of any ILI, requires that ILMTP be run
+in addition to ILITP.</p></li>
+<li><p>MICROP produces an output file (microp.d) which is used as
+input to ILITP.
+Therefore, any change to the Micro-op definition file which
+results in a change to
+microp.d requires that ILITP be run after MICROP.</p></li>
+</ol>
+</section>
+<section id="maintenance-document">
+<h2>Maintenance Document<a class="headerlink" href="#maintenance-document" title="Permalink to this heading">¶</a></h2>
+<p>The compiler maintenance document (this document) is found in the doc
+subdirectory.
+It is written in nroff format using the ‘me’ macro package.
+The names of the nroff files all end with “.n”.</p>
+<p>There is one .n file for each chapter of the document.
+A single chapter can be run off using the command file
+'md’ (or ‘mdt’ if a table of contents is desired).
+A consistent format for the document is defined in the
+file ‘macros.n’ which is automatically included by md or mdt.
+These two command files take from one to five arguments:
+the names of nroff files.
+The result is written to file ‘tmp’, which can be printed.</p>
+<p>To run off more than 5 files together,
+build a file which includes all the desired chapters
+using the “.so” nroff command.
+Refer to file ‘all.n’ which is used to run off the entire document.</p>
+<p>Appendices are generated from .n files copied from the various
+utility program directories.
+This is done by running the file ‘get_apdx.cmd’ which copies
+the most recent files for all the utilities.</p>
+<p>The ILM and ILI indices are generated by running the
+file ‘mkindex.cmd’, which takes a single argument,
+“ilm” or “ili”.</p>
+<p>To summarize, executing the following four commands will
+produce a full copy of the most recent maintenance document with
+table of contents:</p>
+<div class="line-block">
+<div class="line">get_apdx.cmd</div>
+<div class="line">mkindex.cmd ilm</div>
+<div class="line">mkindex.cmd ili</div>
+<div class="line">di.sh all.n</div>
+</div>
+</section>
+</section>
+
+
+      </div>
+      <div class="bottomnav" role="navigation" aria-label="bottom navigation">
+      
+        <p>
+        «&#160;&#160;<a href="../introduction_to_flang.html">Introduction to Flang</a>
+        &#160;&#160;::&#160;&#160;
+        <a class="uplink" href="../index.html">Contents</a>
+        &#160;&#160;::&#160;&#160;
+        <a href="../debugging_flang.html">Debugging flang</a>&#160;&#160;»
+        </p>
+
+      </div>
+
+    <div class="footer" role="contentinfo">
+        &#169; Copyright .
+      Created using <a href="https://www.sphinx-doc.org/">Sphinx</a> 5.3.0.
+    </div>
+  </body>
+</html>

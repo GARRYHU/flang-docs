@@ -1,0 +1,1665 @@
+
+<!DOCTYPE html>
+
+<html lang="en">
+  <head>
+    <meta charset="utf-8" />
+    <meta name="viewport" content="width=device-width, initial-scale=1.0" /><meta name="generator" content="Docutils 0.19: https://docutils.sourceforge.io/" />
+
+    <title>ILI &#8212; Flang 1.0 documentation</title>
+    <link rel="stylesheet" type="text/css" href="../_static/pygments.css" />
+    <link rel="stylesheet" type="text/css" href="../_static/haiku.css" />
+    <script data-url_root="../" id="documentation_options" src="../_static/documentation_options.js"></script>
+    <script src="../_static/jquery.js"></script>
+    <script src="../_static/underscore.js"></script>
+    <script src="../_static/_sphinx_javascript_frameworks_compat.js"></script>
+    <script src="../_static/doctools.js"></script>
+    <script src="../_static/sphinx_highlight.js"></script>
+    <link rel="index" title="Index" href="../genindex.html" />
+    <link rel="search" title="Search" href="../search.html" />
+    <link rel="next" title="Data Initialization File" href="dinit.html" />
+    <link rel="prev" title="ILMs" href="ilm.html" /> 
+  </head><body>
+      <div class="header" role="banner"><h1 class="heading"><a href="../index.html">
+          <span>Flang 1.0 documentation</span></a></h1>
+        <h2 class="heading"><span>ILI</span></h2>
+      </div>
+      <div class="topnav" role="navigation" aria-label="top navigation">
+      
+        <p>
+        «&#160;&#160;<a href="ilm.html">ILMs</a>
+        &#160;&#160;::&#160;&#160;
+        <a class="uplink" href="../index.html">Contents</a>
+        &#160;&#160;::&#160;&#160;
+        <a href="dinit.html">Data Initialization File</a>&#160;&#160;»
+        </p>
+
+      </div>
+      <div class="content" role="main">
+        
+        
+  <section id="ili">
+<h1>ILI<a class="headerlink" href="#ili" title="Permalink to this heading">¶</a></h1>
+<section id="overview">
+<h2>Overview<a class="headerlink" href="#overview" title="Permalink to this heading">¶</a></h2>
+<p>ILIs (intermediate language instructions) are the second internal
+representation of a source program. Each ILI corresponds to a sequence
+of SC
+micro-ops.  The ILIs are translated from the ILMs by the Expander and
+are the representation of the source seen by the optimizer and code
+scheduler.</p>
+<p>ILIs are maintained in a single memory area and are shared for the
+entire source file.  That is, multiple occurrences of an expression
+will be represented by a single ILI. See the section
+<em>ILI Structure</em>
+for
+a complete description of an ILI.</p>
+<p>The ILIs are grouped into basic blocks. An ILM block may produce
+several ILI blocks.
+Associated with each ILI block is a block information header (BIH) which
+defines what labels and variables are
+referenced in the block and describes certain attributes of the block.
+See the section
+<em>BIH Structure</em>
+for more information.</p>
+<p>An ILI block consists of a sequence of ILI terminal nodes (ILTs) which
+are linked together and represent ILI
+“statements”.
+Each ILT consists of
+previous and next ILT links, a pointer to the ILI tree  which
+represents the ILI statement, and flags which describe the ILI statement
+(see the section,
+<em>ILT Structure</em>).
+The Expander buffers one block of ILT at a time in a dynamic storage area.
+When the block is completed, it is written out to a temporary file in binary
+format by the routine
+<code class="docutils literal notranslate"><span class="pre">wrilts</span></code>,
+and will be read by the optimizer and/or
+code scheduler by the routine
+<code class="docutils literal notranslate"><span class="pre">rdilts</span></code>.
+ILIs are added to the ILI area by the routine
+<code class="docutils literal notranslate"><span class="pre">srcili</span></code>.</p>
+</section>
+<section id="static-tables">
+<h2>Static Tables<a class="headerlink" href="#static-tables" title="Permalink to this heading">¶</a></h2>
+<section id="ili-attributes">
+<h3>ILI Attributes<a class="headerlink" href="#ili-attributes" title="Permalink to this heading">¶</a></h3>
+<p>Associated with each ILI opcode (located by the value of the opcode) is
+information describing the ILI (its attributes).
+This information is defined symbolically in a file processed by the
+utility ILITP which creates the
+data definition files needed to define the information including the
+above mentioned macros for the ILI opcodes.
+See APPENDIX V for the current symbolic ILI definitions.</p>
+<p>The attributes for a given ILI opcode are defined by the following
+structure:</p>
+<div class="highlight-none notranslate"><div class="highlight"><pre><span></span>typedef struct {
+   char \*name;
+   char type;
+   short oprs;
+   long oprflag;
+   short attr;
+}  ILIINFO;
+</pre></div>
+</div>
+<p>where,</p>
+<dl>
+<dt>name</dt><dd><p>pointer to a null terminated character string for the ILI name.
+This is needed only for an ILI debug dump.</p>
+</dd>
+<dt>type</dt><dd><p>type of the ILI. The allowed values are:</p>
+<table class="docutils align-default">
+<tbody>
+<tr class="row-odd"><td><p>&amp;’a’</p></td>
+<td><p>arithmetic</p></td>
+</tr>
+<tr class="row-even"><td><p>&amp;’i’</p></td>
+<td><p>intrinsic</p></td>
+</tr>
+<tr class="row-odd"><td><p>&amp;’b’</p></td>
+<td><p>branch</p></td>
+</tr>
+<tr class="row-even"><td><p>&amp;’l’</p></td>
+<td><p>load</p></td>
+</tr>
+<tr class="row-odd"><td><p>&amp;’c’</p></td>
+<td><p>constant</p></td>
+</tr>
+<tr class="row-even"><td><p>&amp;’s’</p></td>
+<td><p>store</p></td>
+</tr>
+<tr class="row-odd"><td><p>&amp;’p’</p></td>
+<td><p>procedure</p></td>
+</tr>
+<tr class="row-even"><td><p>&amp;’d’</p></td>
+<td><p>register define</p></td>
+</tr>
+<tr class="row-odd"><td><p>&amp;’m’</p></td>
+<td><p>register move</p></td>
+</tr>
+<tr class="row-even"><td><p>&amp;’o’</p></td>
+<td><p>other</p></td>
+</tr>
+</tbody>
+</table>
+</dd>
+<dt>oprs</dt><dd><p>number of operands (1-4).</p>
+</dd>
+<dt>oprflag</dt><dd><p>bit fields defining the type of each operand:</p>
+<table class="docutils align-default">
+<tbody>
+<tr class="row-odd"><td colspan="4"><p>_</p></td>
+</tr>
+<tr class="row-even"><td><p>op\*&lt;n\*&gt;</p></td>
+<td><p>…</p></td>
+<td><p>op\*&lt;2\*&gt;</p></td>
+<td><p>op\*&lt;1\*&gt;</p></td>
+</tr>
+<tr class="row-odd"><td colspan="4"><p>_</p></td>
+</tr>
+</tbody>
+</table>
+<p>op\*&lt;i\*&gt; is
+4 bit field defining the type of operand
+<em>i</em>:</p>
+<blockquote>
+<div><dl class="simple">
+<dt><code class="docutils literal notranslate"><span class="pre">ILIO_SYM</span></code></dt><dd><p>symbol table pointer</p>
+</dd>
+<dt><code class="docutils literal notranslate"><span class="pre">ILIO_STC</span></code></dt><dd><p>short constant</p>
+</dd>
+<dt><code class="docutils literal notranslate"><span class="pre">ILIO_OFF</span></code></dt><dd><p>symbol table pointer
+to a constant of type
+<code class="docutils literal notranslate"><span class="pre">DT_CPTR</span></code></p>
+</dd>
+<dt><code class="docutils literal notranslate"><span class="pre">ILIO_NME</span></code></dt><dd><p>names entry pointer</p>
+</dd>
+<dt><code class="docutils literal notranslate"><span class="pre">ILIO_LNK</span></code></dt><dd><p>ILI link (the value
+is not actually used by the ILI; it
+is just defining a dependency on that
+operand)</p>
+</dd>
+<dt><code class="docutils literal notranslate"><span class="pre">ILIO_IRLNK</span></code></dt><dd><p>ILI link whose value
+is type integer register</p>
+</dd>
+<dt><code class="docutils literal notranslate"><span class="pre">ILIO_ARLNK</span></code></dt><dd><p>ILI link whose value
+is type address register</p>
+</dd>
+<dt><code class="docutils literal notranslate"><span class="pre">ILIO_SPLNK</span></code></dt><dd><p>ILI link whose value
+is type single precision register</p>
+</dd>
+<dt><code class="docutils literal notranslate"><span class="pre">ILIO_DPLNK</span></code></dt><dd><p>ILI link whose value
+is type double precision register</p>
+</dd>
+<dt><code class="docutils literal notranslate"><span class="pre">ILIO_IR</span></code></dt><dd><p>operand i is an integer register</p>
+</dd>
+<dt><code class="docutils literal notranslate"><span class="pre">ILIO_AR</span></code></dt><dd><p>operand i is an address register</p>
+</dd>
+<dt><code class="docutils literal notranslate"><span class="pre">ILIO_DP</span></code></dt><dd><p>operand i is a single precision register</p>
+</dd>
+<dt><code class="docutils literal notranslate"><span class="pre">ILIO_SP</span></code></dt><dd><p>operand i is a double precision register</p>
+</dd>
+</dl>
+</div></blockquote>
+<dl>
+<dt>attr</dt><dd><p>bit fields describing other attributes for the ILI</p>
+<table class="docutils align-default">
+<tbody>
+<tr class="row-odd"><td colspan="2"><p>_</p></td>
+</tr>
+<tr class="row-even"><td><p>res</p></td>
+<td><p>comm</p></td>
+</tr>
+<tr class="row-odd"><td colspan="2"><p>_</p></td>
+</tr>
+</tbody>
+</table>
+<dl>
+<dt>comm</dt><dd><p>1 bit field denoting if the operands of the ILI are commutative:</p>
+<table class="docutils align-default">
+<tbody>
+<tr class="row-odd"><td><p>0</p></td>
+<td><p>operands are not commutative</p></td>
+</tr>
+<tr class="row-even"><td><p>ILIA_COMM</p></td>
+<td><p>operands are commutative</p></td>
+</tr>
+</tbody>
+</table>
+</dd>
+<dt>res</dt><dd><p>3 bit field defining the type of the result of the ILI:</p>
+<dl class="simple">
+<dt><code class="docutils literal notranslate"><span class="pre">ILIA_TRM</span></code></dt><dd><p>does not define a result - this ILI is a terminal ILI</p>
+</dd>
+<dt><code class="docutils literal notranslate"><span class="pre">ILIA_LNK</span></code></dt><dd><p>the ILI may be pointed to by other ILI but does not produce a result</p>
+</dd>
+<dt><code class="docutils literal notranslate"><span class="pre">ILIA_IR</span></code></dt><dd><p>dr result</p>
+</dd>
+<dt><code class="docutils literal notranslate"><span class="pre">ILIA_AR</span></code></dt><dd><p>ar result</p>
+</dd>
+<dt><code class="docutils literal notranslate"><span class="pre">ILIA_SP</span></code></dt><dd><p>sp result</p>
+</dd>
+<dt><code class="docutils literal notranslate"><span class="pre">ILIA_DP</span></code></dt><dd><p>dp result</p>
+</dd>
+</dl>
+</dd>
+</dl>
+</dd>
+</dl>
+</dd>
+</dl>
+<p>The attributes for the ILIs are represented by an array of
+<code class="docutils literal notranslate"><span class="pre">ILIINFO</span></code>
+structures called
+<code class="docutils literal notranslate"><span class="pre">ilis</span></code>.
+The array is indexed by the value of an ILI
+opcode.  Extracting information other than the packed bit fields is
+done by using a construct of the form
+<code class="docutils literal notranslate"><span class="pre">ilis[opc].member</span></code>.
+Macros exist in the file
+<em>ili.h</em>
+which provide access to the operand
+flags and attribute flags.  These are:</p>
+<div class="highlight-none notranslate"><div class="highlight"><pre><span></span>IL_OPRFLAG(opc, opn)
+IL_ISLINK(opc, opn)
+IL_COMM(opc)
+IL_REG(opc)
+</pre></div>
+</div>
+<p>where
+<code class="docutils literal notranslate"><span class="pre">opc</span></code>
+is the opcode of the ILI and
+<code class="docutils literal notranslate"><span class="pre">opn</span></code>
+is the operand number.</p>
+</section>
+<section id="ili-scheduling-information">
+<h3>ILI Scheduling Information<a class="headerlink" href="#ili-scheduling-information" title="Permalink to this heading">¶</a></h3>
+<p>The ILI Scheduling Information is static data created by the
+ILITP utility when processing ILI template definitions,
+and used by the Scheduler to schedule ILI.</p>
+<p>The information is stored in a single static array,
+<code class="docutils literal notranslate"><span class="pre">silinfo</span></code>,
+which is indexed by ILI opcode number and which contains
+entries of the following structure:</p>
+<div class="highlight-none notranslate"><div class="highlight"><pre><span></span>struct {
+   short cycles;
+   short rsc_vs;
+   short opr_info;
+   short r_reads;
+   short r_writes;
+   short latch;
+   short first_rs;
+   short rs_avail;
+   short ovlap;
+   short attrs;
+}
+</pre></div>
+</div>
+<dl>
+<dt>cycles</dt><dd><p>Number of template cycles, including those containing only result
+definition micro-ops, of this ILI.  It (1) is used to compute the depth
+of an ili when building the dependency graph, (2) defines how many
+resource vector masks there are for this ili, (3) is used to determine when
+an address register input to an ili is free for other uses, (4) is used to
+determine if an ili needs to be written to the Scheduled Ili file.</p>
+</dd>
+<dt>rsc_vs</dt><dd><p>Relative pointer into array
+<code class="docutils literal notranslate"><span class="pre">resources</span></code>
+containing the static resource
+bit masks for this ili (the bit masks are shared by the various ili).</p>
+</dd>
+<dt>opr_info</dt><dd><p>Currently not used.</p>
+</dd>
+<dt>r_reads</dt><dd><p>Relative pointer into array
+<code class="docutils literal notranslate"><span class="pre">r_reads</span></code>
+containing register
+read information.
+<code class="docutils literal notranslate"><span class="pre">r_reads</span></code>
+consists of (shared) blocks of records, one record for each
+data register or double precision read in a template.  Each record is a
+3-tuple with the following fields:</p>
+<dl class="simple">
+<dt>cyclno</dt><dd><p>cycle relative to the beginning of the template on
+which the read occurs (0, 1, …).</p>
+</dd>
+<dt>iliopr</dt><dd><p>number (1, 2, …) of ili operand which is being
+read.</p>
+</dd>
+</dl>
+<p>motype</p>
+<blockquote>
+<div><dl class="simple">
+<dt>0</dt><dd><p>default.</p>
+</dd>
+<dt>1</dt><dd><p>first multiplier operand.</p>
+</dd>
+<dt>2</dt><dd><p>second multiplier operand.</p>
+</dd>
+<dt>3</dt><dd><p>operand which is read on more than one cycle
+and which therefore may not be allowed to
+latch with input.</p>
+</dd>
+</dl>
+</div></blockquote>
+</dd>
+<dt>r_writes</dt><dd><p>Relative pointer into array
+<code class="docutils literal notranslate"><span class="pre">r_writes</span></code>
+containing register
+write information.
+<code class="docutils literal notranslate"><span class="pre">r_writes</span></code>
+consists of (shared) blocks of records,
+one record for each result definition micro-op (e.g. rs=xxx) in the
+template.  Each record is a tuple containing the following two values:</p>
+<dl class="simple">
+<dt>cyclno</dt><dd><p>cycle number relative to beginning of the
+template, on which the write occurs.</p>
+</dd>
+<dt>src</dt><dd><p>source of the write:
+0 - 7     latch id.
+8 - 11    opr1, opr2, … respectively.</p>
+</dd>
+</dl>
+</dd>
+<dt>latch</dt><dd><p>For ili whose result is available in a latch this
+is the latch id (1 - 7), and 0 for other ili.</p>
+</dd>
+<dt>first_rs</dt><dd><p>Number of first template cycle which contains a result definition (rs= )
+micro-op.
+This is used to determine on what cycle the result register(s) allocated
+for this ili must be free and available.</p>
+</dd>
+<dt>rs_avail</dt><dd><p>Template cycle of the last result definition micro-op.
+If the result type of the ili is ar or lnk, this is the number of the
+first cycle after the end of the template.
+If the last result definition micro-op is of the form
+“rs=opn”,
+this value is incremented by one.</p>
+<p>This value is used to (1) compute the first cycle on which to attempt
+scheduling a link successor of this ili, and (2) determine if a
+link successor will be able to latch to the result of this ili.</p>
+</dd>
+<dt>suc_sched</dt><dd><p>Number of cycles in template.
+Used to compute the first cycle on which to attempt scheduling
+a non-link successor of this ili.</p>
+</dd>
+</dl>
+</section>
+<section id="ili-template-definitions">
+<h3>ILI Template Definitions<a class="headerlink" href="#ili-template-definitions" title="Permalink to this heading">¶</a></h3>
+<p>The Template Definitions consist of two arrays which define for
+each ILI opcode, the micro-ops which make up its template.</p>
+<p>The first array,
+<code class="docutils literal notranslate"><span class="pre">ilitp</span></code>,
+is indexed by ILI opcode and contains
+relative pointers into the second array,
+<code class="docutils literal notranslate"><span class="pre">tmops</span></code>.</p>
+<p>Figure 13-1 Template Definitions</p>
+<p>The array
+<code class="docutils literal notranslate"><span class="pre">tmops</span></code>
+consists of a segment for each ILI template.
+The first element of a segment is the depth in cycles,
+<em>d</em>,
+of the
+template.
+Following the depth are
+<em>d</em>
+pairs of micro-op numbers
+which define which micro-ops appear on the consecutive cycles
+of the template.
+Note that this implies a maximum of two micro-ops per template cycle,
+but this limit should not cause a problem since any two micro-ops
+can always be merged to form a third.
+If more than two microps are desired for each template line, then
+the MAXTMOPS define should be set to the desired value for both
+the code (“benddep.h”) and for the microp and ilitp utilities
+machine dependent include file.</p>
+<p>If one of the cycles only contains a single micro-op,
+the succeeding microp values are 0.</p>
+<p>Result definition micro-ops are not included in the template.</p>
+</section>
+</section>
+<section id="dynamic-structures">
+<h2>Dynamic Structures<a class="headerlink" href="#dynamic-structures" title="Permalink to this heading">¶</a></h2>
+<section id="ili-structure">
+<h3>ILI Structure<a class="headerlink" href="#ili-structure" title="Permalink to this heading">¶</a></h3>
+<p>An ILI has the form:</p>
+<div class="highlight-none notranslate"><div class="highlight"><pre><span></span>typedef struct {
+   unsigned short opc;
+   unsigned short hshlnk;
+   unsigned short count;
+   unsigned short opnd[];
+}  ILI;
+</pre></div>
+</div>
+<p>where,</p>
+<dl class="simple">
+<dt>opc</dt><dd><p>value denoting the ILI operation (its opcode)</p>
+</dd>
+<dt>hshlnk</dt><dd><p>hash link field which is used for linking together
+ILIs whose hash values are identical</p>
+</dd>
+<dt>count</dt><dd><p>a count of the number of times the ILI is used (used for reclaiming ILI
+space)</p>
+</dd>
+<dt>opnd[]</dt><dd><p>operands of the ILI where the number of operands ranges from 1 to 4 and
+depends on the ILI opcode.
+The size of the operand array is statically set to a constant which is
+sufficient to hold the operands of all ILIs.
+Note that the ILITP utility will ensure that this size is sufficent.</p>
+</dd>
+</dl>
+<p>A pointer to an ILI is just an integer value which is an offset from the
+beginning of the ILI area, and, this value is represented by an unsigned
+short int.  Since an ILI’s operand field can locate
+(link to) an ILI, the number of ILIs allowed for a source program is
+limited to 65535.</p>
+<p>ILI opcodes are non-zero positive integers referenced by macros whose names
+begin with
+<code class="docutils literal notranslate"><span class="pre">IL\_</span></code>.
+These names appear in the file
+<em>iliatt.h</em>
+which is produced
+by the utility, ILITP (see the section
+<em>ILITP Utility</em>).
+In the file
+<em>ili.h</em>,
+are the macros which are used to access an
+ILI and a typedef for the ILI structure.</p>
+<p>The macros used to access the field
+<code class="docutils literal notranslate"><span class="pre">&lt;field&gt;</span></code>
+of ILI
+<code class="docutils literal notranslate"><span class="pre">i</span></code>,
+where
+<code class="docutils literal notranslate"><span class="pre">&lt;field&gt;</span></code>
+is one of
+<code class="docutils literal notranslate"><span class="pre">OPC</span></code>,
+<code class="docutils literal notranslate"><span class="pre">HSHLNK</span></code>,
+or
+<code class="docutils literal notranslate"><span class="pre">COUNT</span></code>,
+are of the
+form:
+<code class="docutils literal notranslate"><span class="pre">ILI_&lt;field&gt;(i)</span></code>
+The macro used to access the
+<code class="docutils literal notranslate"><span class="pre">n``th</span>
+<span class="pre">operand</span>
+<span class="pre">of</span> <span class="pre">ILI</span>
+<span class="pre">``i</span></code>
+is
+<code class="docutils literal notranslate"><span class="pre">ILI_OPND(i,</span> <span class="pre">n)</span></code>
+All of these macros can be used to assign a value to or fetch a value from
+an ILI field.</p>
+<p>Each ILI is hashed into the common ILI area. The hash tables are logically
+divided into 4 tables where a table is used for the ILI with the same number
+of operands.  Each hash table is of identical size and the hashing function
+uses the values of the opcodes and operands to compute the hash index.
+The routine
+<code class="docutils literal notranslate"><span class="pre">srcili</span></code>
+is used to search the ILI area.  ILIs whose hash values
+are identical are linked together using the HSHLNK field.</p>
+</section>
+<section id="ilt-structure">
+<h3>ILT Structure<a class="headerlink" href="#ilt-structure" title="Permalink to this heading">¶</a></h3>
+<p>An ILT is the terminal node of an ILI statement which roughly corresponds
+to a source language statement.  The ILI statement may be a store,
+an unconditional or conditional branch, or a procedure call.
+The ILTs are maintained in a single dynamic memory area.
+The following external variable is used to represent the ILT area:</p>
+<div class="highlight-none notranslate"><div class="highlight"><pre><span></span>struct {
+    ILT \*stg_base;          /\* pointer to memory space \*/
+    unsigned short stg_size; /\* size in ILT units \*/
+    unsigned short stg_avail;        /\* index to the available ILT \*/
+} iltb;
+</pre></div>
+</div>
+<p>The structure of an ILT is:</p>
+<table class="docutils align-default">
+<tbody>
+<tr class="row-odd"><td colspan="2"><p>_</p></td>
+</tr>
+<tr class="row-even"><td><p>ilip</p></td>
+<td><p>flags</p></td>
+</tr>
+<tr class="row-odd"><td colspan="2"><p>_</p></td>
+</tr>
+<tr class="row-even"><td><p>prev</p></td>
+<td><p>next</p></td>
+</tr>
+<tr class="row-odd"><td colspan="2"><p>_</p></td>
+</tr>
+</tbody>
+</table>
+<p>where,</p>
+<dl>
+<dt>ilip</dt><dd><p>ILI pointer to the
+“tree”
+of ILIs representing the statement</p>
+</dd>
+<dt>flags</dt><dd><p>various flags of the ILT (a value of one indicates that the flag is set).</p>
+<dl class="simple">
+<dt>EX</dt><dd><p>ILI tree contains an external reference (either
+a procedure or a function)</p>
+</dd>
+<dt>ST</dt><dd><p>ILI is a store</p>
+</dd>
+<dt>BR</dt><dd><p>ILI is a branch</p>
+</dd>
+</dl>
+</dd>
+<dt>prev</dt><dd><p>pointer to the previous ILT (a value of zero indicates that the
+ILT is the first in the block</p>
+</dd>
+<dt>next</dt><dd><p>pointer to the next ILT (a value of zero indicates that the
+ILT is the last in the block</p>
+</dd>
+</dl>
+<p>An ILI block is doubly linked list of ILTs.
+A block of ILTs is maintained in a dynamic storage area by the Expander.
+This dynamic area is divided into consecutive ILT nodes.
+The free ILT nodes are linked together to manage unused
+nodes.  A pointer to
+an ILT node is an integer value which is a relative pointer
+from the area’s base address.</p>
+<p>Macros, found in the include file
+<em>ili.h</em>,
+provide access to the
+fields of an ILT.  These macros are of the form:</p>
+<dl class="simple">
+<dt><code class="docutils literal notranslate"><span class="pre">ILT_&lt;field&gt;(i)</span></code></dt><dd><p>access field
+<code class="docutils literal notranslate"><span class="pre">&lt;field&gt;</span></code>
+of ILT
+<code class="docutils literal notranslate"><span class="pre">i</span></code>,
+where
+<code class="docutils literal notranslate"><span class="pre">&lt;field&gt;</span></code>
+is one of the flags
+<code class="docutils literal notranslate"><span class="pre">ILIP</span></code>,
+<code class="docutils literal notranslate"><span class="pre">PREV</span></code>,
+or
+<code class="docutils literal notranslate"><span class="pre">NEXT</span></code>.</p>
+</dd>
+</dl>
+</section>
+<section id="bih-structure">
+<h3>BIH Structure<a class="headerlink" href="#bih-structure" title="Permalink to this heading">¶</a></h3>
+<p>The block information header for an ILT/ILI block contains a list of
+all the labels to which control may flow from this block, and a list
+of the variables and constants referenced in the block.  In addition,
+a BIH contains information such as the line number of the first statement
+in the block, where the block is filed away, flags, storage management
+information,
+and fields used by the optimizer.  The information is generated by
+the Expander (except for the optimizer fields) and used by the
+optimizer and/or code scheduler.</p>
+<p>The BIHs are maintained in a dynamic memory area and a pointer
+(the block id) to a BIH is a relative pointer from the beginning of
+the area.
+The following external variable is used to represent the BIH area:</p>
+<div class="highlight-none notranslate"><div class="highlight"><pre><span></span>struct {
+    BIH \*stg_base;            /\* pointer to memory space \*/
+    unsigned short stg_size;  /\* size in BIH units \*/
+    unsigned short stg_avail; /\* index to the available BIH \*/
+} bihb;
+</pre></div>
+</div>
+<p>The structure of a BIH is:</p>
+<table class="docutils align-default">
+<tbody>
+<tr class="row-odd"><td colspan="2"><p>_</p></td>
+</tr>
+<tr class="row-even"><td><p>label</p></td>
+<td><p>lineno</p></td>
+</tr>
+<tr class="row-odd"><td colspan="2"><p>_</p></td>
+</tr>
+<tr class="row-even"><td><p>flags</p></td>
+<td><p>assn</p></td>
+</tr>
+<tr class="row-odd"><td colspan="2"><p>_</p></td>
+</tr>
+<tr class="row-even"><td colspan="2"><p>filoff /</p></td>
+</tr>
+<tr class="row-odd"><td><p>iltfst</p></td>
+<td><p>iltlst</p></td>
+</tr>
+<tr class="row-even"><td colspan="2"><p>_</p></td>
+</tr>
+<tr class="row-odd"><td><p>prev</p></td>
+<td><p>next</p></td>
+</tr>
+<tr class="row-even"><td colspan="2"><p>_</p></td>
+</tr>
+</tbody>
+</table>
+<p>where,</p>
+<dl>
+<dt>label</dt><dd><p>symbol table pointer to the label defined by the block (at the beginning).
+A value of zero indicates no lable is defined.</p>
+</dd>
+<dt>lineno</dt><dd><p>source line number of the first statement in the block</p>
+</dd>
+<dt>flags</dt><dd><p>various bit flags of the block.  A value of one indicates that
+the flag is true</p>
+<dl class="simple">
+<dt>RD</dt><dd><p>the block has been read into the ILT area</p>
+</dd>
+<dt>FT</dt><dd><p>the block’s control falls through to its
+immediate successor</p>
+</dd>
+<dt>EN</dt><dd><p>the block is an entry to a procedure - label locates
+the procedure entry symbol</p>
+</dd>
+<dt>EX</dt><dd><p>the block references an external. If the block is the
+entry of the function, this flag is for the entire
+function.</p>
+</dd>
+<dt>PL</dt><dd><p>the block is a pipelinable loop</p>
+</dd>
+</dl>
+</dd>
+<dt>assn</dt><dd><p>assigned register and temporary lists (to be completed)</p>
+</dd>
+<dt>filoff</dt><dd><p>locates where the block of ILTs is in the ILT file. This field is
+shared with the fields iltfirst and iltlast.</p>
+</dd>
+<dt>iltfirst</dt><dd><p>pointer to the first ILT in the block</p>
+</dd>
+<dt>iltlast</dt><dd><p>pointer to the last ILT in the block</p>
+</dd>
+<dt>prev</dt><dd><p>pointer to the previous block’s BIH</p>
+</dd>
+<dt>next</dt><dd><p>pointer to the next block’s BIH</p>
+</dd>
+</dl>
+<p>Macros are provided in file
+<em>ili.h</em>
+which allow access to the fields of
+a BIH.  The macros are of the form:</p>
+<div class="highlight-none notranslate"><div class="highlight"><pre><span></span>BIH_&lt;field&gt;( blkid )
+</pre></div>
+</div>
+<p>where
+<code class="docutils literal notranslate"><span class="pre">blkid</span></code>
+is the block id for the BIH.</p>
+</section>
+<section id="names-table">
+<h3>Names Table<a class="headerlink" href="#names-table" title="Permalink to this heading">¶</a></h3>
+<p>The names table consists of entries which denote the references that
+have occurred in the ILI.
+An entry will provide information as to its type (scalar, array, etc.).
+The entries are located by various expander/optimizer
+data structures and the
+load and store ILI’s.</p>
+<p>The names table is maintained in a single dynmamic area.
+The following external variable is used to represent the NME area:</p>
+<div class="highlight-none notranslate"><div class="highlight"><pre><span></span>struct {
+    NME \*stg_base;          /\* pointer to memory space \*/
+    unsigned short stg_size; /\* size in NME units \*/
+    unsigned short stg_avail;        /\* index to the available NME \*/
+} nmeb;
+</pre></div>
+</div>
+<p>A names (NME) entry has the form:</p>
+<div class="highlight-none notranslate"><div class="highlight"><pre><span></span>typedef struct {
+    char type;
+    char inlarr;
+    unsigned short sym;
+    unsigned short nm;
+    unsigned short rfptr;
+    unsigned short hshlnk;
+    unsigned short f6;
+    INT cnst;
+}  NME;
+</pre></div>
+</div>
+<p>where,</p>
+<dl>
+<dt>type</dt><dd><p>indicates the type of the entry:</p>
+<table class="docutils align-default">
+<tbody>
+<tr class="row-odd"><td><p>NT_UNK</p></td>
+<td><p>The reference is unknown (i.e., *(f())).</p></td>
+</tr>
+<tr class="row-even"><td><p>NT_IND</p></td>
+<td><p>indirection, i.e., *p</p></td>
+</tr>
+<tr class="row-odd"><td><p>NT_VAR</p></td>
+<td><p>variable, (array, structure, or scalar)</p></td>
+</tr>
+<tr class="row-even"><td><p>NT_MEM</p></td>
+<td><p>structure member</p></td>
+</tr>
+<tr class="row-odd"><td><p>NT_ARR</p></td>
+<td><p>array element</p></td>
+</tr>
+</tbody>
+</table>
+</dd>
+<dt>inlarr</dt><dd><p>Reference is a subscripted reference of an array which has been
+substituted for a dummy array argument of a function which has
+been inlined.</p>
+</dd>
+<dt>hshlnk</dt><dd><p>hash link field used for linking up names entries whose hash values are
+identical</p>
+</dd>
+<dt>f6</dt><dd><p>field used by the optimizer to record the definitions for
+a symbol</p>
+</dd>
+</dl>
+<p>The meanings of the remaining fields depend on type:
+.uh indirection</p>
+<dl class="simple">
+<dt>rfptr</dt><dd><p>back pointer (exact use depends on the expander/optimizer). If
+no reference exists, this field is zero.</p>
+</dd>
+<dt>nm</dt><dd><p>base reference (for
+<code class="docutils literal notranslate"><span class="pre">\*p</span></code>,
+nm is the name entry for
+<code class="docutils literal notranslate"><span class="pre">p</span></code>)</p>
+</dd>
+</dl>
+<p>sym</p>
+<blockquote>
+<div><dl class="simple">
+<dt>0</dt><dd><p>The reference is simple:
+<code class="docutils literal notranslate"><span class="pre">\*p</span></code>,
+<code class="docutils literal notranslate"><span class="pre">\*(p+c)</span></code>
+where
+<code class="docutils literal notranslate"><span class="pre">c</span></code>
+is a constant; then
+cnst is
+<code class="docutils literal notranslate"><span class="pre">c</span></code>
+(in units of bytes)</p>
+</dd>
+<dt>65535</dt><dd><p>The reference is complex:
+<code class="docutils literal notranslate"><span class="pre">\*(p+i)</span></code>
+where
+<code class="docutils literal notranslate"><span class="pre">i</span></code>
+is a variable,
+<code class="docutils literal notranslate"><span class="pre">\*f()</span></code>,
+etc.</p>
+</dd>
+</dl>
+<p>.uh variable</p>
+</div></blockquote>
+<dl class="simple">
+<dt>rfptr</dt><dd><p>back pointer (exact use depends on the expander/optimizer). If
+no reference exists, this field is zero.</p>
+</dd>
+<dt>nm</dt><dd><p>0</p>
+</dd>
+<dt>sym</dt><dd><p>symbol table pointer
+.uh member</p>
+</dd>
+<dt>rfptr</dt><dd><p>back pointer (exact use depends on the expander/optimizer). If
+no reference exists, this field is zero.</p>
+</dd>
+<dt>nm</dt><dd><p>parent of member reference (this is a pointer to a NME item):
+for
+<code class="docutils literal notranslate"><span class="pre">s.x</span></code>,
+this locates the NME for
+<code class="docutils literal notranslate"><span class="pre">s</span></code>.</p>
+</dd>
+<dt>sym</dt><dd><p>symbol table pointer to the member
+.uh array</p>
+</dd>
+<dt>rfptr</dt><dd><p>back pointer (exact use depends on the expander/optimizer). If
+no reference exists, this field is zero.</p>
+</dd>
+<dt>nm</dt><dd><p>NME item for the array: for
+<code class="docutils literal notranslate"><span class="pre">a[i]</span></code>,
+this locates the NME for
+<code class="docutils literal notranslate"><span class="pre">a</span></code>.</p>
+</dd>
+</dl>
+<p>sym</p>
+<blockquote>
+<div><dl class="simple">
+<dt>0</dt><dd><p>the reference has constant subscripts; then
+cnst = constant offset in byte units</p>
+</dd>
+<dt>65535</dt><dd><p>the reference has variable subscripts.</p>
+</dd>
+</dl>
+</div></blockquote>
+<p>Examples:
+The notation
+<code class="docutils literal notranslate"><span class="pre">&lt;type,</span> <span class="pre">rfptr,</span> <span class="pre">sym,</span> <span class="pre">nm,</span> <span class="pre">cnst&gt;</span></code>
+represents
+a NME item.
+<code class="docutils literal notranslate"><span class="pre">'--'</span></code>
+indicates that the field is not used.
+<code class="docutils literal notranslate"><span class="pre">'x'</span></code>
+indicates a ST item for
+<code class="docutils literal notranslate"><span class="pre">x.</span></code>
+<code class="docutils literal notranslate"><span class="pre">'(i)'</span></code>
+indicates the
+<code class="docutils literal notranslate"><span class="pre">i</span></code>-th
+NME entry.</p>
+<div class="highlight-none notranslate"><div class="highlight"><pre><span></span>struct {
+    struct {
+     int             y, z;
+    }               x;
+    int             a[10];
+    struct {
+     int             c;
+    }               b;
+}               s, \*p;
+</pre></div>
+</div>
+<div class="highlight-none notranslate"><div class="highlight"><pre><span></span>(1)  &lt;  NT_VAR , -- , &#39;s&#39; ,   0 , -- &gt;       &quot;s&quot;
+(2)  &lt;  NT_MEM , -- , &#39;x&#39; , (1) , -- &gt;       &quot;s.x&quot;
+(3)  &lt;  NT_MEM , -- , &#39;y&#39; , (2) , -- &gt;       &quot;s.x.y&quot;
+(4)  &lt;  NT_MEM , -- , &#39;z&#39; , (2) , -- &gt;       &quot;s.x.z&quot;
+</pre></div>
+</div>
+<div class="highlight-none notranslate"><div class="highlight"><pre><span></span>(5)  &lt;  NT_MEM , -- , &#39;a&#39; , (1) , -- &gt;       &quot;s.a&quot;
+(6)  &lt;  NT_ARR , -- ,   0 , (5) ,  1 &gt;       &quot;s.a[1]&quot;
+(7)  &lt;  NT_ARR , -- ,  -1 , (5) , -- &gt;       &quot;s.a[i]&quot;
+</pre></div>
+</div>
+<div class="highlight-none notranslate"><div class="highlight"><pre><span></span>(8)  &lt;  NT_VAR , -- , &#39;p&#39; ,   0 , -- &gt;       &quot;p&quot;
+(9)  &lt;  NT_IND , -- ,   0 , (8) ,  0 &gt;       &quot;\*p&quot;
+(10) &lt;  NT_MEM , -- , &#39;b&#39; , (9) , -- &gt;       &quot;p-&gt;b&quot;
+(11) &lt;  NT_MEM , -- , &#39;c&#39; , (10), -- &gt;       &quot;p-&gt;b.c&quot;
+</pre></div>
+</div>
+<p>Macros exist in the file
+<em>ili.h</em>
+which allow access to the fields and
+are of the form:</p>
+<div class="highlight-none notranslate"><div class="highlight"><pre><span></span>NME_&lt;field&gt;(item)
+</pre></div>
+</div>
+</section>
+</section>
+<section id="processing">
+<h2>Processing<a class="headerlink" href="#processing" title="Permalink to this heading">¶</a></h2>
+<section id="ili-processing">
+<h3>ILI Processing<a class="headerlink" href="#ili-processing" title="Permalink to this heading">¶</a></h3>
+<p>The ILIs (intermediate language instructions) are maintained in a single
+dynamic memory area and are shared for the entire source program.
+The following
+external structure variable is used to locate the memory area,
+give the size of the area, and to indicate where the available
+area begins :</p>
+<div class="highlight-none notranslate"><div class="highlight"><pre><span></span>struct {
+    ILI \*stg_base;   /\* pointer to memory space \*/
+    int  stg_size;   /\* size in units of ILIs   \*/
+    int  stg_avail;  /\* index to the available ILI in the memory
+                      \* space \*/
+}        ilib;
+</pre></div>
+</div>
+<p>Multiple occurrences of an expression will be represented by a single
+ILI.
+Although the number of operands depend on the ILI,
+each ILI entry in the ILI area consists of a fixed size.
+ILI pointers are just integers (greater than zero) which
+are offsets from the beginning of the ILI area.</p>
+<p>The operands of an ILI may be pointers to other ILI, immediate values,
+pointers (index values) to names entries,
+and symbol table pointers.  For an ILI whose operands are commutative
+(the operands are two ILI pointers), the ILI pointers are ordered such
+that the index of operand 1 is less than or equal to the index of operand
+2. This provides an easy mechanism to ensure that expressions
+such as
+<code class="docutils literal notranslate"><span class="pre">a</span> <span class="pre">\*</span> <span class="pre">b</span></code>
+and
+<code class="docutils literal notranslate"><span class="pre">b</span> <span class="pre">\*</span> <span class="pre">a</span></code>
+are represented by the same ILI.
+If one of the operands is a pointer to a constant ILI,
+the second operand will always locate the constant ILI. Note that
+this is an exception to the rule that the index value of the first operand
+is not greater than the index value of the second operand.</p>
+<p>The ILI module contains two levels of ILI processing. At the lower level
+is the routine
+<code class="docutils literal notranslate"><span class="pre">srcili</span></code>.
+At the higher level is the routine
+<code class="docutils literal notranslate"><span class="pre">addili</span></code>
+which is called
+by the various expand and optimizer routines whenever an ILI needs to be added.
+srcili is called by addili when the ILI is to be entered into the ILI area.</p>
+<p><code class="docutils literal notranslate"><span class="pre">srcili</span></code>
+uses a hashing mechanism based on the ILI’s opcode and
+operands. Figure 13-1 gives a description of the
+<code class="docutils literal notranslate"><span class="pre">srcili</span></code>
+algorithm.
+Note that for a new entry, its count is set to 0.</p>
+<div class="highlight-none notranslate"><div class="highlight"><pre><span></span>val = HASH(ili);         /\* compute hash value \*/
+for (p=ILI in the hash chain for val)
+   if (p==ili) return(p);
+
+/\*  create new entry in the ILI area  \*/
+
+p = new ILI;
+copy fields of ili to p;
+ILI_COUNT(p) = 0;
+return(p);
+</pre></div>
+</div>
+<p>Figure 13-1. srcili Algorithm</p>
+<p>The ILI module is entered through the routine
+<code class="docutils literal notranslate"><span class="pre">addili</span></code>.
+ILIs to be added
+to the ILI area are first handled by
+<code class="docutils literal notranslate"><span class="pre">addili</span></code>.
+Other routines are provided which call
+<code class="docutils literal notranslate"><span class="pre">addili</span></code>
+given a specific ILI
+and its operands to be added.
+<code class="docutils literal notranslate"><span class="pre">addili</span></code>
+processes the ILI
+according to its type and performs certain optimizations such as
+constant folding and strength reduction. For those cases discussed
+previously,
+<code class="docutils literal notranslate"><span class="pre">addili</span></code>
+re-arranges operands.
+Depending on the complexity involved, separate routines are called by
+<code class="docutils literal notranslate"><span class="pre">addili</span></code>
+(although they are logically a part of
+<code class="docutils literal notranslate"><span class="pre">addili</span></code>)
+to handle certain cases.
+Figure 13-2 gives an overview of
+<code class="docutils literal notranslate"><span class="pre">addili</span></code>.</p>
+<div class="highlight-none notranslate"><div class="highlight"><pre><span></span>given ilip (a pointer to the ILI to be added);
+opc = ilip-&gt;opc;
+select processing depending on type of ILI {
+
+case ilip is arithmetic:
+   return addarth(ilip);
+case ilip is constant, load, store, procedure, define:
+   return srcili(ilip);
+case ilip is move:
+   process move ILI;
+case ilip is branch:
+   return addbran(ilip);
+case ilip is other:
+   return srcili(ilip);
+
+}
+</pre></div>
+</div>
+<p>Figure 13-2. addili</p>
+<p>Optimizations are performed on the ILI (mainly on the arithmetics)
+and include both machine
+independent and dependent optimizations.  Briefly, the optimizations are:</p>
+<ul>
+<li><p>constant folding</p></li>
+<li><p>identities</p>
+<div class="highlight-none notranslate"><div class="highlight"><pre><span></span>i \* 1  \(-&gt;  i
+i / 1  \(-&gt;  i
+i + 0  \(-&gt;  i
+</pre></div>
+</div>
+</li>
+<li><p>integer and address association</p>
+<div class="highlight-none notranslate"><div class="highlight"><pre><span></span>i - c          \(-&gt;  i + (-c),  c is a constant
+(i + c1) + c2  \(-&gt;  i + (c1 + c2),  c1 and c2 are constants
+(c1 - i) + c2  \(-&gt;  (c1 + c2) - i
+</pre></div>
+</div>
+</li>
+<li><p>comparison with zero</p>
+<div class="highlight-none notranslate"><div class="highlight"><pre><span></span>i :: 0  \(-&gt;      uses ILI which does not require a memory
+                  reference of the constant 0
+i + c :: 0  \(-&gt;  i :: c, where c is a constant
+</pre></div>
+</div>
+</li>
+<li><p>branch optimizations - see section entitled
+<em>Branch Optimizations</em>.</p></li>
+</ul>
+<section id="move-processing">
+<h4>Move Processing<a class="headerlink" href="#move-processing" title="Permalink to this heading">¶</a></h4>
+<p>The move ILI are divided into two types:</p>
+<ol class="arabic simple">
+<li><p>The move ILI whose link is type IR, DP, SP, or AR to a data register,
+double precision register, or address register, respectively.
+These ILIs (MVIR, MVDP, MVSP, and MVAR) are terminal ILIs and also
+specify the destination register.</p></li>
+<li><p>The move ILIs which convert type AR to IR or IR to AR (AIMV or
+IAMV, respectively).
+These ILIs are non-terminal ILIs and do not specify a register.</p></li>
+</ol>
+<p>The terminal move ILIs are simply added to the
+ILI area by srcili unless the register specified is (mi1.  If this
+occurs, the ILI linked to by the move ILI is returned.
+This is provided for certain expansions which need to simply pass up
+the result of another ILI.</p>
+<p>The convert register ILIs may be constant folded.  That is, if
+the value (ILI) being converted is a constant, the appropriate constant
+and constant ILI are created. Also, the following identities may be
+performed:</p>
+<div class="highlight-none notranslate"><div class="highlight"><pre><span></span>AIMV  j  \(-&gt;  i    if j = IAMV  i
+IAMV  j  \(-&gt;  i    if j = IAMV  i
+</pre></div>
+</div>
+</section>
+<section id="branch-optimizations">
+<h4>Branch Optimizations<a class="headerlink" href="#branch-optimizations" title="Permalink to this heading">¶</a></h4>
+<p>Certain sequences of ILIs are optimized which will allow
+better code to be produced. The optimizations include changing a compare
+ILI followed by a branch ILI to a single ILI which combines the
+compare and branch operations, and
+“constant folding”
+branches (changing a compare and branch to an unconditional branch).</p>
+<p>These optimizations center around the ICJMPZ ILI and LCJMPZ ILI.
+Depending on the language, the ILMs BRT and BRF expand to one of these ILI.
+For C, the notion of true and false is integer non-zero and zero,
+respectively; therefore, the ICJMPZ would be used (ICJMPZ means comparing
+its operand to zero and branching if the specified condition is true).
+For Fortran, the notion of logical true and false is odd and even,
+respectively; LCJMPZ means checking the low bit
+of its operand and branching if the specified condition is true).</p>
+<p>The ICJMPZ ILI is of the form:</p>
+<div class="highlight-none notranslate"><div class="highlight"><pre><span></span>ICJMPZ drlnk cond sym
+</pre></div>
+</div>
+<p>where,</p>
+<dl class="simple">
+<dt>drlnk</dt><dd><p>is a pointer to an integer ILI</p>
+</dd>
+<dt>cond</dt><dd><p>is a condition value:
+1 = equal
+2 = not equal
+3 = less than
+4 = greater than or equal
+5 = less than or equal
+6 = greater than</p>
+</dd>
+<dt>sym</dt><dd><p>is a symbol table pointer to the label.</p>
+</dd>
+</dl>
+<p>The ILI LCJMPZ is of the form:</p>
+<div class="highlight-none notranslate"><div class="highlight"><pre><span></span>LCJMPZ drlnk cond sym
+</pre></div>
+</div>
+<p>where,</p>
+<dl class="simple">
+<dt>drlnk</dt><dd><p>is a pointer to an ILI producing a logical result</p>
+</dd>
+<dt>cond</dt><dd><p>is a condition value:
+1 = equal (branch if false)
+2 = not equal (branch if true)</p>
+</dd>
+<dt>sym</dt><dd><p>is a symbol table pointer to the label.</p>
+</dd>
+</dl>
+<p>For conditional branching, the semantic analyzer outputs a
+sequence of ILMs corresponding to:</p>
+<div class="highlight-none notranslate"><div class="highlight"><pre><span></span>(1) compare op1 op2 (this ILM is based on data type)
+(2) relop (1)
+(2) branch true (or false) (1) label
+</pre></div>
+</div>
+<p>For example, comparing two integer values and branching to label L
+in C
+if they are equal results in the following sequence of two ILMs:</p>
+<div class="highlight-none notranslate"><div class="highlight"><pre><span></span>(1) ICMP op1 op2
+(2) EQ (1)
+(3) BRT (1) L
+</pre></div>
+</div>
+<p>These ILMs, before any optimizations occur, expand to the following
+ILI:</p>
+<div class="highlight-none notranslate"><div class="highlight"><pre><span></span>(1) ICMP op1 op2 eq
+(2) ICJMPZ (1) ne L
+</pre></div>
+</div>
+<p>The desired ILI in this example is:</p>
+<div class="highlight-none notranslate"><div class="highlight"><pre><span></span>(1) ICJMP op1 op2 eq L
+</pre></div>
+</div>
+<p>Optimizing the ILI in the ICJMPZ context involves looking at the
+operand of ICJMPZ and creating new ILI depending on what it is.
+If the ILI is a compare, a compare and branch ILI is created
+according to the following table:</p>
+<table class="docutils align-default">
+<tbody>
+<tr class="row-odd"><td><p>operand</p></td>
+<td></td>
+<td><p>created ILI</p></td>
+</tr>
+<tr class="row-even"><td><p>ACMP[Z]</p></td>
+<td><p>(-&gt; ICJMPZ (-&gt;</p></td>
+<td><p>ACJMP[Z] *</p></td>
+</tr>
+<tr class="row-odd"><td><p>ICMP[Z]</p></td>
+<td><p>^</p></td>
+<td><p>ICJMP[Z]</p></td>
+</tr>
+<tr class="row-even"><td><p>FCMP[Z]</p></td>
+<td><p>^</p></td>
+<td><p>FCJMP[Z]</p></td>
+</tr>
+<tr class="row-odd"><td><p>DCMP[Z]</p></td>
+<td><p>^</p></td>
+<td><p>DCJMP[Z]</p></td>
+</tr>
+</tbody>
+</table>
+<dl class="simple">
+<dt>*</dt><dd><p>ACJMP becomes ACJMPEQ if the condition is equals</p>
+</dd>
+<dt>NOTE</dt><dd><p>The (optional) Z indicates that the comparison is with zero.</p>
+</dd>
+</dl>
+<p>If the ILI is a constant, then either an unconditional branch is
+generated or no branch is required.</p>
+<p>Additional optimizations performed on the compare and
+branch ILIs (non-Z variety) are:</p>
+<ul>
+<li><p>If the second operand is a constant of value zero, the
+ILI becomes the corresponding Z variety whose link operand
+is the first operand of the original ILI and whose condition and
+and sym fields are copied from the original ILI.</p></li>
+<li><p>If the first operand is a constant of
+value zero, the ILI becomes the corresponding Z variety
+whose link operand is the second operand of the original ILI.
+The comparison is reversed if the condition is not 1 (equal)
+or 2 (not equal) (i.e., less than becomes greater than, etc.)
+For example,</p>
+<div class="highlight-none notranslate"><div class="highlight"><pre><span></span>(1) ICON &#39;0&#39;
+(2) ICJMP (1) i ge L
+</pre></div>
+</div>
+<p>becomes</p>
+<div class="highlight-none notranslate"><div class="highlight"><pre><span></span>(1) ICJMPZ i le L
+</pre></div>
+</div>
+</li>
+</ul>
+<p>For Fortran, the BRT/BRF ILMs expand to the LCJMPZ ILI.
+This ILI is optimized according to the following, recursive, rules:</p>
+<ol class="arabic simple">
+<li><p>if the operand is any compare ILI, the LCJMPZ becomes an ICJMPZ
+and the ICJMPZ is optimized as above.</p></li>
+<li><p>if the operand is a NOT ILI, the not is deleted and the condition
+in the LCJMPZ is complemented. The operand of the NOT becomes the
+operand of the new LCJMPZ.</p></li>
+<li><p>otherwise, the low bit of the operand’s value needs to be checked.
+The LCJMPZ is passed through.</p></li>
+</ol>
+</section>
+</section>
+</section>
+<section id="program-units">
+<h2>Program Units<a class="headerlink" href="#program-units" title="Permalink to this heading">¶</a></h2>
+<p>The C module file
+<em>iliutil.c</em>
+contains the following routines:</p>
+<div class="highlight-none notranslate"><div class="highlight"><pre><span></span>int addili (ilip)
+    ILI \*ilip;
+</pre></div>
+</div>
+<ul class="simple">
+<li><p>Main add ili routine; returns the index where the ILI, described by
+<code class="docutils literal notranslate"><span class="pre">ilip</span></code>,
+was added.</p></li>
+</ul>
+<div class="highlight-none notranslate"><div class="highlight"><pre><span></span>int addarth (ilip)
+    ILI \*ilip;
+</pre></div>
+</div>
+<ul class="simple">
+<li><p>Adds the arithmetic ili.  Performs the operand switching if the
+ILI has commutative operands.  Performs various arithmetic optimizations
+including constant folding.
+The index to the ILI added is returned.</p></li>
+</ul>
+<div class="highlight-none notranslate"><div class="highlight"><pre><span></span>int red_iadd (ilix, con)
+    int ilix;
+    INT con;
+</pre></div>
+</div>
+<ul>
+<li><p>Adds the integer add ILI (IADD) of the form
+<code class="docutils literal notranslate"><span class="pre">ilip+con</span></code>.
+This routine
+recursively searches
+<code class="docutils literal notranslate"><span class="pre">ilip</span></code>
+for opportunities to fold in
+<code class="docutils literal notranslate"><span class="pre">con</span></code>,
+e.g.,</p>
+<div class="highlight-none notranslate"><div class="highlight"><pre><span></span>(i + 2) + j + 4  --&gt;  (i + 6) + j
+</pre></div>
+</div>
+</li>
+</ul>
+<div class="highlight-none notranslate"><div class="highlight"><pre><span></span>int red_aadd (ilix, con)
+    int ilix;
+    INT con[2];
+</pre></div>
+</div>
+<ul class="simple">
+<li><p>Adds the address add ILI (AADD) of the form
+<code class="docutils literal notranslate"><span class="pre">ilip+con</span></code>.
+This routine recursively searches
+<code class="docutils literal notranslate"><span class="pre">ilip</span></code>
+for opportunities to fold in
+the address constant
+<code class="docutils literal notranslate"><span class="pre">con</span></code>.</p></li>
+</ul>
+<div class="highlight-none notranslate"><div class="highlight"><pre><span></span>int addbran (ilip)
+    ILI \*ilip;
+</pre></div>
+</div>
+<ul class="simple">
+<li><p>Adds the branch ili. This routine checks for the various branch
+optimizations.</p></li>
+</ul>
+<div class="highlight-none notranslate"><div class="highlight"><pre><span></span>INT icmp(val1, val2)
+    INT val1, val2;
+</pre></div>
+</div>
+<ul>
+<li><p>Compares two INT values and returns:</p>
+<table class="docutils align-default">
+<tbody>
+<tr class="row-odd"><td><p>(mi1</p></td>
+<td><p>val1 &lt; val2</p></td>
+</tr>
+<tr class="row-even"><td><p>0</p></td>
+<td><p>val1 = val2</p></td>
+</tr>
+<tr class="row-odd"><td><p>1</p></td>
+<td><p>val1 &gt; val2</p></td>
+</tr>
+</tbody>
+</table>
+</li>
+</ul>
+<div class="highlight-none notranslate"><div class="highlight"><pre><span></span>int ad1ili(opc, op1 )
+    int opc, op1;
+</pre></div>
+</div>
+<ul class="simple">
+<li><p>Adds an ILI with one operand.
+<code class="docutils literal notranslate"><span class="pre">opc</span></code>
+is the opcode of the ILI and
+<code class="docutils literal notranslate"><span class="pre">op1</span></code>
+its
+operand.</p></li>
+</ul>
+<div class="highlight-none notranslate"><div class="highlight"><pre><span></span>int ad2ili(opc, op1, op2)
+    int opc, op1, op2;
+</pre></div>
+</div>
+<ul class="simple">
+<li><p>Adds an ILI with two operands.</p></li>
+</ul>
+<div class="highlight-none notranslate"><div class="highlight"><pre><span></span>int ad3ili(opc, op1, op2, op3)
+    int opc, op1, op2, op3;
+</pre></div>
+</div>
+<ul class="simple">
+<li><p>Adds an ILI with three operands.</p></li>
+</ul>
+<div class="highlight-none notranslate"><div class="highlight"><pre><span></span>int ad4ili(opc, op1, op2, op3, op4)
+    int opc, op1, op2, op3, op4;
+</pre></div>
+</div>
+<ul class="simple">
+<li><p>Adds an ILI with four operands.</p></li>
+</ul>
+<div class="highlight-none notranslate"><div class="highlight"><pre><span></span>int ad_icon(val)
+    INT val;
+</pre></div>
+</div>
+<ul class="simple">
+<li><p>Adds the ICON ili for the integer constant whose value is
+<code class="docutils literal notranslate"><span class="pre">val</span></code>.</p></li>
+</ul>
+<div class="highlight-none notranslate"><div class="highlight"><pre><span></span>int ad_aconi(val)
+</pre></div>
+</div>
+<ul class="simple">
+<li><p>Adds the ACON ili for an integer constant instead of an address constant.</p></li>
+</ul>
+<div class="highlight-none notranslate"><div class="highlight"><pre><span></span>int srcili(ilip)
+    ILI \*ilip;
+</pre></div>
+</div>
+<ul class="simple">
+<li><p>Enters the ILI into the ILI area.  If it already exists, the
+index is returned.  If it is a new entry, its fields are
+set, and its index is returned.</p></li>
+</ul>
+<div class="highlight-none notranslate"><div class="highlight"><pre><span></span>void dmpili()
+</pre></div>
+</div>
+<ul class="simple">
+<li><p>For compiler debugging purposes, writes to the debug file
+the ILI hash table and/or the ILI area.
+This dump is controlled by vale of debug flag 10.</p></li>
+</ul>
+<p>The following routines are contained in the C module file,
+<em>bihutil.c</em>^:</p>
+<div class="highlight-none notranslate"><div class="highlight"><pre><span></span>bih_init()
+</pre></div>
+</div>
+<ul class="simple">
+<li><p>Initializes the bih area.  This involves creating a list of free nodes
+in the area beginning from its available index to the end of the storage
+(its storage size).  The available index and storage size are
+set when it is allocated or reallocated.</p></li>
+</ul>
+<div class="highlight-none notranslate"><div class="highlight"><pre><span></span>int addbih(bihx)
+    int bihx;
+</pre></div>
+</div>
+<ul class="simple">
+<li><p>Creates a new bih, initializes its fields, and links it in after
+<code class="docutils literal notranslate"><span class="pre">bihx</span></code>.
+The index to the new bih is returned.</p></li>
+</ul>
+<div class="highlight-none notranslate"><div class="highlight"><pre><span></span>int chk_terminal_func(entbihx, exitbihx)
+    int entbihx, exitbihx;
+</pre></div>
+</div>
+<ul class="simple">
+<li><p>Determines if the function’s linkage can be changed in order to
+speed it up.  The function is defined by the entry bih index,
+<code class="docutils literal notranslate"><span class="pre">entbihx</span></code>,
+and the exit bih index,
+<code class="docutils literal notranslate"><span class="pre">exitbihx</span></code>.
+The conditions and their corresponding actions are:</p>
+<ol class="arabic simple">
+<li><p>The function does not make any function calls (the function is a
+terminal function).  No entry and exit routines are needed.
+A special static array (.STACK) is used to contain any automatic
+data required by the function. The appropriate ILI replace the
+ENTRY and EXIT ILI which will load and restore the stack pointer.</p></li>
+<li><p>The function does not require any save frame space in the stack
+header (globar registers
+are not used and the exception register is not modified).
+The routines referenced in the ENTRY and EXIT ILI are replaced
+with
+<code class="docutils literal notranslate"><span class="pre">c$i_qentry</span></code>
+and
+<code class="docutils literal notranslate"><span class="pre">c$i_qexit</span></code>,
+respectively.
+These routines do not check the functions’s PED
+to determine if the AR and EXCSTAT fields are used.</p></li>
+</ol>
+</li>
+</ul>
+<p>The C module file
+<em>iltutil.c</em>
+contains the following routines:</p>
+<div class="highlight-none notranslate"><div class="highlight"><pre><span></span>ilt_init()
+</pre></div>
+</div>
+<ul class="simple">
+<li><p>Initializes the ILT area. This involves creating a list of free ILT
+nodes in the available area.  This area begins at the available index
+and ends at the value denoted by storage size.</p></li>
+</ul>
+<div class="highlight-none notranslate"><div class="highlight"><pre><span></span>int addilt(iltx, ilix)
+    int iltx, ilix;
+</pre></div>
+</div>
+<ul class="simple">
+<li><p>Creates a new ilt for the ili
+<code class="docutils literal notranslate"><span class="pre">ilix.</span></code>
+The ilt is inserted after
+<code class="docutils literal notranslate"><span class="pre">iltx</span></code>
+and its index is returned.</p></li>
+</ul>
+<div class="highlight-none notranslate"><div class="highlight"><pre><span></span>int reduce_ilt(iltx)
+    int iltx;
+</pre></div>
+</div>
+<ul class="simple">
+<li><p>Recursively searches the ili of the ilt located by
+<code class="docutils literal notranslate"><span class="pre">iltx</span></code>
+for any function ILIs.
+When one is found, a new ilt is created for it.
+Returns the index to the last ilt created.</p></li>
+</ul>
+<div class="highlight-none notranslate"><div class="highlight"><pre><span></span>wrilts(bihx)
+    int bihx;
+</pre></div>
+</div>
+<ul class="simple">
+<li><p>Writes out an ilt/ili block given its bih.</p></li>
+</ul>
+<div class="highlight-none notranslate"><div class="highlight"><pre><span></span>rdilts(bihx)
+    int bihx;
+</pre></div>
+</div>
+<ul class="simple">
+<li><p>Reads in an ilt/ili block given its bih.</p></li>
+</ul>
+<div class="highlight-none notranslate"><div class="highlight"><pre><span></span>dmpilt(bihx)
+    int bihx;
+</pre></div>
+</div>
+<ul class="simple">
+<li><p>For debugging purposes, the ilt/ili block is written out to the debug
+file.  This dump is controlled by the value in debug flag 10.</p></li>
+</ul>
+<p>The C module file
+<em>nmeutil.c</em>
+contains the following routines:</p>
+<div class="highlight-none notranslate"><div class="highlight"><pre><span></span>int addnme(type, sym, nm, cnst)
+    int type, sym, nm;
+    INT cnst;
+</pre></div>
+</div>
+<ul class="simple">
+<li><p>Main add NME routine.</p></li>
+</ul>
+<div class="highlight-none notranslate"><div class="highlight"><pre><span></span>void dmpnme()
+</pre></div>
+</div>
+<ul class="simple">
+<li><p>For compiler debugging purposes, writes to the debug file the
+names table area. This dump is controlled by debug flag 10.</p></li>
+</ul>
+</section>
+<section id="ilitp-utility">
+<h2>ILITP Utility<a class="headerlink" href="#ilitp-utility" title="Permalink to this heading">¶</a></h2>
+<p>NOTE: This section needs to be revised!!</p>
+<p>ILITP reads the file which symbolically defines the ILI opcodes,
+their attributes, and their micro-op templates.
+It also reads a file of micro-op information created by the
+MICROP utility.
+ILITP writes a number of files, containing C macros and data
+definitions for the ILI attributes, templates, etc.
+ILITP must be run when an ILI is deleted or added, or when its
+attributes or templates are modified.</p>
+<section id="inputs">
+<h3>Inputs<a class="headerlink" href="#inputs" title="Permalink to this heading">¶</a></h3>
+<p>The first file read by ILITP is the file of micro-op information
+created by MICROP.
+This information is stored up in a table indexed by micro-op
+number for later use when processing the
+ILI template definitions.</p>
+<p>The main input to ILITP is
+the ILI definition file, which is the first
+file specified on the command line.  For an ILI, there are three
+types of lines processed:</p>
+<ol class="arabic">
+<li><p>The .IL line defines the name, the number of operands, and operand
+types of the ILI.
+The ILI definition line has the form:</p>
+<blockquote>
+<div><div class="highlight-none notranslate"><div class="highlight"><pre><span></span>.IL &lt;name&gt; [ &lt;opr&gt;i ] ...
+</pre></div>
+</div>
+<p>where,</p>
+</div></blockquote>
+<dl>
+<dt>&lt;name&gt;</dt><dd><p>is the name of the ILI</p>
+</dd>
+<dt>&lt;opr&gt;i</dt><dd><p>is the type of the ith operand and is one of:</p>
+<dl class="simple">
+<dt>sym</dt><dd><p>operand locates a symbol table node</p>
+</dd>
+<dt>off</dt><dd><p>operand locates an address constant (a symbol table node)</p>
+</dd>
+<dt>nme</dt><dd><p>operand locates a names table entry</p>
+</dd>
+<dt>lnk</dt><dd><p>operand locates an ILI</p>
+</dd>
+<dt>irlnk</dt><dd><p>operand locates a IR ILI</p>
+</dd>
+<dt>splnk</dt><dd><p>operand locates a SP ILI</p>
+</dd>
+<dt>dplnk</dt><dd><p>operand locates a DP ILI</p>
+</dd>
+<dt>arlnk</dt><dd><p>operand locates a AR ILI</p>
+</dd>
+<dt>stc</dt><dd><p>operand is a short constant (an immediate value)</p>
+</dd>
+<dt>dr</dt><dd><p>operand is data register</p>
+</dd>
+<dt>sp</dt><dd><p>operand is a single precision register</p>
+</dd>
+<dt>dp</dt><dd><p>operand is a double precision register</p>
+</dd>
+<dt>ar</dt><dd><p>operand is an address register</p>
+</dd>
+<dt>x87</dt><dd><p>operand is an x87 floating-point stack register</p>
+</dd>
+</dl>
+</dd>
+</dl>
+</li>
+<li><p>The .AT line defines the type of the ILI, the register type of the
+ILI, and whether or not the ILI operands are commutative.
+The attribute line is of the form:</p>
+<div class="highlight-none notranslate"><div class="highlight"><pre><span></span>.AT &lt;type&gt; [ &lt;comm&gt; [ &lt;res&gt; ] ]
+</pre></div>
+</div>
+<p>where,</p>
+<dl class="simple">
+<dt>&lt;type&gt;</dt><dd><p>is the type of the ILI:
+“arth”,
+“intr”,
+“branch”,
+“load”,
+“cons”,
+“store”,
+“proc”,
+“define”,
+“move”,
+or
+“other”.</p>
+</dd>
+<dt>&lt;comm&gt;</dt><dd><p>is the commutative flag for the operands:
+“null”
+(operands are not commutative)
+or
+“comm”
+(operands are commutative).</p>
+</dd>
+<dt>&lt;res&gt;</dt><dd><p>is the result type of the ILI:
+“null”
+or
+“trm”
+(no result and a terminal ILI),
+“lnk”
+(the ILI
+has no result but can be linked to),
+“dr”
+(data register),
+“ar”
+(address register),
+“dp”
+(double precision register), or
+“x87”
+(x87 floating-point stack register).</p>
+</dd>
+</dl>
+</li>
+<li><p>The .TP line defines the micro-operations for an instruction word.
+There may be zero or more .TP lines required for an ILI.  The
+.TP line is of the form:
+.. code-block:: none</p>
+<blockquote>
+<div><p>.TP &lt;micro-ops&gt; …</p>
+</div></blockquote>
+<p>At most two micro-ops can appear on a single line.
+The text of a micro-op must match exactly one of the micro-ops
+defined in the Micro-op Definition File (input to MICROP).</p>
+</li>
+</ol>
+</section>
+<section id="outputs">
+<h3>Outputs<a class="headerlink" href="#outputs" title="Permalink to this heading">¶</a></h3>
+<p>Four output files are written by ILITP:
+<em>iliatdf.h</em>,
+<em>iliatt.h</em>,
+<em>ilidf.h</em>,
+and
+<em>ilitpdf.h</em>.</p>
+</section>
+</section>
+<section id="summary">
+<h2>Summary<a class="headerlink" href="#summary" title="Permalink to this heading">¶</a></h2>
+<section id="include-files">
+<h3>Include Files<a class="headerlink" href="#include-files" title="Permalink to this heading">¶</a></h3>
+<dl class="simple">
+<dt>iliatdf.h</dt><dd><p>Contains the C initializations for the ILI attributes produced
+by ILITP</p>
+</dd>
+<dt>ilitpdf.h</dt><dd><p>Contains the C initializations for the ILI templates
+produced by ILITP</p>
+</dd>
+<dt>iliatt.h</dt><dd><p>Contains the macros which define the C symbol names for the ILI and
+their corresponding opcode values. This file is produced by ILITP.</p>
+</dd>
+<dt>ili.h</dt><dd><p>Contains the declarations for the ILI data structures, ILI attributes,
+and the ILT data structures.
+The necessary external data declarations are in this file including
+the storage management structures for the ILI and ILT areas.
+Macros defined in the file provide access to the ILI and ILT fields,
+and provide the values of the various fields.
+Also, this file
+contains the declarations for the BIH data structure
+and storage management structure.  Macros reside in the file which
+provide access to the fields of these structures.</p>
+</dd>
+</dl>
+</section>
+<section id="macros">
+<h3>Macros<a class="headerlink" href="#macros" title="Permalink to this heading">¶</a></h3>
+<dl class="simple">
+<dt>IL_</dt><dd><p>ILI attributes and names</p>
+</dd>
+<dt>ILIO_</dt><dd><p>ILI operand types</p>
+</dd>
+<dt>ILIA_</dt><dd><p>ILI attribute flag values</p>
+</dd>
+<dt>ILI_</dt><dd><p>ILI structure</p>
+</dd>
+<dt>ILT_</dt><dd><p>ILT structure</p>
+</dd>
+<dt>BIH_</dt><dd><p>BIH structure</p>
+</dd>
+</dl>
+</section>
+</section>
+</section>
+
+
+      </div>
+      <div class="bottomnav" role="navigation" aria-label="bottom navigation">
+      
+        <p>
+        «&#160;&#160;<a href="ilm.html">ILMs</a>
+        &#160;&#160;::&#160;&#160;
+        <a class="uplink" href="../index.html">Contents</a>
+        &#160;&#160;::&#160;&#160;
+        <a href="dinit.html">Data Initialization File</a>&#160;&#160;»
+        </p>
+
+      </div>
+
+    <div class="footer" role="contentinfo">
+        &#169; Copyright .
+      Created using <a href="https://www.sphinx-doc.org/">Sphinx</a> 5.3.0.
+    </div>
+  </body>
+</html>

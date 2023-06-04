@@ -1,0 +1,283 @@
+
+<!DOCTYPE html>
+
+<html lang="en">
+  <head>
+    <meta charset="utf-8" />
+    <meta name="viewport" content="width=device-width, initial-scale=1.0" /><meta name="generator" content="Docutils 0.19: https://docutils.sourceforge.io/" />
+
+    <title>Transformer &#8212; Flang 1.0 documentation</title>
+    <link rel="stylesheet" type="text/css" href="../_static/pygments.css" />
+    <link rel="stylesheet" type="text/css" href="../_static/haiku.css" />
+    <script data-url_root="../" id="documentation_options" src="../_static/documentation_options.js"></script>
+    <script src="../_static/jquery.js"></script>
+    <script src="../_static/underscore.js"></script>
+    <script src="../_static/_sphinx_javascript_frameworks_compat.js"></script>
+    <script src="../_static/doctools.js"></script>
+    <script src="../_static/sphinx_highlight.js"></script>
+    <link rel="index" title="Index" href="../genindex.html" />
+    <link rel="search" title="Search" href="../search.html" />
+    <link rel="next" title="Output Converter" href="outconv.html" />
+    <link rel="prev" title="Semantic Analyzer" href="semant.html" /> 
+  </head><body>
+      <div class="header" role="banner"><h1 class="heading"><a href="../index.html">
+          <span>Flang 1.0 documentation</span></a></h1>
+        <h2 class="heading"><span>Transformer</span></h2>
+      </div>
+      <div class="topnav" role="navigation" aria-label="top navigation">
+      
+        <p>
+        «&#160;&#160;<a href="semant.html">Semantic Analyzer</a>
+        &#160;&#160;::&#160;&#160;
+        <a class="uplink" href="../index.html">Contents</a>
+        &#160;&#160;::&#160;&#160;
+        <a href="outconv.html">Output Converter</a>&#160;&#160;»
+        </p>
+
+      </div>
+      <div class="content" role="main">
+        
+        
+  <section id="transformer">
+<h1>Transformer<a class="headerlink" href="#transformer" title="Permalink to this heading">¶</a></h1>
+<section id="overview">
+<h2>Overview<a class="headerlink" href="#overview" title="Permalink to this heading">¶</a></h2>
+<p>The transformer module performs a number of manipulations on the AST
+and on the Symbol Table.  The object of these manipulations is to
+place the internal data structures in a canonical form that is easy
+to process by later phases.</p>
+<p>The following transformations are performed on the AST:</p>
+<ul class="simple">
+<li><p>Canonicalize alignment and distribution directives and create symbols
+for descriptors.</p></li>
+<li><p>Transform array assignments and WHERE statements into FORALL statements.</p></li>
+<li><p>Canonicalize FORALL statements</p></li>
+<li><p>Rewrite arguments of subroutines, array-valued intrinsics and functions,
+and various intrinsics.</p></li>
+<li><p>Perform transformations on sequential variables and common blocks.</p></li>
+</ul>
+<p>The Symbol Table and AST are modified by this module. Statements are
+inserted and deleted, and new symbols created.</p>
+</section>
+<section id="data-structures">
+<h2>Data Structures<a class="headerlink" href="#data-structures" title="Permalink to this heading">¶</a></h2>
+<section id="global-data-structures">
+<h3>Global Data Structures<a class="headerlink" href="#global-data-structures" title="Permalink to this heading">¶</a></h3>
+<p><em>Symbol Table</em> — New symbols are created for the following data items:</p>
+<ul class="simple">
+<li><p>Alignment descriptors and their pointers.</p></li>
+</ul>
+<p>Each aligned array is assigned
+an alignment descriptor, which is a one-dimensional integer array, with
+a bound of 1. The
+alignment descriptor is created as a based variable, and a pointer for
+the alignment descriptor is created.  The various variables are accessed
+as follows: given a symbol pointer
+<code class="docutils literal notranslate"><span class="pre">sptr</span></code>
+for an aligned array A, the alignment descriptor (array) for A is accessed
+via
+<code class="docutils literal notranslate"><span class="pre">DESCRG(sptr)</span></code>,
+and the pointer to the alignment descriptor (as for any based variable)
+is accessed via
+<code class="docutils literal notranslate"><span class="pre">MIDNUMG(DESCRG(sptr))</span></code>.</p>
+<ul class="simple">
+<li><p>Section descriptors and their pointers.</p></li>
+</ul>
+<p>A section descriptor is created for each aligned array; the descriptor will
+describe the entire array. The descriptor is pointed to by
+<code class="docutils literal notranslate"><span class="pre">DESCRG(sptr)</span></code>.</p>
+<ul class="simple">
+<li><p>Processor descriptors and their pointers.</p></li>
+</ul>
+<p>Each
+<code class="docutils literal notranslate"><span class="pre">ST_PROCESSOR</span></code>
+symbol has a descriptor, created in the same way as alignment descriptors,
+and referenced via
+<code class="docutils literal notranslate"><span class="pre">DESCRG</span></code>.</p>
+<ul class="simple">
+<li><p>Template descriptors and their pointers.
+<code class="docutils literal notranslate"><span class="pre">ST_TEMPLATE</span></code>
+symbols receive descriptors in the same way as
+<code class="docutils literal notranslate"><span class="pre">ST_PROCESSOR</span></code>
+symbols.</p></li>
+<li><p>Internal
+<code class="docutils literal notranslate"><span class="pre">ST_PROCESSOR</span></code>
+and
+<code class="docutils literal notranslate"><span class="pre">ST_TEMPLATE</span></code>
+symbols.</p></li>
+</ul>
+<p>For arrays directly distributed onto processor arrangements,
+templates are created. For distributed arrays and templates with no
+explicit processor arrangement, processor arrangements are created.
+These use internal compiler-created names but are otherwise the same
+as user-defined templates and processors.</p>
+<p><em>AST</em> —
+The AST is modified by insertion and deletion of statements. The modification
+is described in more detail in the section on processing.</p>
+</section>
+<section id="local-data-structures">
+<h3>Local Data Structures<a class="headerlink" href="#local-data-structures" title="Permalink to this heading">¶</a></h3>
+<p>There are no significant local data structures in the transform module.</p>
+</section>
+</section>
+<section id="processing">
+<h2>Processing<a class="headerlink" href="#processing" title="Permalink to this heading">¶</a></h2>
+<section id="id1">
+<h3>Overview<a class="headerlink" href="#id1" title="Permalink to this heading">¶</a></h3>
+<p>The main processing function is
+<code class="docutils literal notranslate"><span class="pre">transform()</span></code>.
+It performs canonical alignment transformations, rewrites foralls containing
+transformational intrinsics, rewrites block WHERE statements,
+rewrites subroutine and intrinsic calls, converts array assignments
+and WHERE statements into foralls, and
+foralls into canonical form.  Also, descriptor symbols are created.</p>
+<p>The processing for the transform module is performed
+in two files:
+<code class="docutils literal notranslate"><span class="pre">transfrm.c``and</span>
+<span class="pre">``func.c</span></code>.</p>
+</section>
+<section id="transformational-intrinsics">
+<h3>Transformational Intrinsics<a class="headerlink" href="#transformational-intrinsics" title="Permalink to this heading">¶</a></h3>
+<p><code class="docutils literal notranslate"><span class="pre">rewrite_forall_intrinsic</span></code>
+removes transformational intrinsics from forall statements.
+For example,</p>
+<div class="highlight-none notranslate"><div class="highlight"><pre><span></span>forall (i=1:n, j=1:n)
+    a(i,j) = a(i,j) + sum(b(i,:)\*c(:,j))
+</pre></div>
+</div>
+<p>is transformed into:</p>
+<div class="highlight-none notranslate"><div class="highlight"><pre><span></span>do i = 1,n
+   do j = 1,n
+      temp(i,j) = sum(b(i,:) \* c(:,j)
+   enddo
+enddo
+forall (i=1:n, j=1:n)
+   a(i,j) = a(i,j) + temp(i,j)
+</pre></div>
+</div>
+</section>
+<section id="block-wheres">
+<h3>Block Wheres<a class="headerlink" href="#block-wheres" title="Permalink to this heading">¶</a></h3>
+<p><code class="docutils literal notranslate"><span class="pre">rewrite_block_where</span></code>
+converts block WHERE constructs into single-statement
+WHEREs.  For example,</p>
+<div class="highlight-none notranslate"><div class="highlight"><pre><span></span>WHERE (a .gt. 0)
+    a = 12
+    b = a / 13
+ENDWHERE
+</pre></div>
+</div>
+<p>is transformed into:</p>
+<div class="highlight-none notranslate"><div class="highlight"><pre><span></span>temp = a .gt. 0
+WHERE (temp) a = 12
+WHERE (temp) b = a / 13
+</pre></div>
+</div>
+<p>Note that the temporary is always created; this could be avoided in many
+cases some analysis; for example, if no variable referenced in the mask
+expression is assigned to in the block, then no temporary is required.</p>
+</section>
+<section id="subroutine-arguments">
+<h3>Subroutine Arguments<a class="headerlink" href="#subroutine-arguments" title="Permalink to this heading">¶</a></h3>
+<p><code class="docutils literal notranslate"><span class="pre">rewrite_calls()</span></code>
+is the most complex part of the transform module. The file
+<code class="docutils literal notranslate"><span class="pre">func.c</span></code>
+contains this function. It is responsible for
+three tasks:</p>
+<ol class="arabic">
+<li><p>Rewrite array expression arguments to functions to use temporaries. For
+example,</p>
+<div class="highlight-none notranslate"><div class="highlight"><pre><span></span>call sub(a(1:n:2) + b(1:m:3))
+</pre></div>
+</div>
+<p>becomes</p>
+<div class="highlight-none notranslate"><div class="highlight"><pre><span></span>allocate temp(1:n:2)
+temp = a(1:n:2) + b(1:m:3)
+</pre></div>
+</div>
+</li>
+<li><p>Rewrite expressions using array-valued functions, and the calls to those
+functions. This involves creating a temporary to hold the return value
+of the function. This is done currently only for intrinsic functions.</p></li>
+<li><p>Rewrite intrinsics. This is the most important part of
+<code class="docutils literal notranslate"><span class="pre">rewrite_calls.</span></code></p></li>
+</ol>
+<p>Intrinsic rewriting is performed on transformational intrinsics, as well
+as a number of Fortran intrinsics. Transformational intrinsics are
+turned into calls to runtime support functions.
+Here is an example:</p>
+<p>Consider the statement:</p>
+<div class="highlight-none notranslate"><div class="highlight"><pre><span></span>a = SUM(b \* c, dim=2, mask=a .ne. 0) + d
+</pre></div>
+</div>
+<p>First, a temporary is created to hold the expression
+<code class="docutils literal notranslate"><span class="pre">b\*c</span></code>.
+This is done as part of the array expression argument processing. A temporary
+is also created for the mask expression. Then, the function
+<code class="docutils literal notranslate"><span class="pre">rewrite_func_ast</span></code>
+is called. It determines that the appropriate runtime call is
+<code class="docutils literal notranslate"><span class="pre">ftn_sum</span></code>.
+A call to this function is generated. Since the result of the intrinsic
+is used in an expression, a temporary to hold the return value is also
+generated.</p>
+<p>The generated code looks like:</p>
+<div class="highlight-none notranslate"><div class="highlight"><pre><span></span>allocate temp1
+temp1 = b\*c
+allocate temp2
+temp2 = a .ne. 0
+allocate temp3
+call ftn_sum(temp3, temp1, dim, temp2)
+a = temp3
+deallocate temp3
+deallocate temp2
+deallocate temp1
+</pre></div>
+</div>
+</section>
+<section id="rewrite-into-foralls">
+<h3>Rewrite Into Foralls<a class="headerlink" href="#rewrite-into-foralls" title="Permalink to this heading">¶</a></h3>
+<p>The function
+<code class="docutils literal notranslate"><span class="pre">rewrite_into_forall()</span></code>
+converts array assignments and WHERE statements into forall statements.
+This is relatively straightforward; special care must be taken for
+array-valued subscripts. Also, an attempt is made to generate the forall
+so that later DO-loops will be in column major order.</p>
+</section>
+<section id="rewrite-foralls">
+<h3>Rewrite Foralls<a class="headerlink" href="#rewrite-foralls" title="Permalink to this heading">¶</a></h3>
+<p><code class="docutils literal notranslate"><span class="pre">rewrite_forall</span></code>
+creates temporaries for forall statements that would have a dependence
+if directly scalarized (this functionality will be moved to a later
+phase). It also handles vector foralls, such as:</p>
+<div class="highlight-none notranslate"><div class="highlight"><pre><span></span>forall (i=1:n) a(i,:) = b(i,:)
+</pre></div>
+</div>
+<p>These are converted into foralls with multiple indices:</p>
+<div class="highlight-none notranslate"><div class="highlight"><pre><span></span>forall (i=1:n,j=1:m) a(i,j) = b(i,j)
+</pre></div>
+</div>
+<p>This should probably be part of an earlier phase.</p>
+</section>
+</section>
+</section>
+
+
+      </div>
+      <div class="bottomnav" role="navigation" aria-label="bottom navigation">
+      
+        <p>
+        «&#160;&#160;<a href="semant.html">Semantic Analyzer</a>
+        &#160;&#160;::&#160;&#160;
+        <a class="uplink" href="../index.html">Contents</a>
+        &#160;&#160;::&#160;&#160;
+        <a href="outconv.html">Output Converter</a>&#160;&#160;»
+        </p>
+
+      </div>
+
+    <div class="footer" role="contentinfo">
+        &#169; Copyright .
+      Created using <a href="https://www.sphinx-doc.org/">Sphinx</a> 5.3.0.
+    </div>
+  </body>
+</html>
