@@ -1,0 +1,14 @@
+<map id="ilidir.h" name="ilidir.h">
+<area shape="rect" id="node1" title=" " alt="" coords="544,5,600,32"/>
+<area shape="rect" id="node2" href="$tools_2flang1_2flang1exe_2comm_8c.html" title="Fortran communications module." alt="" coords="5,80,75,107"/>
+<area shape="rect" id="node3" href="$commgen_8c.html" title="Fortran communications optimizer module." alt="" coords="99,80,189,107"/>
+<area shape="rect" id="node4" href="$comminvar_8c.html" title="Invariant communication optimization." alt="" coords="214,80,311,107"/>
+<area shape="rect" id="node5" href="$datadep_8c.html" title="Data dependence framework." alt="" coords="335,80,414,107"/>
+<area shape="rect" id="node6" href="$direct_8c.html" title="Directive/pragma support modules." alt="" coords="438,80,503,107"/>
+<area shape="rect" id="node7" href="$expand_8cpp.html" title="Common expander routines." alt="" coords="527,80,617,107"/>
+<area shape="rect" id="node8" href="$flow_8c.html" title="Optimizer submodule responsible for performing flow analysis Used by the optimizer and vectorizer." alt="" coords="641,80,697,107"/>
+<area shape="rect" id="node9" href="$func_8c.html" title="rewrite function args, etc" alt="" coords="721,80,780,107"/>
+<area shape="rect" id="node10" href="$ilidir_8c.html" title="ILI directive module." alt="" coords="804,80,860,107"/>
+<area shape="rect" id="node11" href="$main_8c.html" title="main program and initialization routines for fortran front&#45;end" alt="" coords="884,80,945,107"/>
+<area shape="rect" id="node12" href="$outconv_8c.html" title="Routines for descriptor optimizatons and forall transformations." alt="" coords="970,80,1049,107"/>
+</map>

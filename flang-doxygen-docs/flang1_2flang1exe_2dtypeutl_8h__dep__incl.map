@@ -1,0 +1,48 @@
+<map id="dtypeutl.h" name="dtypeutl.h">
+<area shape="rect" id="node1" title="Fortran data type utility functions." alt="" coords="2101,5,2179,32"/>
+<area shape="rect" id="node2" href="$assem_8c.html" title="PGFTN/N10 &quot;assembler&quot; module." alt="" coords="5,80,77,107"/>
+<area shape="rect" id="node3" href="$ast_8c.html" title="Abstract syntax tree access module." alt="" coords="101,80,152,107"/>
+<area shape="rect" id="node4" href="$astout_8c.html" title="Abstract syntax tree output module." alt="" coords="176,80,245,107"/>
+<area shape="rect" id="node5" href="$bblock_8c.html" title="Fortran front&#45;end basic block module." alt="" coords="270,80,341,107"/>
+<area shape="rect" id="node6" href="$tools_2flang1_2flang1exe_2comm_8c.html" title="Fortran communications module." alt="" coords="365,80,435,107"/>
+<area shape="rect" id="node7" href="$commgen_8c.html" title="Fortran communications optimizer module." alt="" coords="459,80,549,107"/>
+<area shape="rect" id="node8" href="$commopt_8c.html" title="Fortran communications optimizer module." alt="" coords="574,80,661,107"/>
+<area shape="rect" id="node9" href="$dinit_8c.html" title="Process data initialization statements. Called by semant." alt="" coords="685,80,742,107"/>
+<area shape="rect" id="node10" href="$dinitutl_8c.html" title="Utilities for processing the data init file." alt="" coords="766,80,837,107"/>
+<area shape="rect" id="node11" href="$dpm__out_8c.html" title="Fortran data partitioning module, output." alt="" coords="861,80,944,107"/>
+<area shape="rect" id="node12" href="$dtypeutl_8c.html" title="Fortran data type utility functions." alt="" coords="969,80,1047,107"/>
+<area shape="rect" id="node13" href="$dump_8c.html" title="dump routines for compiler&#39;s internal data structures. This file contains dump routines for the compi..." alt="" coords="1071,80,1137,107"/>
+<area shape="rect" id="node14" href="$exterf_8c.html" title="Routines for exporting symbols to .mod files and to IPA." alt="" coords="1161,80,1228,107"/>
+<area shape="rect" id="node15" href="$func_8c.html" title="rewrite function args, etc" alt="" coords="1252,80,1311,107"/>
+<area shape="rect" id="node16" href="$hlvect_8c.html" title="high level vectorization utils" alt="" coords="1335,80,1403,107"/>
+<area shape="rect" id="node17" href="$inliner_8c.html" title="inliner utils definitions" alt="" coords="1428,80,1495,107"/>
+<area shape="rect" id="node18" href="$interf_8c.html" title="Routines for importing symbols from .mod files and from IPA." alt="" coords="1519,80,1582,107"/>
+<area shape="rect" id="node19" href="$lower_8c.html" title="lower STD/AST to back&#45;end ILM structure" alt="" coords="1606,80,1669,107"/>
+<area shape="rect" id="node20" href="$lowerexp_8c.html" title="Routines used by lower.c for lowering to ILMs." alt="" coords="1693,80,1777,107"/>
+<area shape="rect" id="node21" href="$lowerilm_8c.html" title="Routines used by lower.c for lowering to ILMs." alt="" coords="1801,80,1881,107"/>
+<area shape="rect" id="node22" href="$lowersym_8c.html" title="Routines used by lower.c for lowering symbols." alt="" coords="1905,80,1993,107"/>
+<area shape="rect" id="node23" href="$main_8c.html" title="main program and initialization routines for fortran front&#45;end" alt="" coords="2017,80,2079,107"/>
+<area shape="rect" id="node24" href="$module_8c.html" title="Fortran module support." alt="" coords="2103,80,2177,107"/>
+<area shape="rect" id="node25" href="$outconv_8c.html" title="Routines for descriptor optimizatons and forall transformations." alt="" coords="2202,80,2281,107"/>
+<area shape="rect" id="node26" href="$rest_8c.html" title="various ast transformations" alt="" coords="2305,80,2359,107"/>
+<area shape="rect" id="node27" href="$rte_8c.html" title=" " alt="" coords="2384,80,2432,107"/>
+<area shape="rect" id="node28" href="$scan_8c.html" title="This file contains the compiler&#39;s scanner (lexical analyzer) module." alt="" coords="2456,80,2517,107"/>
+<area shape="rect" id="node29" href="$semant_8c.html" title="This file contains part 1 of the compiler&#39;s semantic actions (also known as the semant1 phase)." alt="" coords="2542,80,2618,107"/>
+<area shape="rect" id="node30" href="$semant2_8c.html" title="This file contains part 2 of the compiler&#39;s semantic actions (also known as the semant2 phase)." alt="" coords="2643,80,2725,107"/>
+<area shape="rect" id="node31" href="$semant3_8c.html" title="This file contains part 3 of the compiler&#39;s semantic actions (also known as the semant3 phase)." alt="" coords="2749,80,2832,107"/>
+<area shape="rect" id="node32" href="$semantio_8c.html" title="Semantic analyzer routines which process IO statements." alt="" coords="2857,80,2943,107"/>
+<area shape="rect" id="node33" href="$semfin_8c.html" title="Fortran routines called at the end of semantic processing." alt="" coords="2968,80,3040,107"/>
+<area shape="rect" id="node34" href="$semfunc_8c.html" title="Fortran front&#45;end utility routines used by Semantic Analyzer to process functions,..." alt="" coords="3064,80,3147,107"/>
+<area shape="rect" id="node35" href="$semfunc2_8c.html" title="Utility routines used by semantic analyzer." alt="" coords="3171,80,3261,107"/>
+<area shape="rect" id="node36" href="$semgnr_8c.html" title="Fortran utility routines used by Semantic Analyzer to process user&#45;defined generics including overloa..." alt="" coords="3286,80,3362,107"/>
+<area shape="rect" id="node37" href="$semsmp_8c.html" title="semantic analyzer routines which process SMP statements." alt="" coords="3387,80,3469,107"/>
+<area shape="rect" id="node38" href="$semsym_8c.html" title="Fortran Semantic action routines to resolve symbol references as to overloading class." alt="" coords="3493,80,3576,107"/>
+<area shape="rect" id="node39" href="$semtbp_8c.html" title="This file contains semantic processing routines for type bound procedures (tbps), generic tbps,..." alt="" coords="3601,80,3677,107"/>
+<area shape="rect" id="node40" href="$semutil_8c.html" title="Utility routines used by Semantic Analyzer." alt="" coords="3701,80,3776,107"/>
+<area shape="rect" id="node41" href="$semutil2_8c.html" title="Utility routines used by Fortran Semantic Analyzer." alt="" coords="3800,80,3883,107"/>
+<area shape="rect" id="node42" href="$symtab_8c.html" title="Fortran &#45; symbol table access module." alt="" coords="3907,80,3983,107"/>
+<area shape="rect" id="node43" href="$symutl_8c.html" title="Fortran symbol utilities." alt="" coords="4008,80,4080,107"/>
+<area shape="rect" id="node44" href="$transfrm_8c.html" title=" " alt="" coords="4105,80,4186,107"/>
+<area shape="rect" id="node45" href="$vsub_8c.html" title="Rewrite subscript vectors for lhs and rhs, etc." alt="" coords="4211,80,4272,107"/>
+<area shape="rect" id="node46" href="$xref_8c.html" title="Fortran module responsible for generating Cross Reference Listing." alt="" coords="4297,80,4351,107"/>
+</map>

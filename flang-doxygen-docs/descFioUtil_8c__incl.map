@@ -1,0 +1,22 @@
+<map id="descFioUtil.c" name="descFioUtil.c">
+<area shape="rect" id="node1" title=" " alt="" coords="483,5,581,32"/>
+<area shape="rect" id="node2" href="$fioMacros_8h.html" title="descriptor and other definitions" alt="" coords="323,155,413,181"/>
+<area shape="rect" id="node11" href="$descRW_8h.html" title=" " alt="" coords="491,80,573,107"/>
+<area shape="rect" id="node12" href="$runtime_2flang_2global_8h.html" title="Global definitions and declarations for Fortran I/O library." alt="" coords="609,80,676,107"/>
+<area shape="rect" id="node3" title=" " alt="" coords="561,229,625,256"/>
+<area shape="rect" id="node4" title=" " alt="" coords="5,229,75,256"/>
+<area shape="rect" id="node5" href="$fortDt_8h.html" title="runtime Data type code definitions" alt="" coords="99,229,165,256"/>
+<area shape="rect" id="node7" href="$fioStructs_8h.html" title="Fortran IO related structs." alt="" coords="189,229,278,256"/>
+<area shape="rect" id="node8" href="$FuncArgMacros_8h.html" title="Fortran RTE name build and entry symbol macros." alt="" coords="303,229,428,256"/>
+<area shape="rect" id="node9" href="$fort__vars_8h.html" title=" " alt="" coords="453,229,537,256"/>
+<area shape="rect" id="node6" title=" " alt="" coords="93,304,171,331"/>
+<area shape="rect" id="node10" title=" " alt="" coords="703,304,769,331"/>
+<area shape="rect" id="node13" href="$universal_8h.html" title="Declarations common across all programs for all hosts and targets." alt="" coords="439,155,524,181"/>
+<area shape="rect" id="node14" href="$stdioInterf_8h.html" title=" " alt="" coords="548,155,639,181"/>
+<area shape="rect" id="node18" href="$cnfg_8h.html" title="cnfg.h &#45; declare external variables/arrays used by Fortran I/O" alt="" coords="663,155,721,181"/>
+<area shape="rect" id="node19" href="$fio__fcb__flags_8h.html" title="fio_fcb_flags.h &#45; FIO_FCB flags for access, dispose, blank, status and format fields:" alt="" coords="745,155,852,181"/>
+<area shape="rect" id="node20" title=" " alt="" coords="877,155,939,181"/>
+<area shape="rect" id="node15" title=" " alt="" coords="649,229,711,256"/>
+<area shape="rect" id="node16" title=" " alt="" coords="735,229,801,256"/>
+<area shape="rect" id="node17" title=" " alt="" coords="825,229,893,256"/>
+</map>

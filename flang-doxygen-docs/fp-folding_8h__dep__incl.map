@@ -1,0 +1,5 @@
+<map id="fp&#45;folding.h" name="fp&#45;folding.h">
+<area shape="rect" id="node1" title="API for floating&#45;point folding." alt="" coords="94,5,181,32"/>
+<area shape="rect" id="node2" href="$host-fp-folding_8c.html" title="Implement floating&#45;point folding with host arithmetic." alt="" coords="5,80,120,107"/>
+<area shape="rect" id="node3" href="$legacy-folding-api_8c.html" title="Implement legacy folding interfaces." alt="" coords="145,80,279,107"/>
+</map>

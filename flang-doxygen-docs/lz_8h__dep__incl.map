@@ -1,0 +1,17 @@
+<map id="lz.h" name="lz.h">
+<area shape="rect" id="node1" title="definitions for LZ compression used with IPA" alt="" coords="297,5,340,32"/>
+<area shape="rect" id="node2" href="$ccffinfo_8c.html" title="common compiler feedback format module" alt="" coords="27,80,103,107"/>
+<area shape="rect" id="node3" href="$dpm__out_8c.html" title="Fortran data partitioning module, output." alt="" coords="5,155,88,181"/>
+<area shape="rect" id="node4" href="$dpm__out_8h.html" title=" " alt="" coords="229,80,312,107"/>
+<area shape="rect" id="node6" href="$exterf_8c.html" title="Routines for exporting symbols to .mod files and to IPA." alt="" coords="112,155,179,181"/>
+<area shape="rect" id="node10" href="$interf_8c.html" title="Routines for importing symbols from .mod files and from IPA." alt="" coords="337,80,399,107"/>
+<area shape="rect" id="node11" href="$lz_8c.html" title=" " alt="" coords="424,80,467,107"/>
+<area shape="rect" id="node12" href="$flang2_2flang2exe_2main_8h.html" title="main exports" alt="" coords="560,80,621,107"/>
+<area shape="rect" id="node15" href="$module_8c.html" title="Fortran module support." alt="" coords="645,80,720,107"/>
+<area shape="rect" id="node5" href="$dump_8c.html" title="dump routines for compiler&#39;s internal data structures. This file contains dump routines for the compi..." alt="" coords="203,155,269,181"/>
+<area shape="rect" id="node7" href="$lowersym_8c.html" title="Routines used by lower.c for lowering symbols." alt="" coords="293,155,381,181"/>
+<area shape="rect" id="node8" href="$outconv_8c.html" title="Routines for descriptor optimizatons and forall transformations." alt="" coords="406,155,485,181"/>
+<area shape="rect" id="node9" href="$rest_8c.html" title="various ast transformations" alt="" coords="509,155,563,181"/>
+<area shape="rect" id="node13" href="$main_8cpp.html" title="Fortran backend main program and initialization routines." alt="" coords="588,155,663,181"/>
+<area shape="rect" id="node14" href="$upper_8cpp.html" title="upper &#45; import the lowered F90/HPF code" alt="" coords="687,155,766,181"/>
+</map>

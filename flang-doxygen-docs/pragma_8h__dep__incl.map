@@ -1,0 +1,20 @@
+<map id="pragma.h" name="pragma.h">
+<area shape="rect" id="node1" title=" " alt="" coords="782,5,858,32"/>
+<area shape="rect" id="node2" href="$ast_8c.html" title="Abstract syntax tree access module." alt="" coords="5,80,56,107"/>
+<area shape="rect" id="node3" href="$astout_8c.html" title="Abstract syntax tree output module." alt="" coords="80,80,149,107"/>
+<area shape="rect" id="node4" href="$direct_8c.html" title="Directive/pragma support modules." alt="" coords="174,80,239,107"/>
+<area shape="rect" id="node5" href="$dpm__out_8c.html" title="Fortran data partitioning module, output." alt="" coords="264,80,347,107"/>
+<area shape="rect" id="node6" href="$exp__ftn_8cpp.html" title="Fortran&#45;specific expander routines." alt="" coords="371,80,461,107"/>
+<area shape="rect" id="node7" href="$flow_8c.html" title="Optimizer submodule responsible for performing flow analysis Used by the optimizer and vectorizer." alt="" coords="485,80,541,107"/>
+<area shape="rect" id="node8" href="$ilmutil_8cpp.html" title=" " alt="" coords="566,80,647,107"/>
+<area shape="rect" id="node9" href="$lowerilm_8c.html" title="Routines used by lower.c for lowering to ILMs." alt="" coords="672,80,752,107"/>
+<area shape="rect" id="node10" href="$lowersym_8c.html" title="Routines used by lower.c for lowering symbols." alt="" coords="776,80,864,107"/>
+<area shape="rect" id="node11" href="$outconv_8c.html" title="Routines for descriptor optimizatons and forall transformations." alt="" coords="889,80,967,107"/>
+<area shape="rect" id="node12" href="$pragma_8c.html" title="PGC &amp; PGFTN directive scan &amp; semantic module." alt="" coords="991,80,1067,107"/>
+<area shape="rect" id="node13" href="$rest_8c.html" title="various ast transformations" alt="" coords="1091,80,1146,107"/>
+<area shape="rect" id="node14" href="$semant_8c.html" title="This file contains part 1 of the compiler&#39;s semantic actions (also known as the semant1 phase)." alt="" coords="1170,80,1246,107"/>
+<area shape="rect" id="node15" href="$semant3_8c.html" title="This file contains part 3 of the compiler&#39;s semantic actions (also known as the semant3 phase)." alt="" coords="1271,80,1353,107"/>
+<area shape="rect" id="node16" href="$semsmp_8c.html" title="semantic analyzer routines which process SMP statements." alt="" coords="1377,80,1460,107"/>
+<area shape="rect" id="node17" href="$semtbp_8c.html" title="This file contains semantic processing routines for type bound procedures (tbps), generic tbps,..." alt="" coords="1485,80,1561,107"/>
+<area shape="rect" id="node18" href="$upper_8cpp.html" title="upper &#45; import the lowered F90/HPF code" alt="" coords="1585,80,1663,107"/>
+</map>

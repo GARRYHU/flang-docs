@@ -1,0 +1,13 @@
+<map id="komp.h" name="komp.h">
+<area shape="rect" id="node1" title=" " alt="" coords="321,5,386,32"/>
+<area shape="rect" id="node2" href="$llcrit_8c.html" title=" " alt="" coords="243,80,301,107"/>
+<area shape="rect" id="node3" href="$llcrit_8h.html" title=" " alt="" coords="325,80,382,107"/>
+<area shape="rect" id="node11" href="$ompstubs_8c.html" title=" " alt="" coords="407,80,497,107"/>
+<area shape="rect" id="node4" href="$allo_8c.html" title=" " alt="" coords="5,155,59,181"/>
+<area shape="rect" id="node5" href="$ftncharsup_8c.html" title=" " alt="" coords="83,155,178,181"/>
+<area shape="rect" id="node6" href="$ftnexit_8c.html" title=" " alt="" coords="203,155,272,181"/>
+<area shape="rect" id="node7" href="$miscsup__com_8c.html" title="Collection of misc Fortran intrinsics (present, min, max, ajustl, adjustl, ...)." alt="" coords="296,155,411,181"/>
+<area shape="rect" id="node8" href="$mpmalloc_8c.html" title=" " alt="" coords="435,155,525,181"/>
+<area shape="rect" id="node9" href="$rnum_8c.html" title=" " alt="" coords="549,155,611,181"/>
+<area shape="rect" id="node10" href="$flangrti_2trace_8c.html" title=" " alt="" coords="635,155,698,181"/>
+</map>

@@ -1,0 +1,11 @@
+<map id="commopt.h" name="commopt.h">
+<area shape="rect" id="node1" title="macros, definitions, and prototypes for communications module" alt="" coords="386,5,473,32"/>
+<area shape="rect" id="node2" href="$tools_2flang1_2flang1exe_2comm_8c.html" title="Fortran communications module." alt="" coords="5,80,75,107"/>
+<area shape="rect" id="node3" href="$commgen_8c.html" title="Fortran communications optimizer module." alt="" coords="99,80,189,107"/>
+<area shape="rect" id="node4" href="$comminvar_8c.html" title="Invariant communication optimization." alt="" coords="214,80,311,107"/>
+<area shape="rect" id="node5" href="$commopt_8c.html" title="Fortran communications optimizer module." alt="" coords="335,80,422,107"/>
+<area shape="rect" id="node6" href="$detect_8c.html" title="Detect communications for the communications module." alt="" coords="447,80,516,107"/>
+<area shape="rect" id="node7" href="$main_8c.html" title="main program and initialization routines for fortran front&#45;end" alt="" coords="540,80,601,107"/>
+<area shape="rect" id="node8" href="$outconv_8c.html" title="Routines for descriptor optimizatons and forall transformations." alt="" coords="626,80,705,107"/>
+<area shape="rect" id="node9" href="$vsub_8c.html" title="Rewrite subscript vectors for lhs and rhs, etc." alt="" coords="729,80,791,107"/>
+</map>

@@ -1,0 +1,8 @@
+<map id="common_tanf.h" name="common_tanf.h">
+<area shape="rect" id="node1" title=" " alt="" coords="229,5,341,32"/>
+<area shape="rect" id="node2" href="$fs__tan__16__avx512_8cpp.html" title=" " alt="" coords="5,155,159,181"/>
+<area shape="rect" id="node3" href="$fs__tan__1__avx2_8cpp.html" title=" " alt="" coords="405,80,537,107"/>
+<area shape="rect" id="node4" href="$fs__tan__4__avx2_8cpp.html" title=" " alt="" coords="183,155,315,181"/>
+<area shape="rect" id="node5" href="$fs__tan__8__avx2_8cpp.html" title=" " alt="" coords="339,155,471,181"/>
+<area shape="rect" id="node6" href="$tan__f__vec_8h.html" title=" " alt="" coords="239,80,330,107"/>
+</map>

@@ -1,0 +1,8 @@
+<map id="assem.h" name="assem.h">
+<area shape="rect" id="node1" title="Assembler module." alt="" coords="231,5,303,32"/>
+<area shape="rect" id="node2" href="$expsmp_8cpp.html" title="SMP expander routines." alt="" coords="5,80,99,107"/>
+<area shape="rect" id="node3" href="$iliutil_8cpp.html" title="ILI utility module." alt="" coords="123,80,197,107"/>
+<area shape="rect" id="node4" href="$llassem_8cpp.html" title=" " alt="" coords="221,80,313,107"/>
+<area shape="rect" id="node5" href="$llassem__common_8cpp.html" title=" " alt="" coords="337,80,487,107"/>
+<area shape="rect" id="node6" href="$tgtutil_8cpp.html" title="tgtutil.c &#45; Various definitions for the libomptarget runtime" alt="" coords="511,80,590,107"/>
+</map>

@@ -1,0 +1,5 @@
+<map id="sharedefs.h" name="sharedefs.h">
+<area shape="rect" id="node1" title=" " alt="" coords="5,5,96,32"/>
+<area shape="rect" id="node2" href="$shared_2utils_2symacc_8h.html" title="Various definitions for symacc." alt="" coords="11,80,90,107"/>
+<area shape="rect" id="node3" href="$shared_2utils_2symacc_8c.html" title="Generic access module. Used by all compilers and initialization utility." alt="" coords="11,155,90,181"/>
+</map>

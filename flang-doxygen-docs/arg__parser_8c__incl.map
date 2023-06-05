@@ -1,0 +1,12 @@
+<map id="arg_parser.c" name="arg_parser.c">
+<area shape="rect" id="node1" title="Argument parser implementation." alt="" coords="393,5,487,32"/>
+<area shape="rect" id="node2" href="$include_2flang_2ADT_2hash_8h.html" title="General&#45;Purpose Hash Tables." alt="" coords="5,87,128,114"/>
+<area shape="rect" id="node3" href="$arg__parser_8h.html" title="C header file for the argument parser." alt="" coords="153,80,287,121"/>
+<area shape="rect" id="node5" title=" " alt="" coords="304,177,379,203"/>
+<area shape="rect" id="node6" href="$xflag_8h.html" title="Definitions for x&#45;flags handling routines." alt="" coords="363,87,517,114"/>
+<area shape="rect" id="node7" href="$pgerror_8h.html" title="Error handling and reporting." alt="" coords="542,87,679,114"/>
+<area shape="rect" id="node9" title=" " alt="" coords="704,87,768,114"/>
+<area shape="rect" id="node10" title=" " alt="" coords="793,87,858,114"/>
+<area shape="rect" id="node4" href="$debug__action_8h.html" title="Debug action header file." alt="" coords="129,169,279,211"/>
+<area shape="rect" id="node8" href="$universal_8h.html" title="Declarations common across all programs for all hosts and targets." alt="" coords="568,177,653,203"/>
+</map>

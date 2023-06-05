@@ -1,0 +1,9 @@
+<map id="arginfo" name="arginfo">
+<area shape="rect" id="node1" title=" " alt="" coords="252,335,313,361"/>
+<area shape="rect" id="node2" title=" " alt="" coords="229,5,267,32"/>
+<area shape="rect" id="node3" href="$struct__sfuse.html" title="Statement function used in the right&#45;hand side." alt="" coords="156,245,217,272"/>
+<area shape="rect" id="node4" href="$struct__sfdsc.html" title="Statement function descriptor." alt="" coords="148,335,209,361"/>
+<area shape="rect" id="node5" href="$struct__arginfo.html" title="Information about statement function arguments." alt="" coords="9,140,77,167"/>
+<area shape="rect" id="node6" title=" " alt="" coords="5,5,80,32"/>
+<area shape="rect" id="node7" title=" " alt="" coords="233,140,279,167"/>
+</map>

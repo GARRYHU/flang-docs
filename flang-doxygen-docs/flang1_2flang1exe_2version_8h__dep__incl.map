@@ -1,0 +1,10 @@
+<map id="version.h" name="version.h">
+<area shape="rect" id="node1" title=" " alt="" coords="265,5,339,32"/>
+<area shape="rect" id="node2" href="$accpp_8c.html" title="accpp.c &#45; PGC ansi source preprocessor module." alt="" coords="5,80,73,107"/>
+<area shape="rect" id="node3" href="$assem_8c.html" title="PGFTN/N10 &quot;assembler&quot; module." alt="" coords="98,80,170,107"/>
+<area shape="rect" id="node4" href="$fpp_8c.html" title=" " alt="" coords="194,80,245,107"/>
+<area shape="rect" id="node5" href="$listing_8c.html" title="Fortran source listing file module." alt="" coords="269,80,335,107"/>
+<area shape="rect" id="node6" href="$main_8c.html" title="main program and initialization routines for fortran front&#45;end" alt="" coords="359,80,421,107"/>
+<area shape="rect" id="node7" href="$semfunc_8c.html" title="Fortran front&#45;end utility routines used by Semantic Analyzer to process functions,..." alt="" coords="445,80,527,107"/>
+<area shape="rect" id="node8" href="$tools_2flang1_2flang1exe_2version_8c.html" title=" " alt="" coords="551,80,626,107"/>
+</map>

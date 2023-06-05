@@ -1,0 +1,5 @@
+<map id="ompaccel.h" name="ompaccel.h">
+<area shape="rect" id="node1" title="ompaccel.c &#45; OpenMP GPU Offload for NVVM Targets. It uses libomptarget" alt="" coords="5,5,95,32"/>
+<area shape="rect" id="node2" href="$tgtutil_8cpp.html" title="tgtutil.c &#45; Various definitions for the libomptarget runtime" alt="" coords="11,155,89,181"/>
+<area shape="rect" id="node3" href="$tgtutil_8h.html" title="Various definitions for the libomptarget runtime." alt="" coords="53,80,119,107"/>
+</map>

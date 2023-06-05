@@ -1,0 +1,7 @@
+<map id="open_close.h" name="open_close.h">
+<area shape="rect" id="node1" title="Declaration of open.c and close.c functions visible to other runtime library routines." alt="" coords="131,5,230,32"/>
+<area shape="rect" id="node2" href="$abort3f_8c.html" title="Implements LIB3F abort subprogram." alt="" coords="5,80,79,107"/>
+<area shape="rect" id="node3" href="$initpar_8c.html" title="FIXME." alt="" coords="103,80,171,107"/>
+<area shape="rect" id="node4" href="$open_8c.html" title="Implements the Fortran OPEN statment." alt="" coords="195,80,257,107"/>
+<area shape="rect" id="node5" href="$utils_8c.html" title="Utility functions for fortran i.o." alt="" coords="281,80,339,107"/>
+</map>

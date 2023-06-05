@@ -1,0 +1,24 @@
+<map id="ll_write.h" name="ll_write.h">
+<area shape="rect" id="node1" title=" " alt="" coords="59,5,133,32"/>
+<area shape="rect" id="node2" title=" " alt="" coords="5,379,67,405"/>
+<area shape="rect" id="node3" href="$ll__structure_8h.html" title="LLVM bridge representation." alt="" coords="109,80,206,107"/>
+<area shape="rect" id="node4" href="$flang2_2flang2exe_2gbldefs_8h.html" title="Host dependent, version dependent, and miscellaneous macros used throughout PGFTN." alt="" coords="575,155,649,181"/>
+<area shape="rect" id="node21" title=" " alt="" coords="124,155,191,181"/>
+<area shape="rect" id="node22" href="$include_2flang_2ADT_2hash_8h.html" title="General&#45;Purpose Hash Tables." alt="" coords="215,155,337,181"/>
+<area shape="rect" id="node5" title=" " alt="" coords="775,453,841,480"/>
+<area shape="rect" id="node6" href="$universal_8h.html" title="Declarations common across all programs for all hosts and targets." alt="" coords="723,304,808,331"/>
+<area shape="rect" id="node7" title=" " alt="" coords="472,229,552,256"/>
+<area shape="rect" id="node8" href="$pgifeat_8h.html" title="Definitions of all (c/c++/fortran) language features that could depend on target, abi,..." alt="" coords="576,229,648,256"/>
+<area shape="rect" id="node9" href="$scutil_8h.html" title=" " alt="" coords="384,229,448,256"/>
+<area shape="rect" id="node20" title=" " alt="" coords="672,229,763,256"/>
+<area shape="rect" id="node10" href="$legacy-folding-api_8h.html" title="Legacy constant folding API." alt="" coords="481,304,615,331"/>
+<area shape="rect" id="node11" href="$legacy-ints_8h.html" title="Legacy integer type." alt="" coords="717,379,813,405"/>
+<area shape="rect" id="node12" href="$legacy-util-api_8h.html" title="Legacy utility interfaces." alt="" coords="338,304,451,331"/>
+<area shape="rect" id="node13" title=" " alt="" coords="91,379,157,405"/>
+<area shape="rect" id="node14" title=" " alt="" coords="181,379,245,405"/>
+<area shape="rect" id="node15" title=" " alt="" coords="269,379,339,405"/>
+<area shape="rect" id="node16" title=" " alt="" coords="363,379,427,405"/>
+<area shape="rect" id="node17" title=" " alt="" coords="451,379,517,405"/>
+<area shape="rect" id="node18" title=" " alt="" coords="541,379,600,405"/>
+<area shape="rect" id="node19" title=" " alt="" coords="625,379,693,405"/>
+</map>

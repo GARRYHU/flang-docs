@@ -1,0 +1,24 @@
+<map id="symacc.c" name="symacc.c">
+<area shape="rect" id="node1" title="Generic access module. Used by all compilers and initialization utility." alt="" coords="697,5,775,32"/>
+<area shape="rect" id="node2" href="$shared_2utils_2symacc_8h.html" title="Various definitions for symacc." alt="" coords="603,80,682,107"/>
+<area shape="rect" id="node21" title=" " alt="" coords="707,80,765,107"/>
+<area shape="rect" id="node22" title=" " alt="" coords="789,80,859,107"/>
+<area shape="rect" id="node3" href="$scutil_8h.html" title=" " alt="" coords="392,155,456,181"/>
+<area shape="rect" id="node17" href="$shared_2utils_2gbldefs_8h.html" title="gbldefs.h &#45; syminit/symutil utility definitions" alt="" coords="615,229,689,256"/>
+<area shape="rect" id="node18" href="$tools_2shared_2utils_2global_8h.html" title="FTN global variables and flags." alt="" coords="609,155,676,181"/>
+<area shape="rect" id="node19" title=" " alt="" coords="701,155,777,181"/>
+<area shape="rect" id="node20" href="$shared_2utils_2sharedefs_8h.html" title=" " alt="" coords="801,155,892,181"/>
+<area shape="rect" id="node4" href="$legacy-folding-api_8h.html" title="Legacy constant folding API." alt="" coords="29,229,163,256"/>
+<area shape="rect" id="node5" href="$legacy-ints_8h.html" title="Legacy integer type." alt="" coords="5,304,101,331"/>
+<area shape="rect" id="node7" href="$legacy-util-api_8h.html" title="Legacy utility interfaces." alt="" coords="367,229,481,256"/>
+<area shape="rect" id="node16" href="$universal_8h.html" title="Declarations common across all programs for all hosts and targets." alt="" coords="505,229,591,256"/>
+<area shape="rect" id="node6" title=" " alt="" coords="21,379,86,405"/>
+<area shape="rect" id="node8" title=" " alt="" coords="573,304,638,331"/>
+<area shape="rect" id="node9" title=" " alt="" coords="301,304,365,331"/>
+<area shape="rect" id="node10" title=" " alt="" coords="389,304,459,331"/>
+<area shape="rect" id="node11" title=" " alt="" coords="751,304,812,331"/>
+<area shape="rect" id="node12" title=" " alt="" coords="663,304,727,331"/>
+<area shape="rect" id="node13" title=" " alt="" coords="483,304,549,331"/>
+<area shape="rect" id="node14" title=" " alt="" coords="125,304,184,331"/>
+<area shape="rect" id="node15" title=" " alt="" coords="209,304,277,331"/>
+</map>

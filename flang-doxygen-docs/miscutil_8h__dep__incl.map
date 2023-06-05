@@ -1,0 +1,7 @@
+<map id="miscutil.h" name="miscutil.h">
+<area shape="rect" id="node1" title=" " alt="" coords="144,5,223,32"/>
+<area shape="rect" id="node2" href="$direct_8c.html" title="Directive/pragma support modules." alt="" coords="5,80,71,107"/>
+<area shape="rect" id="node3" href="$main_8cpp.html" title="Fortran backend main program and initialization routines." alt="" coords="95,80,170,107"/>
+<area shape="rect" id="node4" href="$miscutil_8c.html" title="Compiler miscellaneous utility programs." alt="" coords="195,80,273,107"/>
+<area shape="rect" id="node5" href="$pragma_8c.html" title="PGC &amp; PGFTN directive scan &amp; semantic module." alt="" coords="297,80,373,107"/>
+</map>

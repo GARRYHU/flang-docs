@@ -1,0 +1,6 @@
+<map id="soc.h" name="soc.h">
+<area shape="rect" id="node1" title="Definitions/declarations for storage overlap chains." alt="" coords="130,5,185,32"/>
+<area shape="rect" id="node2" href="$fenddf_8cpp.html" title="Data definitions for FTN front&#45;end data structures." alt="" coords="5,80,88,107"/>
+<area shape="rect" id="node3" href="$symtab_8cpp.html" title="Fortran symbol table access module." alt="" coords="112,80,203,107"/>
+<area shape="rect" id="node4" href="$upper_8cpp.html" title="upper &#45; import the lowered F90/HPF code" alt="" coords="227,80,306,107"/>
+</map>

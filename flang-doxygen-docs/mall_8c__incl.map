@@ -1,0 +1,10 @@
+<map id="mall.c" name="mall.c">
+<area shape="rect" id="node1" title="customized storage allocation routines for compiler." alt="" coords="92,5,149,32"/>
+<area shape="rect" id="node2" href="$mall_8h.html" title=" " alt="" coords="5,80,63,107"/>
+<area shape="rect" id="node4" title=" " alt="" coords="87,80,154,107"/>
+<area shape="rect" id="node5" href="$tools_2shared_2error_8h.html" title="Compiler Error handling and reporting." alt="" coords="178,80,237,107"/>
+<area shape="rect" id="node3" title=" " alt="" coords="31,155,106,181"/>
+<area shape="rect" id="node6" title=" " alt="" coords="148,155,232,181"/>
+<area shape="rect" id="node7" href="$pgerror_8h.html" title="Error handling and reporting." alt="" coords="256,155,393,181"/>
+<area shape="rect" id="node8" href="$universal_8h.html" title="Declarations common across all programs for all hosts and targets." alt="" coords="282,229,367,256"/>
+</map>

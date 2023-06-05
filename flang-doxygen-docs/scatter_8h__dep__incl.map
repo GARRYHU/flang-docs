@@ -1,0 +1,9 @@
+<map id="scatter.h" name="scatter.h">
+<area shape="rect" id="node1" title=" " alt="" coords="233,5,307,32"/>
+<area shape="rect" id="node2" href="$runtime_2flang_2dist_8c.html" title=" " alt="" coords="5,80,60,107"/>
+<area shape="rect" id="node3" href="$gather_8c.html" title=" " alt="" coords="85,80,154,107"/>
+<area shape="rect" id="node4" href="$gathscat_8c.html" title=" " alt="" coords="178,80,261,107"/>
+<area shape="rect" id="node5" href="$scatter_8c.html" title="Scatter reduction routines." alt="" coords="285,80,359,107"/>
+<area shape="rect" id="node6" href="$scatter__maxval_8c.html" title=" " alt="" coords="383,80,506,107"/>
+<area shape="rect" id="node7" href="$scatter__minval_8c.html" title=" " alt="" coords="531,80,649,107"/>
+</map>

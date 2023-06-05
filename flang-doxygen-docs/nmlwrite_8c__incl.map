@@ -1,0 +1,24 @@
+<map id="nmlwrite.c" name="nmlwrite.c">
+<area shape="rect" id="node1" title="Support for namelist write statements." alt="" coords="885,5,967,32"/>
+<area shape="rect" id="node2" title=" " alt="" coords="509,80,575,107"/>
+<area shape="rect" id="node3" title=" " alt="" coords="897,229,963,256"/>
+<area shape="rect" id="node4" href="$runtime_2flang_2global_8h.html" title="Global definitions and declarations for Fortran I/O library." alt="" coords="599,80,666,107"/>
+<area shape="rect" id="node21" href="$format_8h.html" title=" " alt="" coords="964,80,1035,107"/>
+<area shape="rect" id="node22" href="$nml_8h.html" title="Extern decls, definitions and structs common to nmlread.c and nmlwrite.c." alt="" coords="1059,80,1113,107"/>
+<area shape="rect" id="node5" href="$universal_8h.html" title="Declarations common across all programs for all hosts and targets." alt="" coords="387,155,473,181"/>
+<area shape="rect" id="node6" href="$fioMacros_8h.html" title="descriptor and other definitions" alt="" coords="273,155,363,181"/>
+<area shape="rect" id="node14" title=" " alt="" coords="127,304,192,331"/>
+<area shape="rect" id="node15" href="$stdioInterf_8h.html" title=" " alt="" coords="798,155,889,181"/>
+<area shape="rect" id="node18" href="$cnfg_8h.html" title="cnfg.h &#45; declare external variables/arrays used by Fortran I/O" alt="" coords="497,155,555,181"/>
+<area shape="rect" id="node19" href="$fio__fcb__flags_8h.html" title="fio_fcb_flags.h &#45; FIO_FCB flags for access, dispose, blank, status and format fields:" alt="" coords="579,155,686,181"/>
+<area shape="rect" id="node20" title=" " alt="" coords="711,155,773,181"/>
+<area shape="rect" id="node7" title=" " alt="" coords="614,229,678,256"/>
+<area shape="rect" id="node8" title=" " alt="" coords="487,229,557,256"/>
+<area shape="rect" id="node9" href="$fortDt_8h.html" title="runtime Data type code definitions" alt="" coords="397,229,463,256"/>
+<area shape="rect" id="node11" href="$fioStructs_8h.html" title="Fortran IO related structs." alt="" coords="25,229,115,256"/>
+<area shape="rect" id="node12" href="$FuncArgMacros_8h.html" title="Fortran RTE name build and entry symbol macros." alt="" coords="139,229,265,256"/>
+<area shape="rect" id="node13" href="$fort__vars_8h.html" title=" " alt="" coords="289,229,373,256"/>
+<area shape="rect" id="node10" title=" " alt="" coords="391,304,469,331"/>
+<area shape="rect" id="node16" title=" " alt="" coords="719,229,781,256"/>
+<area shape="rect" id="node17" title=" " alt="" coords="805,229,873,256"/>
+</map>

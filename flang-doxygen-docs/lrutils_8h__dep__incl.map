@@ -1,0 +1,8 @@
+<map id="lrutils.h" name="lrutils.h">
+<area shape="rect" id="node1" title="LR utility header files." alt="" coords="200,5,264,32"/>
+<area shape="rect" id="node2" href="$lrutils_8c.html" title="LR utility functions." alt="" coords="5,80,69,107"/>
+<area shape="rect" id="node3" href="$prstab1_8c.html" title="LR parser (part 1)" alt="" coords="94,80,170,107"/>
+<area shape="rect" id="node4" href="$prstab2_8c.html" title="LR parser (part 2)" alt="" coords="194,80,270,107"/>
+<area shape="rect" id="node5" href="$prstab3_8c.html" title="LR parser (part 3)" alt="" coords="294,80,370,107"/>
+<area shape="rect" id="node6" href="$prstab4_8c.html" title="LR parser (part 4)" alt="" coords="394,80,470,107"/>
+</map>

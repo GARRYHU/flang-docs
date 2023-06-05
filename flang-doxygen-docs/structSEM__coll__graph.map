@@ -1,0 +1,52 @@
+<map id="SEM" name="SEM">
+<area shape="rect" id="node1" title=" " alt="" coords="952,2488,1003,2515"/>
+<area shape="rect" id="node2" title=" " alt="" coords="5,1651,44,1677"/>
+<area shape="rect" id="node3" href="$structDOIF.html" title=" " alt="" coords="709,1260,763,1287"/>
+<area shape="rect" id="node6" href="$structnoscope__sym.html" title=" " alt="" coords="391,1091,494,1117"/>
+<area shape="rect" id="node8" href="$structDOINFO.html" title=" " alt="" coords="407,1745,479,1772"/>
+<area shape="rect" id="node14" href="$structreduc__tag.html" title=" " alt="" coords="403,799,482,825"/>
+<area shape="rect" id="node15" href="$structreduc__sym.html" title=" " alt="" coords="145,851,231,877"/>
+<area shape="rect" id="node16" href="$structxyyz.html" title=" " alt="" coords="417,493,468,520"/>
+<area shape="rect" id="node22" href="$structtype__list.html" title=" " alt="" coords="277,1065,347,1092"/>
+<area shape="rect" id="node24" href="$structequiv__var.html" title=" " alt="" coords="697,393,775,420"/>
+<area shape="rect" id="node26" href="$structSTSK.html" title=" " alt="" coords="414,2485,471,2512"/>
+<area shape="rect" id="node27" href="$structSCOPESTACK.html" title=" " alt="" coords="680,2201,792,2228"/>
+<area shape="rect" id="node33" href="$struct__seql.html" title=" " alt="" coords="416,2668,469,2695"/>
+<area shape="rect" id="node34" href="$structINTERF.html" title=" " alt="" coords="408,2579,477,2605"/>
+<area shape="rect" id="node35" href="$structargpos__t.html" title=" " alt="" coords="537,2973,609,3000"/>
+<area shape="rect" id="node36" href="$structDOSTACK.html" title=" " alt="" coords="400,580,485,607"/>
+<area shape="rect" id="node37" href="$struct__accl.html" title=" " alt="" coords="416,2757,469,2784"/>
+<area shape="rect" id="node43" href="$structIFACE.html" title="Deferred procedure interface." alt="" coords="705,1884,767,1911"/>
+<area shape="rect" id="node46" href="$struct__std__range.html" title=" " alt="" coords="269,3121,355,3148"/>
+<area shape="rect" id="node47" href="$struct__std__record.html" title=" " alt="" coords="528,3268,619,3295"/>
+<area shape="rect" id="node4" title=" " alt="" coords="406,927,479,953"/>
+<area shape="rect" id="node5" title=" " alt="" coords="405,977,480,1004"/>
+<area shape="rect" id="node7" title=" " alt="" coords="165,2183,211,2209"/>
+<area shape="rect" id="node9" title=" " alt="" coords="396,2041,489,2068"/>
+<area shape="rect" id="node10" title=" " alt="" coords="389,1141,496,1168"/>
+<area shape="rect" id="node11" title=" " alt="" coords="389,1192,496,1219"/>
+<area shape="rect" id="node12" title=" " alt="" coords="409,1796,476,1823"/>
+<area shape="rect" id="node13" title=" " alt="" coords="389,1243,496,1269"/>
+<area shape="rect" id="node17" title=" " alt="" coords="159,361,217,388"/>
+<area shape="rect" id="node18" title=" " alt="" coords="389,1311,496,1337"/>
+<area shape="rect" id="node19" title=" " alt="" coords="389,1415,496,1441"/>
+<area shape="rect" id="node20" title=" " alt="" coords="393,1468,493,1495"/>
+<area shape="rect" id="node21" title=" " alt="" coords="389,1523,496,1549"/>
+<area shape="rect" id="node23" title=" " alt="" coords="389,1573,496,1600"/>
+<area shape="rect" id="node25" title=" " alt="" coords="681,1935,791,1961"/>
+<area shape="rect" id="node28" title=" " alt="" coords="403,2433,482,2460"/>
+<area shape="rect" id="node29" title=" " alt="" coords="666,2252,806,2279"/>
+<area shape="rect" id="node30" title=" " alt="" coords="669,2303,803,2329"/>
+<area shape="rect" id="node31" title=" " alt="" coords="669,2353,803,2380"/>
+<area shape="rect" id="node32" title=" " alt="" coords="671,2404,801,2431"/>
+<area shape="rect" id="node38" title=" " alt="" coords="670,2768,802,2795"/>
+<area shape="rect" id="node39" title=" " alt="" coords="669,2819,803,2845"/>
+<area shape="rect" id="node40" title=" " alt="" coords="671,2869,801,2896"/>
+<area shape="rect" id="node41" title=" " alt="" coords="651,2920,821,2947"/>
+<area shape="rect" id="node42" title=" " alt="" coords="677,2971,795,2997"/>
+<area shape="rect" id="node44" title=" " alt="" coords="675,3084,797,3111"/>
+<area shape="rect" id="node45" title=" " alt="" coords="709,3135,763,3161"/>
+<area shape="rect" id="node48" title=" " alt="" coords="668,3299,804,3325"/>
+<area shape="rect" id="node49" title=" " alt="" coords="702,3349,770,3376"/>
+<area shape="rect" id="node50" title=" " alt="" coords="679,3400,793,3427"/>
+</map>

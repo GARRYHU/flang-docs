@@ -1,0 +1,8 @@
+<map id="sharedefs.h" name="sharedefs.h">
+<area shape="rect" id="node1" title=" " alt="" coords="138,5,229,32"/>
+<area shape="rect" id="node2" href="$miscutil_8h.html" title=" " alt="" coords="144,80,223,107"/>
+<area shape="rect" id="node3" href="$direct_8c.html" title="Directive/pragma support modules." alt="" coords="5,155,71,181"/>
+<area shape="rect" id="node4" href="$main_8cpp.html" title="Fortran backend main program and initialization routines." alt="" coords="95,155,170,181"/>
+<area shape="rect" id="node5" href="$miscutil_8c.html" title="Compiler miscellaneous utility programs." alt="" coords="195,155,273,181"/>
+<area shape="rect" id="node6" href="$pragma_8c.html" title="PGC &amp; PGFTN directive scan &amp; semantic module." alt="" coords="297,155,373,181"/>
+</map>

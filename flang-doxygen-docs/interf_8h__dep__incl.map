@@ -1,0 +1,12 @@
+<map id="interf.h" name="interf.h">
+<area shape="rect" id="node1" title="Various definitions and prototypes for importing/exporting modules and IPA information." alt="" coords="366,5,429,32"/>
+<area shape="rect" id="node2" href="$exterf_8c.html" title="Routines for exporting symbols to .mod files and to IPA." alt="" coords="5,80,72,107"/>
+<area shape="rect" id="node3" href="$inliner_8c.html" title="inliner utils definitions" alt="" coords="96,80,163,107"/>
+<area shape="rect" id="node4" href="$interf_8c.html" title="Routines for importing symbols from .mod files and from IPA." alt="" coords="187,80,250,107"/>
+<area shape="rect" id="node5" href="$main_8c.html" title="main program and initialization routines for fortran front&#45;end" alt="" coords="275,80,336,107"/>
+<area shape="rect" id="node6" href="$module_8c.html" title="Fortran module support." alt="" coords="360,80,435,107"/>
+<area shape="rect" id="node7" href="$semant_8c.html" title="This file contains part 1 of the compiler&#39;s semantic actions (also known as the semant1 phase)." alt="" coords="459,80,535,107"/>
+<area shape="rect" id="node8" href="$semsym_8c.html" title="Fortran Semantic action routines to resolve symbol references as to overloading class." alt="" coords="560,80,643,107"/>
+<area shape="rect" id="node9" href="$semtbp_8c.html" title="This file contains semantic processing routines for type bound procedures (tbps), generic tbps,..." alt="" coords="667,80,743,107"/>
+<area shape="rect" id="node10" href="$semutil2_8c.html" title="Utility routines used by Fortran Semantic Analyzer." alt="" coords="768,80,851,107"/>
+</map>

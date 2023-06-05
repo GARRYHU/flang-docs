@@ -1,0 +1,12 @@
+<map id="hpfutl.h" name="hpfutl.h">
+<area shape="rect" id="node1" title=" " alt="" coords="382,5,447,32"/>
+<area shape="rect" id="node2" href="$tools_2flang1_2flang1exe_2comm_8c.html" title="Fortran communications module." alt="" coords="5,80,75,107"/>
+<area shape="rect" id="node3" href="$detect_8c.html" title="Detect communications for the communications module." alt="" coords="99,80,168,107"/>
+<area shape="rect" id="node4" href="$dpm__out_8c.html" title="Fortran data partitioning module, output." alt="" coords="192,80,275,107"/>
+<area shape="rect" id="node5" href="$func_8c.html" title="rewrite function args, etc" alt="" coords="299,80,357,107"/>
+<area shape="rect" id="node6" href="$hpfutl_8c.html" title=" " alt="" coords="382,80,447,107"/>
+<area shape="rect" id="node7" href="$semant3_8c.html" title="This file contains part 3 of the compiler&#39;s semantic actions (also known as the semant3 phase)." alt="" coords="472,80,555,107"/>
+<area shape="rect" id="node8" href="$symutl_8c.html" title="Fortran symbol utilities." alt="" coords="579,80,651,107"/>
+<area shape="rect" id="node9" href="$transfrm_8c.html" title=" " alt="" coords="675,80,757,107"/>
+<area shape="rect" id="node10" href="$vsub_8c.html" title="Rewrite subscript vectors for lhs and rhs, etc." alt="" coords="781,80,843,107"/>
+</map>
