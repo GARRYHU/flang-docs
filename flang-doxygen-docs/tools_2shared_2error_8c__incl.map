@@ -1,0 +1,13 @@
+<map id="error.c" name="error.c">
+<area shape="rect" id="node1" title="Error handling and reporting module." alt="" coords="427,5,485,32"/>
+<area shape="rect" id="node2" href="$tools_2shared_2error_8h.html" title="Compiler Error handling and reporting." alt="" coords="177,80,236,107"/>
+<area shape="rect" id="node4" title=" " alt="" coords="266,155,350,181"/>
+<area shape="rect" id="node7" title=" " alt="" coords="328,80,395,107"/>
+<area shape="rect" id="node8" title=" " alt="" coords="419,80,493,107"/>
+<area shape="rect" id="node9" title=" " alt="" coords="517,80,579,107"/>
+<area shape="rect" id="node10" title=" " alt="" coords="603,80,679,107"/>
+<area shape="rect" id="node11" title=" " alt="" coords="704,80,773,107"/>
+<area shape="rect" id="node3" title=" " alt="" coords="5,155,80,181"/>
+<area shape="rect" id="node5" href="$pgerror_8h.html" title="Error handling and reporting." alt="" coords="105,155,242,181"/>
+<area shape="rect" id="node6" href="$universal_8h.html" title="Declarations common across all programs for all hosts and targets." alt="" coords="131,229,216,256"/>
+</map>

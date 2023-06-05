@@ -1,0 +1,6 @@
+<map id="trace.h" name="trace.h">
+<area shape="rect" id="node1" title=" " alt="" coords="97,5,159,32"/>
+<area shape="rect" id="node2" href="$exterf_8c.html" title="Routines for exporting symbols to .mod files and to IPA." alt="" coords="5,80,72,107"/>
+<area shape="rect" id="node3" href="$interf_8c.html" title="Routines for importing symbols from .mod files and from IPA." alt="" coords="97,80,159,107"/>
+<area shape="rect" id="node4" href="$pointsto_8c.html" title="Do &quot;points to&quot; analysis; save information in NME and PTE structures." alt="" coords="183,80,262,107"/>
+</map>

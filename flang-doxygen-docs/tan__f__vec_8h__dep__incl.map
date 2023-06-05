@@ -1,0 +1,6 @@
+<map id="tan_f_vec.h" name="tan_f_vec.h">
+<area shape="rect" id="node1" title=" " alt="" coords="203,5,294,32"/>
+<area shape="rect" id="node2" href="$fs__tan__16__avx512_8cpp.html" title=" " alt="" coords="5,80,159,107"/>
+<area shape="rect" id="node3" href="$fs__tan__4__avx2_8cpp.html" title=" " alt="" coords="183,80,315,107"/>
+<area shape="rect" id="node4" href="$fs__tan__8__avx2_8cpp.html" title=" " alt="" coords="339,80,471,107"/>
+</map>
